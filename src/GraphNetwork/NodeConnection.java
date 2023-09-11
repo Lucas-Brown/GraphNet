@@ -28,4 +28,14 @@ public class NodeConnection {
         return sending.equals(sendingMatch) && recieving.equals(recievingMatch);
     }
 
+    /**
+     * Send a signal from the sending node to the recieving node
+     * @param strength The strength of the signal
+     * @return the signal or null if no signal was sent
+     */
+    public Signal SendSignal(float strength)
+    {
+        return transferFunc.TransferSignal(recieving, strength);
+    }
+
 }
