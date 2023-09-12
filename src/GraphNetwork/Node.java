@@ -35,23 +35,44 @@ public class Node {
         outgoingSignals = new ArrayList<>();
     }
 
-    public boolean AddNewConnection(Node recievingNode, NodeTransferFunction transferFunction)
+    /**
+     * 
+     * @param node
+     * @return whether this node is connected to the provided node
+     */
+    public boolean DoesContainConnection(Node node)
     {
-        boolean doesConnectionExist = outgoing.stream().anyMatch(connection -> connection.DoesMatchNodes(this, recievingNode));
-        if(doesConnectionExist)
-        {
-            outgoing.add(new NodeConnection(this, recievingNode, transferFunction));
-        }
-        return doesConnectionExist;
+        return outgoing.stream().anyMatch(connection -> connection.DoesMatchNodes(this, node));
+    }
+
+    /**
+     * Add an incoming connection to the node
+     * @param connection
+     * @return true
+     */
+    boolean AddIncomingConnection(NodeConnection connection)
+    {
+        return incoming.add(connection);
+    }
+
+    /**
+     * Add an outgoing connection to the node
+     * @param connection
+     * @return true
+     */
+    boolean AddOutgoingConnection(NodeConnection connection)
+    {
+        return outgoing.add(connection);
     }
 
     /**
      * 
      * @param target
      */
-    public void SetNodeSignal(float target)
+    public void SetNodeSignal(HashSet<Node> signaledNodes, float target)
     {
         mergedSignal = target;
+        signaledNodes.add(this);
     }
 
     /**

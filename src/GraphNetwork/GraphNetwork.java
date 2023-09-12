@@ -65,4 +65,16 @@ public class GraphNetwork {
         signaledNodes.forEach(n -> n.ReinforceSignalPathways(N_estimator));
         signaledNodes = nextSignaledNodes;
     }
+
+    public boolean AddNewConnection(Node transmittingNode, Node recievingNode, NodeTransferFunction transferFunction)
+    {
+        boolean doesConnectionExist = transmittingNode.DoesContainConnection(recievingNode);
+        if(!doesConnectionExist)
+        {
+            NodeConnection connection = new NodeConnection(transmittingNode, recievingNode, transferFunction);
+            transmittingNode.AddOutgoingConnection(connection);
+            recievingNode.AddIncomingConnection(connection);
+        }
+        return doesConnectionExist;
+    }
 }

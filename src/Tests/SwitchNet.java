@@ -22,8 +22,8 @@ public class SwitchNet
         net.nodes.add(n1);
         net.nodes.add(n2);
 
-        n1.AddNewConnection(n2, new NormalTransferFunction(0f, 1f, 0.5f));
-        n2.AddNewConnection(n1, new NormalTransferFunction(0f, 1f, 0.5f));
+        net.AddNewConnection(n1, n2, new NormalTransferFunction(0f, 1f, 0.5f));
+        net.AddNewConnection(n2, n1, new NormalTransferFunction(0f, 1f, 0.5f));
         
         net.corrector = new Alternator(n2);
 
@@ -46,10 +46,9 @@ public class SwitchNet
         }
         
         @Override
-        public void accept(HashSet<Node> nodes) {
-            alternatingNode.SetNodeSignal(state ? 0 : 1); 
+        public void accept(HashSet<Node> signaledNodes) {
+            alternatingNode.SetNodeSignal(signaledNodes, state ? 0 : 1); 
             state = !state;
-            nodes.add(alternatingNode);
         }
 
     }
