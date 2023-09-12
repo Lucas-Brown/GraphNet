@@ -14,6 +14,8 @@ public class NormalTransferFunction extends NodeTransferFunction {
      */
     private float mean, standardDeviation;
 
+    private int N;
+
     /**
      * @param mean mean value of the normal distribution
      * @param standardDeviation standard deviation of the normal distribution
@@ -23,6 +25,7 @@ public class NormalTransferFunction extends NodeTransferFunction {
         this.mean = mean;
         this.standardDeviation = standardDeviation;
         this.strength = strength;
+        N = 1;
     }
 
     /**
@@ -41,7 +44,7 @@ public class NormalTransferFunction extends NodeTransferFunction {
      * @param newPoint The new data to update the distribution 
      * @param N The fixed number of data points in the distribution 
      */
-    private void UpdateMeanAndVariance(float newPoint, int N)
+    private void UpdateMeanAndVariance(float newPoint, int N_NOTUSED)
     {
         // Useful constants
         final float Np1Inv = 1f/(N + 1f);
@@ -52,7 +55,8 @@ public class NormalTransferFunction extends NodeTransferFunction {
         standardDeviation = (float) Math.sqrt(N*Np1Inv * (standardDeviation));
 
         // Compute the new mean value 
-        mean = (N*mean + newPoint)*Np1Inv;        
+        mean = (N*mean + newPoint)*Np1Inv;   
+        N++;     
     }
 
     @Override

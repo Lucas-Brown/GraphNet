@@ -22,17 +22,9 @@ public abstract class NodeTransferFunction {
         strength += (target - strength) * epsilon;
     }
 
-    public Signal TransferSignal(Node recievingNode, float inputSignal)
+    public Signal GetTransferSignal(Node recievingNode, float inputSignal)
     {
-        // Compute whether a signal should be sent
-        boolean send = ShouldSend(inputSignal);
-        if(send)
-        {
-            // Send the signal to the next node
-            Signal signal = new Signal(this, GetOutputStrength());
-            recievingNode.RecieveSignal(signal);
-            return signal;
-        }
-        return null;
+        // Compute whether a signal should be sent and return the signal if it should be sent
+        return ShouldSend(inputSignal) ? new Signal(this, GetOutputStrength()) : null;
     }
 }

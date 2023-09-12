@@ -1,6 +1,8 @@
 package src.Tests;
 
 import java.util.HashSet;
+import java.util.SortedSet;
+import java.util.TreeSet;
 import java.util.function.Consumer;
 
 import src.GraphNetwork.GraphNetwork;
@@ -12,6 +14,8 @@ import src.GraphNetwork.NormalTransferFunction;
  */
 public class SwitchNet
 {
+
+    static int post_fire_count = 0;
 
     public static void main(String[] args)
     {
@@ -27,12 +31,37 @@ public class SwitchNet
         
         net.corrector = new Alternator(n2);
 
-        for(int i = 0; i < 10; i++)
+        for(int i = 0; i < 1000; i++)
         {
             net.Step();
-            System.out.println("node 1: " + n1.ToVisualString() + "\tnode 2: " + n2.ToVisualString());
         }
 
+        System.out.println("\nSIGNAL STOP\n");
+        
+        net.corrector = SwitchNet::PrintAllActiveNodes;
+        for(int i = 0; i < 1000; i++)
+        {
+            net.Step();
+        }
+
+        System.out.println("steps before auto-stop: " + post_fire_count);
+    }
+
+    public static void PrintAllActiveNodes(HashSet<Node> signaledNodes)
+    {
+        TreeSet<Node> sSet = new TreeSet<Node>(signaledNodes);
+        StringBuilder sb = new StringBuilder();
+        sSet.forEach(node -> 
+        {
+            sb.append(node.toString());
+            sb.append('\t');
+        });
+        String s = sb.toString();
+        if(!s.trim().isEmpty())
+        {
+            post_fire_count++;
+            System.out.println(s);
+        }
     }
 
     static class Alternator implements Consumer<HashSet<Node>>{
@@ -47,8 +76,10 @@ public class SwitchNet
         
         @Override
         public void accept(HashSet<Node> signaledNodes) {
-            alternatingNode.SetNodeSignal(signaledNodes, state ? 0 : 1); 
-            state = !state;
+            if(state = !state)
+            {
+                alternatingNode.SetNodeSignal(signaledNodes, 1); 
+            }
         }
 
     }

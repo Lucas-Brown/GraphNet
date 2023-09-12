@@ -9,7 +9,17 @@ import java.util.stream.Stream;
  * Capable of sending and recieving signals from other nodes.
  * Each node uses a @code NodeConnection to evaluate its own likelyhood of sending a signal out to other connected nodes
  */
-public class Node {
+public class Node implements Comparable<Node>{
+
+    /**
+     * The coutner is used to give each node a unique ID 
+     */
+    private static int ID_COUNTER = 0;
+
+    /**
+     * A unique identifying number for this node.
+     */
+    public final int id;
 
     /**
      * All incoming and outgoing node connections. 
@@ -33,6 +43,7 @@ public class Node {
         outgoing = new ArrayList<NodeConnection>();
         incomingSignals = new ArrayList<>();
         outgoingSignals = new ArrayList<>();
+        id = ID_COUNTER++;
     }
 
     /**
@@ -98,10 +109,21 @@ public class Node {
      * Notify this node of a new incoming signal
      * @param signal The value of the incoming signal
      */
-    public void RecieveSignal(Signal signal)
+    void NotifyRecieveSignal(Signal signal)
     {
         incomingSignals.add(signal);
     }
+
+    
+    /**
+     * Notify this node of a new incoming signal
+     * @param signal The value of the incoming signal
+     */
+    void NotifyTransmittingSignal(Signal signal)
+    {
+        outgoingSignals.add(signal);
+    }
+
 
     /**
      * Handle all incoming signals and store the resulting strength
@@ -139,10 +161,8 @@ public class Node {
     {
         HashSet<Node> signaledNodes = new HashSet<>(outgoing.size());
         outgoing.forEach(connection -> {
-            Signal signal = connection.SendSignal(mergedSignal);
-            if(signal != null)
+            if(connection.SendSignal(mergedSignal) != null)
             {
-                outgoingSignals.add(signal);
                 signaledNodes.add(connection.recieving);
             };
         });
@@ -154,22 +174,26 @@ public class Node {
     {
         for(Signal signal: outgoingSignals)
         {
-            signal.recievingFunction.UpdateDistribution(signal.strength, N_estimator);
+            signal.recievingFunction.UpdateDistribution(mergedSignal, N_estimator);
         }
         outgoingSignals.clear();
     }
 
-
-    public String ToVisualString()
+    @Override
+    public String toString()
     {
-        if(incomingSignals.isEmpty())
-        {
-            return "O"; 
-        }
-        else
-        {
-            return Float.toString(mergedSignal);
-        }
+        return "node " + Integer.toString(id) + ": " + Float.toString(mergedSignal);
+    }
+
+    @Override
+    public int hashCode()
+    {
+        return id;
+    }
+
+    @Override
+    public int compareTo(Node o) {
+        return id - o.id;
     }
 
 }

@@ -37,8 +37,8 @@ public class GraphNetwork {
 
     public GraphNetwork()
     {
-        N_estimator = 100;
-        epsilon = 0.001f;
+        N_estimator = 10;
+        epsilon = 0.01f;
 
         nodes = new ArrayList<>();
         signaledNodes = new HashSet<>();

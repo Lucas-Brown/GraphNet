@@ -35,7 +35,15 @@ public class NodeConnection {
      */
     public Signal SendSignal(float strength)
     {
-        return transferFunc.TransferSignal(recieving, strength);
+        // the sending node should be calling this method and should already 'know' that it is transmitting the signal
+        // but for sake of clarity and to make the transferrence of a signal clear, the sending node is notified here
+        Signal signal = transferFunc.GetTransferSignal(recieving, strength);
+        if(signal != null)
+        {
+            sending.NotifyTransmittingSignal(signal); 
+            recieving.NotifyRecieveSignal(signal);
+        }
+        return signal;
     }
 
 }
