@@ -38,24 +38,21 @@ public class NormalTransferFunction extends NodeTransferFunction {
 
     /**
      * Compute the updated mean and standard deviation using a fixed-count approximation.
-     * @param backpropSignal The new data to update the distribution 
+     * @param newPoint The new data to update the distribution 
      * @param N The fixed number of data points in the distribution 
      */
-    private void UpdateMeanAndVariance(float backpropSignal, int N)
+    private void UpdateMeanAndVariance(float newPoint, int N)
     {
-        // Useful constant
-        final float Np1 = N + 1f;
-
-        // Compute the new mean value and store the old mean for later
-        final float oldMean = mean;
-        mean = (N*mean + backpropSignal)/Np1;
+        // Useful constants
+        final float Np1Inv = 1f/(N + 1f);
+        final float distanceFromMean = newPoint - mean;
 
         // Compute the updated variance (standard deviation)
-        float varSqr = N/Np1 * standardDeviation * standardDeviation;
-        varSqr += 2*(mean - oldMean)/(backpropSignal - oldMean);
-        varSqr += (N+2f)/Np1;
+        standardDeviation = standardDeviation * standardDeviation + distanceFromMean*distanceFromMean*Np1Inv;
+        standardDeviation = (float) Math.sqrt(N*Np1Inv * (standardDeviation));
 
-        standardDeviation = (float) Math.sqrt(varSqr);
+        // Compute the new mean value 
+        mean = (N*mean + newPoint)*Np1Inv;        
     }
 
     @Override
