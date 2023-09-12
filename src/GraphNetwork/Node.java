@@ -131,11 +131,13 @@ public class Node implements Comparable<Node>{
      */
     public void HandleIncomingSignals()
     {
+        if(incomingSignals.isEmpty()) return;
         mergedSignal = 0;
         for(Signal signal : incomingSignals)
         {
             mergedSignal += signal.strength;
         }
+        mergedSignal /= incomingSignals.size();
     }
 
 
@@ -170,11 +172,11 @@ public class Node implements Comparable<Node>{
     }
 
     
-    public void ReinforceSignalPathways(int N_estimator)
+    public void ReinforceSignalPathways(int N_Limiter)
     {
         for(Signal signal: outgoingSignals)
         {
-            signal.recievingFunction.UpdateDistribution(mergedSignal, N_estimator);
+            signal.recievingFunction.UpdateDistribution(mergedSignal, N_Limiter);
         }
         outgoingSignals.clear();
     }

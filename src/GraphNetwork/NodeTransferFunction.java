@@ -12,7 +12,7 @@ public abstract class NodeTransferFunction {
 
     protected abstract boolean ShouldSend(float inputSignal);
     protected abstract float GetOutputStrength();
-    protected abstract void UpdateDistribution(float backpropSignal, int N);
+    protected abstract void UpdateDistribution(float backpropSignal, int N_Limiter);
 
     /**
      * Adjusts the signal strength towards a target value 

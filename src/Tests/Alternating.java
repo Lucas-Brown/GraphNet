@@ -10,9 +10,9 @@ import src.GraphNetwork.Node;
 import src.GraphNetwork.NormalTransferFunction;
 
 /**
- * Test for a graph network alternating between no signal and 1
+ * Test for a graph network alternating between 0 and 1 
  */
-public class SwitchNet
+public class Alternating
 {
 
     private static int post_fire_count = 0;
@@ -23,22 +23,32 @@ public class SwitchNet
 
         Node n1 = new Node();
         Node n2 = new Node();
+        Node n3 = new Node();
         net.nodes.add(n1);
         net.nodes.add(n2);
+        net.nodes.add(n3);
 
-        net.AddNewConnection(n1, n2, new NormalTransferFunction(0f, 1f, 0.5f));
-        net.AddNewConnection(n2, n1, new NormalTransferFunction(0f, 1f, 0.5f));
+
+        //net.AddNewConnection(n1, n1, new NormalTransferFunction(0.1f, 1f, 0.4f));
+        //net.AddNewConnection(n1, n1, new NormalTransferFunction(0.9f, 1f, 0.6f));
         
-        net.corrector = new Alternator(n2);
+        net.AddNewConnection(n1, n2, new NormalTransferFunction(0.9f, 1f, 0.1f));
+        net.AddNewConnection(n2, n1, new NormalTransferFunction(0.8f, 1f, 0.2f));
+        net.AddNewConnection(n1, n3, new NormalTransferFunction(0.7f, 1f, 0.3f));
+        net.AddNewConnection(n3, n1, new NormalTransferFunction(0.6f, 1f, 0.4f));
+        //net.AddNewConnection(n3, n2, new NormalTransferFunction(0.5f, 1f, 0.5f));
+        //net.AddNewConnection(n2, n3, new NormalTransferFunction(0.4f, 1f, 0.6f));
+        
+        net.corrector = new Alternator(n1);
 
-        for(int i = 0; i < 1000; i++)
+        for(int i = 0; i < 100000; i++)
         {
             net.Step();
         }
 
         System.out.println("\nSIGNAL STOP\n");
         
-        net.corrector = SwitchNet::PrintAllActiveNodes;
+        net.corrector = Alternating::PrintAllActiveNodes;
         for(int i = 0; i < 1000; i++)
         {
             net.Step();
@@ -70,16 +80,14 @@ public class SwitchNet
 
         public Alternator(Node alternatingNode)
         {
-            state = false;
+            state = true;
             this.alternatingNode = alternatingNode;
         }
         
         @Override
         public void accept(HashSet<Node> signaledNodes) {
-            if(state = !state)
-            {
-                alternatingNode.SetNodeSignal(signaledNodes, 1); 
-            }
+            state = !state;
+            alternatingNode.SetNodeSignal(signaledNodes, state ? 1 : 0); 
         }
 
     }

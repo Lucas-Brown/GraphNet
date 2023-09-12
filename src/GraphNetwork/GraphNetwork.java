@@ -12,9 +12,9 @@ import java.util.stream.Collectors;
 public class GraphNetwork {
 
     /**
-     * Estimator for the number of data points each distribution represents
+     * Datapoint limiter for the number of data points each distribution represents
      */
-    private Integer N_estimator; 
+    private Integer N_Limiter; 
 
     /**
      * Step size for adjusting the output values of nodes
@@ -37,8 +37,8 @@ public class GraphNetwork {
 
     public GraphNetwork()
     {
-        N_estimator = 10;
-        epsilon = 0.01f;
+        N_Limiter = 10000;
+        epsilon = 0.8f;
 
         nodes = new ArrayList<>();
         signaledNodes = new HashSet<>();
@@ -62,7 +62,7 @@ public class GraphNetwork {
 
         // Adjust transfer distributions
         signaledNodes.forEach(n -> n.CorrectRecievingValue(epsilon));
-        signaledNodes.forEach(n -> n.ReinforceSignalPathways(N_estimator));
+        signaledNodes.forEach(n -> n.ReinforceSignalPathways(N_Limiter));
         signaledNodes = nextSignaledNodes;
     }
 
