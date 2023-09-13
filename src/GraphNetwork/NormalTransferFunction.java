@@ -64,13 +64,13 @@ public class NormalTransferFunction extends NodeTransferFunction {
     }
 
     @Override
-    protected boolean ShouldSend(float inputSignal) {
+    public boolean ShouldSend(float inputSignal) {
         // Use the normalized normal distribution as a measure of how likely  
         return ComputeNormalizedDist(inputSignal) >= rand.nextFloat();
     }
 
     @Override
-    protected float GetOutputStrength() {
+    public float GetOutputStrength() {
         return strength;
     }
 

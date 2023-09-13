@@ -10,8 +10,8 @@ public abstract class NodeTransferFunction {
      */
     protected float strength;
 
-    protected abstract boolean ShouldSend(float inputSignal);
-    protected abstract float GetOutputStrength();
+    public abstract boolean ShouldSend(float inputSignal);
+    public abstract float GetOutputStrength();
     protected abstract void UpdateDistribution(float backpropSignal, int N_Limiter);
 
     /**

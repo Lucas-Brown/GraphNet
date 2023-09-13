@@ -15,8 +15,6 @@ import src.GraphNetwork.NormalTransferFunction;
 public class SwitchNet
 {
 
-    private static int post_fire_count = 0;
-
     public static void main(String[] args)
     {
         GraphNetwork net = new GraphNetwork();
@@ -29,58 +27,42 @@ public class SwitchNet
         net.AddNewConnection(n1, n2, new NormalTransferFunction(0f, 1f, 0.5f));
         net.AddNewConnection(n2, n1, new NormalTransferFunction(0f, 1f, 0.5f));
         
-        net.corrector = new Alternator(n2);
-
-        for(int i = 0; i < 1000; i++)
+        boolean state = false;
+        for(int i = 0; i < 10000; i++)
         {
-            net.Step();
+            // Transfer all signals
+            net.RecieveSignals();
+
+            // Train the network to output a 1 every other step
+            if(state = !state)
+            {
+                net.CorrectNodeValue(n1, 1);
+            }
+
+            net.TransmitSignals();
+            net.ReinforceSignals();
+            net.PropagateErrors();
+
         }
 
-        System.out.println("\nSIGNAL STOP\n");
+        System.out.println("\nTRAINING STOP\n");
         
-        net.corrector = SwitchNet::PrintAllActiveNodes;
+        int post_fire_count = 0;
         for(int i = 0; i < 1000; i++)
         {
-            net.Step();
+            net.RecieveSignals();
+            
+            String netStr = net.AllActiveNodesString();
+            if(!netStr.trim().isEmpty())
+            {
+                System.out.println(netStr);
+                post_fire_count++;
+            }
+
+            net.TransmitSignals();
         }
 
         System.out.println("steps before auto-stop: " + post_fire_count);
     }
 
-    private static void PrintAllActiveNodes(HashSet<Node> signaledNodes)
-    {
-        TreeSet<Node> sSet = new TreeSet<Node>(signaledNodes);
-        StringBuilder sb = new StringBuilder();
-        sSet.forEach(node -> 
-        {
-            sb.append(node.toString());
-            sb.append('\t');
-        });
-        String s = sb.toString();
-        if(!s.trim().isEmpty())
-        {
-            post_fire_count++;
-            System.out.println(s);
-        }
-    }
-
-    private static class Alternator implements Consumer<HashSet<Node>>{
-        private boolean state;
-        private Node alternatingNode;
-
-        public Alternator(Node alternatingNode)
-        {
-            state = false;
-            this.alternatingNode = alternatingNode;
-        }
-        
-        @Override
-        public void accept(HashSet<Node> signaledNodes) {
-            if(state = !state)
-            {
-                alternatingNode.SetNodeSignal(signaledNodes, 1); 
-            }
-        }
-
-    }
 }

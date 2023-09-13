@@ -15,8 +15,6 @@ import src.GraphNetwork.NormalTransferFunction;
 public class Alternating
 {
 
-    private static int post_fire_count = 0;
-
     public static void main(String[] args)
     {
         GraphNetwork net = new GraphNetwork();
@@ -28,67 +26,46 @@ public class Alternating
         net.nodes.add(n2);
         net.nodes.add(n3);
 
-
-        //net.AddNewConnection(n1, n1, new NormalTransferFunction(0.1f, 1f, 0.4f));
-        //net.AddNewConnection(n1, n1, new NormalTransferFunction(0.9f, 1f, 0.6f));
+        net.AddNewConnection(n1, n2, new NormalTransferFunction(0.1f, 1f, 0.9f));
+        net.AddNewConnection(n2, n1, new NormalTransferFunction(0.2f, 1f, 0.8f));
+        net.AddNewConnection(n1, n3, new NormalTransferFunction(0.3f, 1f, 0.7f));
+        net.AddNewConnection(n3, n1, new NormalTransferFunction(0.4f, 1f, 0.6f));
+        //net.AddNewConnection(n2, n3, new NormalTransferFunction(0.5f, 1f, 0.5f));
+        //net.AddNewConnection(n3, n2, new NormalTransferFunction(0.6f, 1f, 0.4f));
         
-        net.AddNewConnection(n1, n2, new NormalTransferFunction(0.9f, 1f, 0.1f));
-        net.AddNewConnection(n2, n1, new NormalTransferFunction(0.8f, 1f, 0.2f));
-        net.AddNewConnection(n1, n3, new NormalTransferFunction(0.7f, 1f, 0.3f));
-        net.AddNewConnection(n3, n1, new NormalTransferFunction(0.6f, 1f, 0.4f));
-        //net.AddNewConnection(n3, n2, new NormalTransferFunction(0.5f, 1f, 0.5f));
-        //net.AddNewConnection(n2, n3, new NormalTransferFunction(0.4f, 1f, 0.6f));
-        
-        net.corrector = new Alternator(n1);
-
-        for(int i = 0; i < 100000; i++)
+        boolean state = false;
+        for(int i = 0; i < 10000; i++)
         {
-            net.Step();
+            // Transfer all signals
+            net.RecieveSignals();
+
+            // Train the network to output alternating 0 and 1
+            net.CorrectNodeValue(n1, (state = !state) ? 1 : 0);
+
+            net.TransmitSignals();
+            //net.ReinforceSignals();
+            net.PropagateErrors();
+
         }
 
-        System.out.println("\nSIGNAL STOP\n");
+        System.out.println("\nTRAINING STOP\n");
         
-        net.corrector = Alternating::PrintAllActiveNodes;
+        int post_fire_count = 0;
         for(int i = 0; i < 1000; i++)
         {
-            net.Step();
+            net.RecieveSignals();
+            
+            String netStr = net.AllActiveNodesString();
+            if(!netStr.trim().isEmpty())
+            {
+                System.out.println(netStr);
+                post_fire_count++;
+            }
+
+            net.TransmitSignals();
         }
 
         System.out.println("steps before auto-stop: " + post_fire_count);
     }
 
-    private static void PrintAllActiveNodes(HashSet<Node> signaledNodes)
-    {
-        TreeSet<Node> sSet = new TreeSet<Node>(signaledNodes);
-        StringBuilder sb = new StringBuilder();
-        sSet.forEach(node -> 
-        {
-            sb.append(node.toString());
-            sb.append('\t');
-        });
-        String s = sb.toString();
-        if(!s.trim().isEmpty())
-        {
-            post_fire_count++;
-            System.out.println(s);
-        }
-    }
-
-    private static class Alternator implements Consumer<HashSet<Node>>{
-        private boolean state;
-        private Node alternatingNode;
-
-        public Alternator(Node alternatingNode)
-        {
-            state = true;
-            this.alternatingNode = alternatingNode;
-        }
-        
-        @Override
-        public void accept(HashSet<Node> signaledNodes) {
-            state = !state;
-            alternatingNode.SetNodeSignal(signaledNodes, state ? 1 : 0); 
-        }
-
-    }
 }

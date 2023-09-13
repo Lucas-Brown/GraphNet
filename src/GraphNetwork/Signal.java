@@ -9,4 +9,9 @@ public final class Signal {
         this.recievingFunction = recievingFunction;
         this.strength = strength;
     }
+
+    public double GetOutputStrength()
+    {
+        return (double) strength;
+    }
 }

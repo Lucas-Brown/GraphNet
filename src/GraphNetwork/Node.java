@@ -1,7 +1,12 @@
 package src.GraphNetwork;
 
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.stream.Collectors;
+import java.util.stream.DoubleStream;
 import java.util.stream.Stream;
 
 /**
@@ -27,9 +32,21 @@ public class Node implements Comparable<Node>{
     private ArrayList<NodeConnection> incoming, outgoing;
 
     /**
-     * All incoming and outgoing signals 
+     * All incoming signals 
      */
-    private ArrayList<Signal> incomingSignals, outgoingSignals;
+    private ArrayList<Signal> incomingSignals;
+
+    
+    /**
+     * All outgoing signals 
+     */
+    private ArrayList<Signal> outgoingSignals;
+
+    
+    /**
+     * All error signals 
+     */
+    private ArrayList<Signal> errorSignals;
 
     /**
      * The signal strength for the current iteration
@@ -43,6 +60,7 @@ public class Node implements Comparable<Node>{
         outgoing = new ArrayList<NodeConnection>();
         incomingSignals = new ArrayList<>();
         outgoingSignals = new ArrayList<>();
+        errorSignals = new ArrayList<>();
         id = ID_COUNTER++;
     }
 
@@ -54,6 +72,29 @@ public class Node implements Comparable<Node>{
     public boolean DoesContainConnection(Node node)
     {
         return outgoing.stream().anyMatch(connection -> connection.DoesMatchNodes(this, node));
+    }
+
+    
+    /**
+     * Correct the value of this node and send an error signal through the network.
+     * 
+     * @param target the value this node should have at this step
+     */
+    void CorrectNodeValue(float target)
+    {
+        // a null recieving function will indicate that the mergedSignal contains the target
+        errorSignals.add(new Signal(null, mergedSignal)); 
+        mergedSignal = target;
+    }
+
+    /**
+     * Directly set the value of this node
+     * 
+     * @param value the value this node should have at this step
+     */
+    void DirectSetNodeValue(float value)
+    {
+        mergedSignal = value;
     }
 
     /**
@@ -76,33 +117,14 @@ public class Node implements Comparable<Node>{
         return outgoing.add(connection);
     }
 
-    /**
-     * 
-     * @param target
-     */
-    public void SetNodeSignal(HashSet<Node> signaledNodes, float target)
-    {
-        mergedSignal = target;
-        signaledNodes.add(this);
-    }
 
     /**
-     * The network has been given a data point which is known to be correct and needs to update accordingly.
-     * This is EXPLICITLY for when a signal is expected and it's corresponding value is incorrect.
-     * If no node is currently sending a signal to this node, then all reciving nodes are updated.
-     * If at least one node has sent a signal to this node, calculate the corresponding distribution of error
-     * @param target
+     * Notify this node that it has recieved an error signal
+     * @param error
      */
-    public void RecieveCorrectionSignal(float target)
+    void NotifyErrorSignal(Signal signal)
     {
-        switch (incomingSignals.size()) {
-            case 0:
-                
-                break;
-        
-            default:
-                break;
-        }
+        errorSignals.add(signal);
     }
 
     /**
@@ -127,17 +149,22 @@ public class Node implements Comparable<Node>{
 
     /**
      * Handle all incoming signals and store the resulting strength
-     * TODO: consider more approaches to merging multiple incoming signals such as log(exp(x1) + exp(x2)) and generalize
      */
     public void HandleIncomingSignals()
     {
         if(incomingSignals.isEmpty()) return;
-        mergedSignal = 0;
-        for(Signal signal : incomingSignals)
-        {
-            mergedSignal += signal.strength;
-        }
-        mergedSignal /= incomingSignals.size();
+        mergedSignal = MergeSignal(incomingSignals.stream().mapToDouble(Signal::GetOutputStrength));
+        
+    }
+
+    /**
+     * TODO: consider more approaches to merging multiple incoming signals such as log(exp(x1) + exp(x2)) and generalize
+     * @param strengths
+     * @return
+     */
+    private float MergeSignal(DoubleStream strengths)
+    {
+        return (float) strengths.average().getAsDouble();
     }
 
 
@@ -171,7 +198,88 @@ public class Node implements Comparable<Node>{
         return signaledNodes.stream();
     }
 
-    
+    /**
+     * Attempt to send an error signal back to every incoming node.
+     * Updates the transfer function based on the error of the signal.
+     * @param epsilon 
+     * @return a stream containing every node that was sent an error signal
+     */
+    public Stream<Node> TransmitError(Integer N_Limiter, float epsilon)
+    {
+        HashMap<NodeConnection, Float> signalMap = new HashMap<>();
+        HashSet<NodeConnection> activatedErrorConnections = new HashSet<>();
+
+        errorSignals.forEach(errorSignal -> 
+        {
+            // If the recieving function is null, then the node was manually set and mergedSignal contains the target
+            // Otherwise, the strength of the signal is the target and the recieving function estimates the strength of a signal
+            
+            HashSet<NodeConnection> errorConnections;
+            
+            if(errorSignal.recievingFunction == null)
+            {
+                errorConnections = GetErrorConnections(activatedErrorConnections, mergedSignal);
+            }
+            else
+            {
+                errorConnections = GetErrorConnections(activatedErrorConnections, errorSignal.strength);
+            }
+
+            if(errorConnections.isEmpty()) return;
+            CalculateRecievedError(signalMap, errorConnections);
+        });
+
+        errorSignals.clear();
+
+        // Send the error to each respective node
+        signalMap.forEach((connection, strength) -> 
+        {
+            connection.recieving.NotifyErrorSignal(new Signal(connection.transferFunc, strength));
+        });
+
+
+        // Correct each transfer function 
+        signalMap.forEach((connection, strength) -> 
+        {
+            connection.transferFunc.AdjustSignalStrength(strength, epsilon);
+        } );
+
+        return activatedErrorConnections.stream().map(connection -> connection.sending);
+    }
+
+    private HashSet<NodeConnection> GetErrorConnections(HashSet<NodeConnection> activatedErrorConnections, float target)
+    {
+        HashSet<NodeConnection> errorConnections = incoming.stream()
+            .filter(connection -> connection.transferFunc.ShouldSend(target)) 
+            .collect(Collectors.toCollection(HashSet::new));
+
+        activatedErrorConnections.addAll(errorConnections);
+        return errorConnections;
+    }
+
+    /**
+     * 
+     * @param signalMap
+     * @param activatedErrorConnections
+     * @param errorSignal
+     * @param epsilon
+     */
+    private void CalculateRecievedError(HashMap<NodeConnection, Float> signalMap, HashSet<NodeConnection> errorConnections)
+    {
+        // compute total contribution from each sucessful signal
+        float cumulativeSignal = MergeSignal(errorConnections.stream().mapToDouble(connection -> connection.transferFunc.strength));
+
+        errorConnections.stream().forEach(connection ->
+        {
+            Float cumulativeError = signalMap.getOrDefault(connection, new Float(0));
+            cumulativeError += cumulativeSignal - connection.transferFunc.strength;
+        });
+    }
+
+    /**
+     * Reinforce the distribution towards the sent signal
+     * @param N_Limiter
+     */
     public void ReinforceSignalPathways(int N_Limiter)
     {
         for(Signal signal: outgoingSignals)
