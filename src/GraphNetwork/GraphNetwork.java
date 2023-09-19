@@ -24,6 +24,12 @@ public class GraphNetwork {
      */
     private float epsilon;
 
+    /**
+     * The factor of decay for the likelyhood of a node firing sucessive signals in one step
+     * i.e. The first check is unchanged, the second check is multiplied by a factor of likelyhoodDecay, the third a factor of likelyhoodDecay * likelyhoodDecay and so on.
+     */
+    private float likelyhoodDecay;
+
 
     /**
      * A list of all nodes within the graph network
@@ -48,7 +54,8 @@ public class GraphNetwork {
     public GraphNetwork()
     {
         N_Limiter = 1000;
-        epsilon = 0.1f;
+        epsilon = 0.2f;
+        likelyhoodDecay = 0.1f;
 
         nodes = new ArrayList<>();
         activeNodes = new HashSet<>();
@@ -99,7 +106,7 @@ public class GraphNetwork {
      */
     public void TransmitSignals()
     {
-        activeNextNodes = activeNodes.stream().flatMap(Node::TransmitSignal).collect(Collectors.toCollection(HashSet::new));
+        activeNextNodes = activeNodes.stream().flatMap(node -> node.TransmitSignal(likelyhoodDecay)).collect(Collectors.toCollection(HashSet::new));
     }
 
     /**
@@ -116,20 +123,20 @@ public class GraphNetwork {
      */
     public void PropagateErrors()
     {
-        errorNodes = errorNodes.stream().flatMap(eNode -> eNode.TransmitError(N_Limiter, epsilon)).collect(Collectors.toCollection(HashSet::new));
+        errorNodes = errorNodes.stream().flatMap(eNode -> eNode.TransmitError(N_Limiter, epsilon, likelyhoodDecay)).collect(Collectors.toCollection(HashSet::new));
     }
 
 
-    public boolean AddNewConnection(Node transmittingNode, Node recievingNode, NodeTransferFunction transferFunction)
+    public void AddNewConnection(Node transmittingNode, Node recievingNode, NodeTransferFunction transferFunction)
     {
-        boolean doesConnectionExist = transmittingNode.DoesContainConnection(recievingNode);
-        if(!doesConnectionExist)
-        {
-            NodeConnection connection = new NodeConnection(transmittingNode, recievingNode, transferFunction);
-            transmittingNode.AddOutgoingConnection(connection);
-            recievingNode.AddIncomingConnection(connection);
-        }
-        return doesConnectionExist;
+        //boolean doesConnectionExist = transmittingNode.DoesContainConnection(recievingNode);
+        //if(!doesConnectionExist)
+        //{
+        Edge connection = new Edge(transmittingNode, recievingNode, transferFunction);
+        transmittingNode.AddOutgoingConnection(connection);
+        recievingNode.AddIncomingConnection(connection);
+        //}
+        //return doesConnectionExist;
     }
 
     public String AllActiveNodesString()

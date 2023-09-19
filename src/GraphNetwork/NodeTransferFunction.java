@@ -10,9 +10,10 @@ public abstract class NodeTransferFunction {
      */
     protected float strength;
 
-    public abstract boolean ShouldSend(float inputSignal);
+    public abstract boolean ShouldSend(float inputSignal, float factor);
     public abstract float GetOutputStrength();
     protected abstract void UpdateDistribution(float backpropSignal, int N_Limiter);
+    public abstract float GetMostLikelyValue();
 
     /**
      * Adjusts the signal strength towards a target value 
@@ -22,9 +23,10 @@ public abstract class NodeTransferFunction {
         strength += (target - strength) * epsilon;
     }
 
-    public Signal GetTransferSignal(Node recievingNode, float inputSignal)
+    public Signal GetTransferSignal(Node recievingNode, float inputSignal, float factor)
     {
         // Compute whether a signal should be sent and return the signal if it should be sent
-        return ShouldSend(inputSignal) ? new Signal(this, GetOutputStrength()) : null;
+        return ShouldSend(inputSignal, factor) ? new Signal(this, GetOutputStrength()) : null;
     }
+
 }

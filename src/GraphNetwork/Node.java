@@ -29,7 +29,7 @@ public class Node implements Comparable<Node>{
     /**
      * All incoming and outgoing node connections. 
      */
-    private ArrayList<NodeConnection> incoming, outgoing;
+    private ArrayList<Edge> incoming, outgoing;
 
     /**
      * All incoming signals 
@@ -56,8 +56,8 @@ public class Node implements Comparable<Node>{
 
     public Node()
     {
-        incoming = new ArrayList<NodeConnection>();
-        outgoing = new ArrayList<NodeConnection>();
+        incoming = new ArrayList<Edge>();
+        outgoing = new ArrayList<Edge>();
         incomingSignals = new ArrayList<>();
         outgoingSignals = new ArrayList<>();
         errorSignals = new ArrayList<>();
@@ -102,7 +102,7 @@ public class Node implements Comparable<Node>{
      * @param connection
      * @return true
      */
-    boolean AddIncomingConnection(NodeConnection connection)
+    boolean AddIncomingConnection(Edge connection)
     {
         return incoming.add(connection);
     }
@@ -112,7 +112,7 @@ public class Node implements Comparable<Node>{
      * @param connection
      * @return true
      */
-    boolean AddOutgoingConnection(NodeConnection connection)
+    boolean AddOutgoingConnection(Edge connection)
     {
         return outgoing.add(connection);
     }
@@ -186,15 +186,20 @@ public class Node implements Comparable<Node>{
      * Attempt to send a signal out to every outward connecting neuron
      * @return a stream containing every node that was sent a signal
      */
-    public Stream<Node> TransmitSignal()
+    public Stream<Node> TransmitSignal(float likelyhoodDecay)
     {
         HashSet<Node> signaledNodes = new HashSet<>(outgoing.size());
-        outgoing.forEach(connection -> {
-            if(connection.SendSignal(mergedSignal) != null)
+        float factor = 1f;
+
+        Collections.shuffle(outgoing); // shuffle to ensure no connection has an order-dependent advantage
+        for(Edge connection : outgoing)
+        {
+            if(connection.SendSignal(mergedSignal, factor) != null)
             {
                 signaledNodes.add(connection.recieving);
             };
-        });
+            factor *= likelyhoodDecay;
+        };
         return signaledNodes.stream();
     }
 
@@ -204,37 +209,37 @@ public class Node implements Comparable<Node>{
      * @param epsilon 
      * @return a stream containing every node that was sent an error signal
      */
-    public Stream<Node> TransmitError(Integer N_Limiter, float epsilon)
+    public Stream<Node> TransmitError(Integer N_Limiter, float epsilon, float likelyhoodDecay)
     {
-        HashMap<NodeConnection, Float> signalMap = new HashMap<>();
-        HashSet<NodeConnection> activatedErrorConnections = new HashSet<>();
+        HashMap<Edge, Float> signalMap = new HashMap<>();
+        HashSet<Edge> activatedErrorConnections = new HashSet<>();
 
         errorSignals.forEach(errorSignal -> 
         {
             // If the recieving function is null, then the node was manually set and mergedSignal contains the target
             // Otherwise, the strength of the signal is the target and the recieving function estimates the strength of a signal
             
-            HashSet<NodeConnection> errorConnections;
+            HashSet<Edge> errorConnections;
             
             if(errorSignal.recievingFunction == null)
             {
-                errorConnections = GetErrorConnections(activatedErrorConnections, mergedSignal);
+                errorConnections = GetErrorConnections(activatedErrorConnections, mergedSignal, likelyhoodDecay);
             }
             else
             {
-                errorConnections = GetErrorConnections(activatedErrorConnections, errorSignal.strength);
+                errorConnections = GetErrorConnections(activatedErrorConnections, errorSignal.strength, likelyhoodDecay);
+                errorSignal.recievingFunction.UpdateDistribution(errorSignal.strength, N_Limiter);
             }
 
             if(errorConnections.isEmpty()) return;
             CalculateRecievedError(signalMap, errorConnections);
         });
 
-        errorSignals.clear();
 
         // Send the error to each respective node
         signalMap.forEach((connection, strength) -> 
         {
-            connection.recieving.NotifyErrorSignal(new Signal(connection.transferFunc, strength));
+            connection.recieving.NotifyErrorSignal(new Signal(connection.transferFunc, connection.transferFunc.GetMostLikelyValue()));
         });
 
 
@@ -244,15 +249,26 @@ public class Node implements Comparable<Node>{
             connection.transferFunc.AdjustSignalStrength(strength, epsilon);
         } );
 
+        errorSignals.clear();
         return activatedErrorConnections.stream().map(connection -> connection.sending);
     }
 
-    private HashSet<NodeConnection> GetErrorConnections(HashSet<NodeConnection> activatedErrorConnections, float target)
+    private HashSet<Edge> GetErrorConnections(HashSet<Edge> activatedErrorConnections, float target, float likelyhoodDecay)
     {
-        HashSet<NodeConnection> errorConnections = incoming.stream()
-            .filter(connection -> connection.transferFunc.ShouldSend(target)) 
-            .collect(Collectors.toCollection(HashSet::new));
+        float factor = 1f; 
 
+        HashSet<Edge> errorConnections = new HashSet<>(incoming.size());
+        for(Edge connection : incoming)
+        {
+            if(connection.transferFunc.ShouldSend(target, factor))
+            {
+                errorConnections.add(connection);
+            }
+            factor *= likelyhoodDecay;
+        }
+
+        errorConnections.forEach(connection -> System.out.println("Transfer mean: " + connection.transferFunc.GetMostLikelyValue() + "\t Target: " + target));
+        
         activatedErrorConnections.addAll(errorConnections);
         return errorConnections;
     }
@@ -264,7 +280,7 @@ public class Node implements Comparable<Node>{
      * @param errorSignal
      * @param epsilon
      */
-    private void CalculateRecievedError(HashMap<NodeConnection, Float> signalMap, HashSet<NodeConnection> errorConnections)
+    private void CalculateRecievedError(HashMap<Edge, Float> signalMap, HashSet<Edge> errorConnections)
     {
         // compute total contribution from each sucessful signal
         float cumulativeSignal = MergeSignal(errorConnections.stream().mapToDouble(connection -> connection.transferFunc.strength));

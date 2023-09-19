@@ -64,9 +64,9 @@ public class NormalTransferFunction extends NodeTransferFunction {
     }
 
     @Override
-    public boolean ShouldSend(float inputSignal) {
+    public boolean ShouldSend(float inputSignal, float factor) {
         // Use the normalized normal distribution as a measure of how likely  
-        return ComputeNormalizedDist(inputSignal) >= rand.nextFloat();
+        return factor*ComputeNormalizedDist(inputSignal) >= rand.nextFloat();
     }
 
     @Override
@@ -79,6 +79,12 @@ public class NormalTransferFunction extends NodeTransferFunction {
         // Update the distribution mean and variance
         UpdateMeanAndVariance(backpropSignal, N_Limiter);
 
+    }
+
+    @Override
+    public float GetMostLikelyValue()
+    {
+        return mean;
     }
     
 }

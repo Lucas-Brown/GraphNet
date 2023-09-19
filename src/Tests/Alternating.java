@@ -20,6 +20,12 @@ public class Alternating
         GraphNetwork net = new GraphNetwork();
 
         Node n1 = new Node();
+        net.nodes.add(n1);
+        
+        net.AddNewConnection(n1, n1, new NormalTransferFunction(0.1f, 1f, 0.9f));
+        net.AddNewConnection(n1, n1, new NormalTransferFunction(0.9f, 1f, 0.1f));
+
+        /* 
         Node n2 = new Node();
         Node n3 = new Node();
         net.nodes.add(n1);
@@ -30,11 +36,12 @@ public class Alternating
         net.AddNewConnection(n2, n1, new NormalTransferFunction(0.2f, 1f, 0.8f));
         net.AddNewConnection(n1, n3, new NormalTransferFunction(0.3f, 1f, 0.7f));
         net.AddNewConnection(n3, n1, new NormalTransferFunction(0.4f, 1f, 0.6f));
-        //net.AddNewConnection(n2, n3, new NormalTransferFunction(0.5f, 1f, 0.5f));
-        //net.AddNewConnection(n3, n2, new NormalTransferFunction(0.6f, 1f, 0.4f));
+        net.AddNewConnection(n2, n3, new NormalTransferFunction(0.5f, 1f, 0.5f));
+        net.AddNewConnection(n3, n2, new NormalTransferFunction(0.6f, 1f, 0.4f));
+        */
         
         boolean state = false;
-        for(int i = 0; i < 10000; i++)
+        for(int i = 0; i < 100000; i++)
         {
             // Transfer all signals
             net.RecieveSignals();
@@ -43,7 +50,7 @@ public class Alternating
             net.CorrectNodeValue(n1, (state = !state) ? 1 : 0);
 
             net.TransmitSignals();
-            //net.ReinforceSignals();
+            net.ReinforceSignals();
             net.PropagateErrors();
 
         }
