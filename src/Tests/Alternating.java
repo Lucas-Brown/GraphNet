@@ -19,8 +19,7 @@ public class Alternating
     {
         GraphNetwork net = new GraphNetwork();
 
-        Node n1 = new Node();
-        net.nodes.add(n1);
+        Node n1 = net.CreateNewNode();
         
         net.AddNewConnection(n1, n1, new NormalTransferFunction(0.1f, 1f, 0.9f));
         net.AddNewConnection(n1, n1, new NormalTransferFunction(0.9f, 1f, 0.1f));

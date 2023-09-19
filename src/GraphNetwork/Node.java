@@ -8,6 +8,7 @@ import java.util.HashSet;
 import java.util.stream.Collectors;
 import java.util.stream.DoubleStream;
 import java.util.stream.Stream;
+import src.GraphNetwork.GraphNetwork.SharedNetworkData;
 
 /**
  * A node within a graph neural network.
@@ -25,6 +26,11 @@ public class Node implements Comparable<Node>{
      * A unique identifying number for this node.
      */
     public final int id;
+
+    /**
+     * The network hyperparameters  
+     */
+    private final SharedNetworkData networkData;
 
     /**
      * All incoming and outgoing node connections. 
@@ -54,8 +60,9 @@ public class Node implements Comparable<Node>{
     private float mergedSignal;
 
 
-    public Node()
+    Node(final SharedNetworkData networkData)
     {
+        this.networkData = networkData;
         incoming = new ArrayList<Edge>();
         outgoing = new ArrayList<Edge>();
         incomingSignals = new ArrayList<>();
@@ -171,12 +178,12 @@ public class Node implements Comparable<Node>{
     /**
      * Adjust the signal sent to this node
      */
-    public void CorrectRecievingValue(float epsilon)
+    public void CorrectRecievingValue()
     {
         final int signal_count = incomingSignals.size();
         for(Signal signal: incomingSignals)
         {
-            signal.recievingFunction.AdjustSignalStrength(mergedSignal, epsilon/signal_count);
+            signal.recievingFunction.AdjustSignalStrength(mergedSignal, networkData.getEpsilon()/signal_count);
         }
         incomingSignals.clear();
     }
@@ -186,10 +193,11 @@ public class Node implements Comparable<Node>{
      * Attempt to send a signal out to every outward connecting neuron
      * @return a stream containing every node that was sent a signal
      */
-    public Stream<Node> TransmitSignal(float likelyhoodDecay)
+    public Stream<Node> TransmitSignal()
     {
         HashSet<Node> signaledNodes = new HashSet<>(outgoing.size());
         float factor = 1f;
+        final float decay = networkData.getLikelyhoodDecay();
 
         Collections.shuffle(outgoing); // shuffle to ensure no connection has an order-dependent advantage
         for(Edge connection : outgoing)
@@ -198,7 +206,7 @@ public class Node implements Comparable<Node>{
             {
                 signaledNodes.add(connection.recieving);
             };
-            factor *= likelyhoodDecay;
+            factor *= decay;
         };
         return signaledNodes.stream();
     }
@@ -209,7 +217,7 @@ public class Node implements Comparable<Node>{
      * @param epsilon 
      * @return a stream containing every node that was sent an error signal
      */
-    public Stream<Node> TransmitError(Integer N_Limiter, float epsilon, float likelyhoodDecay)
+    public Stream<Node> TransmitError()
     {
         HashMap<Edge, Float> signalMap = new HashMap<>();
         HashSet<Edge> activatedErrorConnections = new HashSet<>();
@@ -223,12 +231,12 @@ public class Node implements Comparable<Node>{
             
             if(errorSignal.recievingFunction == null)
             {
-                errorConnections = GetErrorConnections(activatedErrorConnections, mergedSignal, likelyhoodDecay);
+                errorConnections = GetErrorConnections(activatedErrorConnections, mergedSignal);
             }
             else
             {
-                errorConnections = GetErrorConnections(activatedErrorConnections, errorSignal.strength, likelyhoodDecay);
-                errorSignal.recievingFunction.UpdateDistribution(errorSignal.strength, N_Limiter);
+                errorConnections = GetErrorConnections(activatedErrorConnections, errorSignal.strength);
+                errorSignal.recievingFunction.UpdateDistribution(errorSignal.strength, networkData.getN_Limiter());
             }
 
             if(errorConnections.isEmpty()) return;
@@ -246,16 +254,17 @@ public class Node implements Comparable<Node>{
         // Correct each transfer function 
         signalMap.forEach((connection, strength) -> 
         {
-            connection.transferFunc.AdjustSignalStrength(strength, epsilon);
+            connection.transferFunc.AdjustSignalStrength(strength, networkData.getEpsilon());
         } );
 
         errorSignals.clear();
         return activatedErrorConnections.stream().map(connection -> connection.sending);
     }
 
-    private HashSet<Edge> GetErrorConnections(HashSet<Edge> activatedErrorConnections, float target, float likelyhoodDecay)
+    private HashSet<Edge> GetErrorConnections(HashSet<Edge> activatedErrorConnections, float target)
     {
         float factor = 1f; 
+        final float decay = networkData.getLikelyhoodDecay();
 
         HashSet<Edge> errorConnections = new HashSet<>(incoming.size());
         for(Edge connection : incoming)
@@ -264,7 +273,7 @@ public class Node implements Comparable<Node>{
             {
                 errorConnections.add(connection);
             }
-            factor *= likelyhoodDecay;
+            factor *= decay;
         }
 
         errorConnections.forEach(connection -> System.out.println("Transfer mean: " + connection.transferFunc.GetMostLikelyValue() + "\t Target: " + target));
@@ -296,11 +305,11 @@ public class Node implements Comparable<Node>{
      * Reinforce the distribution towards the sent signal
      * @param N_Limiter
      */
-    public void ReinforceSignalPathways(int N_Limiter)
+    public void ReinforceSignalPathways()
     {
         for(Signal signal: outgoingSignals)
         {
-            signal.recievingFunction.UpdateDistribution(mergedSignal, N_Limiter);
+            signal.recievingFunction.UpdateDistribution(mergedSignal, networkData.getN_Limiter());
         }
         outgoingSignals.clear();
     }

@@ -19,10 +19,8 @@ public class SwitchNet
     {
         GraphNetwork net = new GraphNetwork();
 
-        Node n1 = new Node();
-        Node n2 = new Node();
-        net.nodes.add(n1);
-        net.nodes.add(n2);
+        Node n1 = net.CreateNewNode();
+        Node n2 = net.CreateNewNode();
 
         net.AddNewConnection(n1, n2, new NormalTransferFunction(0f, 1f, 0.5f));
         net.AddNewConnection(n2, n1, new NormalTransferFunction(0f, 1f, 0.5f));

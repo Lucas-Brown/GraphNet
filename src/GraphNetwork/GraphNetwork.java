@@ -15,26 +15,14 @@ import java.util.stream.Collectors;
 public class GraphNetwork {
 
     /**
-     * Datapoint limiter for the number of data points each distribution represents
+     * An object to encapsulate all network hyperparameters
      */
-    private Integer N_Limiter; 
-
-    /**
-     * Step size for adjusting the output values of nodes
-     */
-    private float epsilon;
-
-    /**
-     * The factor of decay for the likelyhood of a node firing sucessive signals in one step
-     * i.e. The first check is unchanged, the second check is multiplied by a factor of likelyhoodDecay, the third a factor of likelyhoodDecay * likelyhoodDecay and so on.
-     */
-    private float likelyhoodDecay;
-
+    private final SharedNetworkData networkData;
 
     /**
      * A list of all nodes within the graph network
      */
-    public ArrayList<Node> nodes;
+    private ArrayList<Node> nodes;
 
     /**
      * A hash set containing every node that recieved a signal this step
@@ -53,14 +41,24 @@ public class GraphNetwork {
 
     public GraphNetwork()
     {
-        N_Limiter = 1000;
-        epsilon = 0.2f;
-        likelyhoodDecay = 0.1f;
+        networkData = new SharedNetworkData(1000, 0.2f, 0.9f, 1f);
 
         nodes = new ArrayList<>();
         activeNodes = new HashSet<>();
         activeNextNodes = new HashSet<>();
         errorNodes = new HashSet<>();
+    }
+
+    /**
+     * Creates a new node and adds it to the list of nodes within the network
+     * TODO: Potentially remove external addition of nodes and connections in favor of dynamically adding nodes/edges during training
+     * @return The node that was created 
+     */
+    public Node CreateNewNode()
+    {
+        Node n = new Node(networkData);
+        nodes.add(n);
+        return n;
     }
 
     /**
@@ -106,7 +104,7 @@ public class GraphNetwork {
      */
     public void TransmitSignals()
     {
-        activeNextNodes = activeNodes.stream().flatMap(node -> node.TransmitSignal(likelyhoodDecay)).collect(Collectors.toCollection(HashSet::new));
+        activeNextNodes = activeNodes.stream().flatMap(Node::TransmitSignal).collect(Collectors.toCollection(HashSet::new));
     }
 
     /**
@@ -114,8 +112,8 @@ public class GraphNetwork {
      */
     public void ReinforceSignals()
     {
-        activeNodes.forEach(n -> n.CorrectRecievingValue(epsilon));
-        activeNodes.forEach(n -> n.ReinforceSignalPathways(N_Limiter));
+        activeNodes.forEach(Node::CorrectRecievingValue);
+        activeNodes.forEach(Node::ReinforceSignalPathways);
     }
 
     /**
@@ -123,7 +121,7 @@ public class GraphNetwork {
      */
     public void PropagateErrors()
     {
-        errorNodes = errorNodes.stream().flatMap(eNode -> eNode.TransmitError(N_Limiter, epsilon, likelyhoodDecay)).collect(Collectors.toCollection(HashSet::new));
+        errorNodes = errorNodes.stream().flatMap(Node::TransmitError).collect(Collectors.toCollection(HashSet::new));
     }
 
 
@@ -149,6 +147,59 @@ public class GraphNetwork {
             sb.append('\t');
         });
         return sb.toString();
+    }
+
+    /**
+     * A collection of data which modifies the training and firing rates of each node.
+     * All nodes are given access to this data to use but modification should be strictly controlled by {@link GraphNetwork}
+     */
+    public class SharedNetworkData
+    {
+
+        /**
+         * Datapoint limiter for the number of data points each distribution represents
+         */
+        private int N_Limiter; 
+
+        /**
+         * Step size for adjusting the output values of nodes
+         */
+        private float epsilon;
+
+        /**
+         * The factor of decay for the likelyhood of a node firing sucessive signals in one step
+         * i.e. The first check is unchanged, the second check is multiplied by a factor of likelyhoodDecay, the third a factor of likelyhoodDecay * likelyhoodDecay and so on.
+         */
+        private float likelyhoodDecay;
+
+        /**
+         * Dynamically adjusts the firing rate of the network  
+         */
+        private float globalFiringRateMultiplier;
+
+        private SharedNetworkData(int N_Limiter, float epsilon, float likelyhoodDecay, float globalFiringRateMultiplier)
+        {
+            this.N_Limiter = N_Limiter;
+            this.epsilon = epsilon;
+            this.likelyhoodDecay = likelyhoodDecay;
+            this.globalFiringRateMultiplier = globalFiringRateMultiplier;
+        }
+
+        public int getN_Limiter() {
+            return N_Limiter;
+        }
+
+        public float getEpsilon() {
+            return epsilon;
+        }
+
+        public float getLikelyhoodDecay() {
+            return likelyhoodDecay;
+        }
+
+        public float getGlobalFiringRateMultiplier() {
+            return globalFiringRateMultiplier;
+        }
     }
 
 }
