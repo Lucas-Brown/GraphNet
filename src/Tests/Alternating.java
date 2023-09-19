@@ -7,7 +7,7 @@ import java.util.function.Consumer;
 
 import src.GraphNetwork.GraphNetwork;
 import src.GraphNetwork.Node;
-import src.GraphNetwork.NormalTransferFunction;
+import src.GraphNetwork.BellCurveDistribution;
 
 /**
  * Test for a graph network alternating between 0 and 1 
@@ -21,8 +21,8 @@ public class Alternating
 
         Node n1 = net.CreateNewNode();
         
-        net.AddNewConnection(n1, n1, new NormalTransferFunction(0.1f, 1f, 0.9f));
-        net.AddNewConnection(n1, n1, new NormalTransferFunction(0.9f, 1f, 0.1f));
+        net.AddNewConnection(n1, n1, new BellCurveDistribution(0.1f, 1f, 0.9f));
+        net.AddNewConnection(n1, n1, new BellCurveDistribution(0.9f, 1f, 0.1f));
 
         /* 
         Node n2 = new Node();

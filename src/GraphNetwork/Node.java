@@ -33,7 +33,7 @@ public class Node implements Comparable<Node>{
     /**
      * All incoming and outgoing node connections. 
      */
-    private ArrayList<Edge> incoming, outgoing;
+    private ArrayList<Arc> incoming, outgoing;
 
     /**
      * All incoming signals 
@@ -61,8 +61,8 @@ public class Node implements Comparable<Node>{
     Node(final SharedNetworkData networkData)
     {
         this.networkData = networkData;
-        incoming = new ArrayList<Edge>();
-        outgoing = new ArrayList<Edge>();
+        incoming = new ArrayList<Arc>();
+        outgoing = new ArrayList<Arc>();
         incomingSignals = new ArrayList<>();
         outgoingSignals = new ArrayList<>();
         errorSignals = new ArrayList<>();
@@ -107,7 +107,7 @@ public class Node implements Comparable<Node>{
      * @param connection
      * @return true
      */
-    boolean AddIncomingConnection(Edge connection)
+    boolean AddIncomingConnection(Arc connection)
     {
         return incoming.add(connection);
     }
@@ -117,7 +117,7 @@ public class Node implements Comparable<Node>{
      * @param connection
      * @return true
      */
-    boolean AddOutgoingConnection(Edge connection)
+    boolean AddOutgoingConnection(Arc connection)
     {
         return outgoing.add(connection);
     }
@@ -198,7 +198,7 @@ public class Node implements Comparable<Node>{
         final float decay = networkData.getLikelyhoodDecay();
 
         Collections.shuffle(outgoing); // shuffle to ensure no connection has an order-dependent advantage
-        for(Edge connection : outgoing)
+        for(Arc connection : outgoing)
         {
             if(connection.SendSignal(mergedSignal, factor) != null)
             {
@@ -217,15 +217,15 @@ public class Node implements Comparable<Node>{
      */
     public Stream<Node> TransmitError()
     {
-        HashMap<Edge, Float> signalMap = new HashMap<>();
-        HashSet<Edge> activatedErrorConnections = new HashSet<>();
+        HashMap<Arc, Float> signalMap = new HashMap<>();
+        HashSet<Arc> activatedErrorConnections = new HashSet<>();
 
         errorSignals.forEach(errorSignal -> 
         {
             // If the recieving function is null, then the node was manually set and mergedSignal contains the target
             // Otherwise, the strength of the signal is the target and the recieving function estimates the strength of a signal
             
-            HashSet<Edge> errorConnections;
+            HashSet<Arc> errorConnections;
             
             if(errorSignal.recievingFunction == null)
             {
@@ -259,13 +259,13 @@ public class Node implements Comparable<Node>{
         return activatedErrorConnections.stream().map(connection -> connection.sending);
     }
 
-    private HashSet<Edge> GetErrorConnections(HashSet<Edge> activatedErrorConnections, float target)
+    private HashSet<Arc> GetErrorConnections(HashSet<Arc> activatedErrorConnections, float target)
     {
         float factor = 1f; 
         final float decay = networkData.getLikelyhoodDecay();
 
-        HashSet<Edge> errorConnections = new HashSet<>(incoming.size());
-        for(Edge connection : incoming)
+        HashSet<Arc> errorConnections = new HashSet<>(incoming.size());
+        for(Arc connection : incoming)
         {
             if(connection.transferFunc.ShouldSend(target, factor))
             {
@@ -287,7 +287,7 @@ public class Node implements Comparable<Node>{
      * @param errorSignal
      * @param epsilon
      */
-    private void CalculateRecievedError(HashMap<Edge, Float> signalMap, HashSet<Edge> errorConnections)
+    private void CalculateRecievedError(HashMap<Arc, Float> signalMap, HashSet<Arc> errorConnections)
     {
         // compute total contribution from each sucessful signal
         float cumulativeSignal = MergeSignal(errorConnections.stream().mapToDouble(connection -> connection.transferFunc.strength));

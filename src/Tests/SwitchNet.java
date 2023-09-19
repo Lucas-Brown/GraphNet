@@ -7,7 +7,7 @@ import java.util.function.Consumer;
 
 import src.GraphNetwork.GraphNetwork;
 import src.GraphNetwork.Node;
-import src.GraphNetwork.NormalTransferFunction;
+import src.GraphNetwork.BellCurveDistribution;
 
 /**
  * Test for a graph network alternating between no signal and 1
@@ -22,8 +22,8 @@ public class SwitchNet
         Node n1 = net.CreateNewNode();
         Node n2 = net.CreateNewNode();
 
-        net.AddNewConnection(n1, n2, new NormalTransferFunction(0f, 1f, 0.5f));
-        net.AddNewConnection(n2, n1, new NormalTransferFunction(0f, 1f, 0.5f));
+        net.AddNewConnection(n1, n2, new BellCurveDistribution(0f, 1f, 0.5f));
+        net.AddNewConnection(n2, n1, new BellCurveDistribution(0f, 1f, 0.5f));
         
         boolean state = false;
         for(int i = 0; i < 10000; i++)
