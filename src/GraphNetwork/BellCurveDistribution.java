@@ -2,7 +2,10 @@ package src.GraphNetwork;
 
 import java.util.Random;
 
-public class NormalTransferFunction extends NodeTransferFunction {
+/**
+ * A bell curve distribution 
+ */
+public class BellCurveDistribution extends ActivationProbabilityDistribution {
 
     /**
      * Random number generator for probabalistically choosing whether to send a signal
@@ -20,7 +23,7 @@ public class NormalTransferFunction extends NodeTransferFunction {
      * @param mean mean value of the normal distribution
      * @param standardDeviation standard deviation of the normal distribution
      */
-    public NormalTransferFunction(float mean, float standardDeviation, float strength)
+    public BellCurveDistribution(float mean, float standardDeviation, float strength)
     {
         this.mean = mean;
         this.standardDeviation = standardDeviation;

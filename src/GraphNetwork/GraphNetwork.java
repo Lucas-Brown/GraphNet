@@ -122,12 +122,12 @@ public class GraphNetwork {
     }
 
 
-    public void AddNewConnection(Node transmittingNode, Node recievingNode, NodeTransferFunction transferFunction)
+    public void AddNewConnection(Node transmittingNode, Node recievingNode, ActivationProbabilityDistribution transferFunction)
     {
         //boolean doesConnectionExist = transmittingNode.DoesContainConnection(recievingNode);
         //if(!doesConnectionExist)
         //{
-        Edge connection = new Edge(transmittingNode, recievingNode, transferFunction);
+        Arc connection = new Arc(transmittingNode, recievingNode, transferFunction);
         transmittingNode.AddOutgoingConnection(connection);
         recievingNode.AddIncomingConnection(connection);
         //}

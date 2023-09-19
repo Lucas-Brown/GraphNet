@@ -4,7 +4,7 @@ package src.GraphNetwork;
  * A one-way connection between a sending node and a recieving node.
  * Holds the sending probability distribution  
  */
-public class Edge {
+public class Arc {
     
     /**
      * Sending and recieving node
@@ -14,9 +14,9 @@ public class Edge {
     /**
      * Node transfer function for determining probability and strength of signal forwarding 
      */
-    NodeTransferFunction transferFunc;
+    ActivationProbabilityDistribution transferFunc;
 
-    public Edge(Node sending, Node recieving, NodeTransferFunction transferFunc)
+    public Arc(Node sending, Node recieving, ActivationProbabilityDistribution transferFunc)
     {
         this.sending = sending;
         this.recieving = recieving;

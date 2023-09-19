@@ -3,7 +3,7 @@ package src.GraphNetwork;
 /**
  * Contains the probability distribution information for likelyhood of a signal being sent from one node to another
  */
-public abstract class NodeTransferFunction {
+public abstract class ActivationProbabilityDistribution {
     
     /**
      * The output signal strength
