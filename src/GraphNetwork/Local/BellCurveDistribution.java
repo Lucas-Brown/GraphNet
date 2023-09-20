@@ -15,7 +15,7 @@ public class BellCurveDistribution extends ActivationProbabilityDistribution {
     /**
      * mean value and standard deviation of a normal distribution
      */
-    private float mean, standardDeviation;
+    private double mean, standardDeviation;
 
     private int N;
 
@@ -23,7 +23,7 @@ public class BellCurveDistribution extends ActivationProbabilityDistribution {
      * @param mean mean value of the normal distribution
      * @param standardDeviation standard deviation of the normal distribution
      */
-    public BellCurveDistribution(float mean, float standardDeviation, float strength)
+    public BellCurveDistribution(double mean, double standardDeviation, double strength)
     {
         this.mean = mean;
         this.standardDeviation = standardDeviation;
@@ -36,10 +36,10 @@ public class BellCurveDistribution extends ActivationProbabilityDistribution {
      * @param x 
      * @return value of the distribution at the point x. always returns on the interval (0, 1]
      */
-    private float computeNormalizedDist(float x)
+    private double computeNormalizedDist(double x)
     {
-        final float temp = (x-mean)/standardDeviation;
-        return (float) Math.exp(-temp*temp/2);
+        final double temp = (x-mean)/standardDeviation;
+        return (double) Math.exp(-temp*temp/2);
     }
 
     /**
@@ -47,15 +47,15 @@ public class BellCurveDistribution extends ActivationProbabilityDistribution {
      * @param newPoint The new data to update the distribution 
      * @param N The fixed number of data points in the distribution 
      */
-    private void updateMeanAndVariance(float newPoint, int N_Limiter)
+    private void updateMeanAndVariance(double newPoint, int N_Limiter)
     {
         // Useful constants
-        final float Np1Inv = 1f/(N + 1f);
-        final float distanceFromMean = newPoint - mean;
+        final double Np1Inv = 1f/(N + 1f);
+        final double distanceFromMean = newPoint - mean;
 
         // Compute the updated variance (standard deviation)
         standardDeviation = standardDeviation * standardDeviation + distanceFromMean*distanceFromMean*Np1Inv;
-        standardDeviation = (float) Math.sqrt(N*Np1Inv * (standardDeviation));
+        standardDeviation = (double) Math.sqrt(N*Np1Inv * (standardDeviation));
 
         // Compute the new mean value 
         mean = (N*mean + newPoint)*Np1Inv;   
@@ -67,25 +67,25 @@ public class BellCurveDistribution extends ActivationProbabilityDistribution {
     }
 
     @Override
-    public boolean shouldSend(float inputSignal, float factor) {
+    public boolean shouldSend(double inputSignal, double factor) {
         // Use the normalized normal distribution as a measure of how likely  
-        return factor*computeNormalizedDist(inputSignal) >= rand.nextFloat();
+        return factor*computeNormalizedDist(inputSignal) >= rand.nextDouble();
     }
 
     @Override
-    public float getOutputStrength() {
+    public double getOutputStrength() {
         return strength;
     }
 
     @Override
-    protected void updateDistribution(float backpropSignal, int N_Limiter) {
+    protected void updateDistribution(double backpropSignal, int N_Limiter) {
         // Update the distribution mean and variance
         updateMeanAndVariance(backpropSignal, N_Limiter);
 
     }
 
     @Override
-    public float getMostLikelyValue()
+    public double getMostLikelyValue()
     {
         return mean;
     }

@@ -62,7 +62,7 @@ public class GraphNetwork {
         return n;
     }
 
-    public Signal createSignal(final Node sendingNode, final Node recievingNode, final float strength)
+    public Signal createSignal(final Node sendingNode, final Node recievingNode, final double strength)
     {
         activeNextNodes.add(recievingNode); // every time a signal is created, the network is notified of the reciever
         return new Signal(sendingNode, recievingNode, strength);

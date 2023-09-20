@@ -8,17 +8,17 @@ public abstract class ActivationProbabilityDistribution {
     /**
      * The output signal strength
      */
-    protected float strength;
+    protected double strength;
 
-    public abstract boolean shouldSend(float inputSignal, float factor);
-    public abstract float getOutputStrength();
-    protected abstract void updateDistribution(float backpropSignal, int N_Limiter);
-    public abstract float getMostLikelyValue();
+    public abstract boolean shouldSend(double inputSignal, double factor);
+    public abstract double getOutputStrength();
+    protected abstract void updateDistribution(double backpropSignal, int N_Limiter);
+    public abstract double getMostLikelyValue();
 
     /**
      * Adjusts the signal strength towards a target value 
      */
-    public void adjustSignalStrength(float target, float epsilon)
+    public void adjustSignalStrength(double target, double epsilon)
     {
         strength += (target - strength) * epsilon;
     }

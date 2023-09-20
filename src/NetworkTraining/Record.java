@@ -27,9 +27,9 @@ public class Record {
     /**
      * The output signal strength of the {@link currentNode} at the recorded time step
      */
-    public final float nodeSignalStrength;
+    public final double nodeSignalStrength;
 
-    public Record(Node currentNode, Node[] incomingNodes, Node[] outgoingNodes, float nodeSignalStrength)
+    public Record(Node currentNode, Node[] incomingNodes, Node[] outgoingNodes, double nodeSignalStrength)
     {
         this.currentNode = currentNode;
         this.incomingNodes = incomingNodes;

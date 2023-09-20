@@ -45,7 +45,7 @@ public class Arc {
      * @param factor A factor to multiply the probability check by
      * @return the signal or null if no signal was sent
      */
-    Signal sendSignal(float strength, float factor)
+    Signal sendSignal(double strength, double factor)
     {
         // the sending node should be calling this method and should already 'know' that it is transmitting the signal
         // but for sake of clarity and to make the transferrence of a signal clear, the sending node is notified here

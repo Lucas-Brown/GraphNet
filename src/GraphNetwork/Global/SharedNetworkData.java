@@ -15,20 +15,20 @@ public class SharedNetworkData
     /**
      * Step size for adjusting the output values of nodes
      */
-    private float epsilon;
+    private double epsilon;
 
     /**
      * The factor of decay for the likelyhood of a node firing sucessive signals in one step
      * i.e. The first check is unchanged, the second check is multiplied by a factor of likelyhoodDecay, the third a factor of likelyhoodDecay * likelyhoodDecay and so on.
      */
-    private float likelyhoodDecay;
+    private double likelyhoodDecay;
 
     /**
      * Dynamically adjusts the firing rate of the network  
      */
-    private float globalFiringRateMultiplier;
+    private double globalFiringRateMultiplier;
 
-    SharedNetworkData(int N_Limiter, float epsilon, float likelyhoodDecay, float globalFiringRateMultiplier)
+    SharedNetworkData(int N_Limiter, double epsilon, double likelyhoodDecay, double globalFiringRateMultiplier)
     {
         this.N_Limiter = N_Limiter;
         this.epsilon = epsilon;
@@ -40,15 +40,15 @@ public class SharedNetworkData
         return N_Limiter;
     }
 
-    public float getEpsilon() {
+    public double getEpsilon() {
         return epsilon;
     }
 
-    public float getLikelyhoodDecay() {
+    public double getLikelyhoodDecay() {
         return likelyhoodDecay;
     }
 
-    public float getGlobalFiringRateMultiplier() {
+    public double getGlobalFiringRateMultiplier() {
         return globalFiringRateMultiplier;
     }
 }

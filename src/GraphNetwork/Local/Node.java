@@ -2,14 +2,12 @@ package src.GraphNetwork.Local;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Objects;
 import java.util.Random;
-import java.util.stream.DoubleStream;
-import java.util.stream.Stream;
+import java.util.stream.IntStream;
 
+import src.NetworkTraining.Record;
 import src.GraphNetwork.Global.GraphNetwork;
 import src.GraphNetwork.Global.Signal;
 import src.GraphNetwork.Global.SharedNetworkData;
@@ -72,13 +70,13 @@ public class Node implements Comparable<Node>{
      * Each possible combinations of inputs has a corresponding unique set of weights and biases
      * both grow exponentially, which is bad, but every node should have relatively few connections 
      */
-    private float[][] weights;
-    private float[] biases;
+    private double[][] weights;
+    private double[] biases;
 
     /**
      * The signal strength for the current iteration
      */
-    private float mergedSignal;
+    private double mergedSignal;
 
     public Node(final GraphNetwork network, final SharedNetworkData networkData)
     {
@@ -89,8 +87,8 @@ public class Node implements Comparable<Node>{
         incomingSignals = new ArrayList<>();
         outgoingSignals = new ArrayList<>();
         errorSignals = new ArrayList<>();
-        weights = new float[1][1];
-        biases = new float[0];
+        weights = new double[1][1];
+        biases = new double[0];
         id = ID_COUNTER++;
     }
 
@@ -143,14 +141,14 @@ public class Node implements Comparable<Node>{
         // the second half needs entirely new data
         for(int i = old_size; i < new_size; i++)
         {
-            biases[i] = rand.nextFloat(); 
+            biases[i] = rand.nextdouble(); 
 
             // populate the weights array
             int count = weights[i].length + 1;
-            weights[i] = new float[count];
+            weights[i] = new double[count];
             for(int j = 0; j < count; j++)
             {
-                weights[i][j] = rand.nextFloat();
+                weights[i][j] = rand.nextdouble();
             }
         }
     }
@@ -184,14 +182,42 @@ public class Node implements Comparable<Node>{
         outgoingSignals.add(signal);
     }
 
+    /**
+     * Create a {@code Record} of the recieved and sent signals
+     * @return a record
+     */
+    public Record generateStepRecord()
+    {
+        return new Record(this, 
+        incomingSignals.stream().map(Signal::getSendingNode).toArray(size -> new Node[size]),
+        outgoingSignals.stream().map(Signal::getRecievingNode).toArray(size -> new Node[size]),
+        mergedSignal); 
+    }
+
 
     /**
      * Handle all incoming signals and store the resulting strength
      */
     public void handleIncomingSignals()
     {
-        if(incomingSignals.isEmpty()) return;
-       // mergedSignal = MergeSignal(incomingSignals.stream().mapToDouble(Signal::GetOutputStrength));
+        assert !incomingSignals.isEmpty() : "handleIncomingSignals should never be called if no signals have been recieved.";
+        incomingSignals.sort((s1, s2) -> Integer.compare(s1.recievingNode.id, s2.recievingNode.id)); // sorting by id ensure that the weights are applied to the correct node/signal
+
+        // map every recieving node id to its corresponding value and combine.
+        // for example, an id of 6 may map to 0b0010 and an id of 2 may map to 0b1000
+        // binary_string will thus contain the value 0b1010
+        int binary_string = incomingSignals.stream()
+            .mapToInt(signal -> orderedIDMap.get(signal.recievingNode.id)) 
+            .reduce(0, (result, id_bit)  -> result &= id_bit); // effectively the same as a sum in this case
+
+        // Use the binary_string to select which set of weights to apply 
+        double[] input_weights = weights[binary_string];
+
+        mergedSignal = IntStream.range(0, input_weights.length)
+            .mapToDouble(i -> input_weights[i] * incomingSignals.get(i).strength)
+            .sum();
+            
+        mergedSignal += biases[binary_string];
         
     }
 
@@ -199,7 +225,7 @@ public class Node implements Comparable<Node>{
     @Override
     public String toString()
     {
-        return "node " + Integer.toString(id) + ": " + Float.toString(mergedSignal);
+        return "node " + Integer.toString(id) + ": " + Double.toString(mergedSignal);
     }
 
     @Override
