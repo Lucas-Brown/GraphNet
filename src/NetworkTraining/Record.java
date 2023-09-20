@@ -2,7 +2,7 @@ package src.NetworkTraining;
 
 import java.util.Arrays;
 
-import src.GraphNetwork.Node;
+import src.GraphNetwork.Local.Node;
 
 /**
  * Remembers all signals that were recieved and sent from a particular node 

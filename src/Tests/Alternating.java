@@ -5,9 +5,9 @@ import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.function.Consumer;
 
-import src.GraphNetwork.GraphNetwork;
-import src.GraphNetwork.Node;
-import src.GraphNetwork.BellCurveDistribution;
+import src.GraphNetwork.Global.GraphNetwork;
+import src.GraphNetwork.Local.BellCurveDistribution;
+import src.GraphNetwork.Local.Node;
 
 /**
  * Test for a graph network alternating between 0 and 1 

@@ -52,7 +52,7 @@ public class History {
      */
     public void step()
     {
-        // The size of {@link currentStep} should only change in the event of a history merge
+        // The size of {@code currentStep} should only change in the event of a history merge
         currentRecords.trimToSize(); 
         currentRecords = new ArrayList<>();
         entireHistory.add(currentRecords);

@@ -1,29 +1,40 @@
-package src.GraphNetwork;
+package src.GraphNetwork.Local;
+
+import java.util.Objects;
+
+import src.GraphNetwork.Global.GraphNetwork;
+import src.GraphNetwork.Global.Signal;
 
 /**
  * A one-way connection between a sending node and a recieving node.
- * Holds the sending probability distribution  
+ * Holds the probability distribution for determining activation likelyhood  
  */
 public class Arc {
     
     /**
+     * The network this arc belongs to
+     */
+    private final GraphNetwork network;
+
+    /**
      * Sending and recieving node
      */
-    Node sending, recieving;
+    final Node sending, recieving;
 
     /**
      * Node transfer function for determining probability and strength of signal forwarding 
      */
-    ActivationProbabilityDistribution transferFunc;
+    final ActivationProbabilityDistribution transferFunc;
 
-    public Arc(Node sending, Node recieving, ActivationProbabilityDistribution transferFunc)
+    public Arc(final GraphNetwork network, final Node sending, final Node recieving, final ActivationProbabilityDistribution transferFunc)
     {
+        this.network = Objects.requireNonNull(network);
         this.sending = sending;
         this.recieving = recieving;
         this.transferFunc = transferFunc;
     }
 
-    public boolean DoesMatchNodes(Node sendingMatch, Node recievingMatch)
+    public boolean doesMatchNodes(Node sendingMatch, Node recievingMatch)
     {
         return sending.equals(sendingMatch) && recieving.equals(recievingMatch);
     }
@@ -34,17 +45,17 @@ public class Arc {
      * @param factor A factor to multiply the probability check by
      * @return the signal or null if no signal was sent
      */
-    public Signal SendSignal(float strength, float factor)
+    Signal sendSignal(float strength, float factor)
     {
         // the sending node should be calling this method and should already 'know' that it is transmitting the signal
         // but for sake of clarity and to make the transferrence of a signal clear, the sending node is notified here
-        Signal signal = transferFunc.GetTransferSignal(recieving, strength, factor);
-        if(signal != null)
+        if(transferFunc.shouldSend(strength, factor))
         {
-            sending.NotifyTransmittingSignal(signal); 
-            recieving.NotifyRecieveSignal(signal);
+            Signal signal = network.createSignal(sending, recieving, strength);
+            sending.transmittingSignal(signal); 
+            recieving.recieveSignal(signal);
         }
-        return signal;
+        return null;
     }
 
 }

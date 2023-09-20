@@ -1,4 +1,4 @@
-package src.GraphNetwork;
+package src.GraphNetwork.Local;
 
 import java.util.Random;
 
@@ -36,7 +36,7 @@ public class BellCurveDistribution extends ActivationProbabilityDistribution {
      * @param x 
      * @return value of the distribution at the point x. always returns on the interval (0, 1]
      */
-    private float ComputeNormalizedDist(float x)
+    private float computeNormalizedDist(float x)
     {
         final float temp = (x-mean)/standardDeviation;
         return (float) Math.exp(-temp*temp/2);
@@ -47,7 +47,7 @@ public class BellCurveDistribution extends ActivationProbabilityDistribution {
      * @param newPoint The new data to update the distribution 
      * @param N The fixed number of data points in the distribution 
      */
-    private void UpdateMeanAndVariance(float newPoint, int N_Limiter)
+    private void updateMeanAndVariance(float newPoint, int N_Limiter)
     {
         // Useful constants
         final float Np1Inv = 1f/(N + 1f);
@@ -67,25 +67,25 @@ public class BellCurveDistribution extends ActivationProbabilityDistribution {
     }
 
     @Override
-    public boolean ShouldSend(float inputSignal, float factor) {
+    public boolean shouldSend(float inputSignal, float factor) {
         // Use the normalized normal distribution as a measure of how likely  
-        return factor*ComputeNormalizedDist(inputSignal) >= rand.nextFloat();
+        return factor*computeNormalizedDist(inputSignal) >= rand.nextFloat();
     }
 
     @Override
-    public float GetOutputStrength() {
+    public float getOutputStrength() {
         return strength;
     }
 
     @Override
-    protected void UpdateDistribution(float backpropSignal, int N_Limiter) {
+    protected void updateDistribution(float backpropSignal, int N_Limiter) {
         // Update the distribution mean and variance
-        UpdateMeanAndVariance(backpropSignal, N_Limiter);
+        updateMeanAndVariance(backpropSignal, N_Limiter);
 
     }
 
     @Override
-    public float GetMostLikelyValue()
+    public float getMostLikelyValue()
     {
         return mean;
     }
