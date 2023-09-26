@@ -24,14 +24,14 @@ public class Arc {
     /**
      * Node transfer function for determining probability and strength of signal forwarding 
      */
-    final ActivationProbabilityDistribution transferFunc;
+    final ActivationProbabilityDistribution probDist;
 
     public Arc(final GraphNetwork network, final Node sending, final Node recieving, final ActivationProbabilityDistribution transferFunc)
     {
         this.network = Objects.requireNonNull(network);
         this.sending = sending;
         this.recieving = recieving;
-        this.transferFunc = transferFunc;
+        this.probDist = transferFunc;
     }
 
     public boolean doesMatchNodes(Node sendingMatch, Node recievingMatch)
@@ -40,7 +40,9 @@ public class Arc {
     }
 
     /**
-     * Send a signal from the sending node to the recieving node
+     * Attempt to send a signal from the sending node to the recieving node.
+     * The probability of sending the signal is determined by the probability distribution 
+     * 
      * @param strength The strength of the signal
      * @param factor A factor to multiply the probability check by
      * @return the signal or null if no signal was sent
@@ -49,7 +51,7 @@ public class Arc {
     {
         // the sending node should be calling this method and should already 'know' that it is transmitting the signal
         // but for sake of clarity and to make the transferrence of a signal clear, the sending node is notified here
-        if(transferFunc.shouldSend(strength, factor))
+        if(probDist.shouldSend(strength, factor))
         {
             Signal signal = network.createSignal(sending, recieving, strength);
             sending.transmittingSignal(signal); 

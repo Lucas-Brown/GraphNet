@@ -2,11 +2,16 @@ package src.GraphNetwork.Local;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Objects;
 import java.util.Random;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
+import src.NetworkTraining.History;
 import src.NetworkTraining.Record;
 import src.GraphNetwork.Global.GraphNetwork;
 import src.GraphNetwork.Global.Signal;
@@ -40,6 +45,11 @@ public class Node implements Comparable<Node>{
     private final SharedNetworkData networkData;
 
     /**
+     * The activation function 
+     */
+    private final ActivationFunction activationFunction;
+
+    /**
      * All incoming and outgoing node connections. 
      */
     private final ArrayList<Arc> incoming, outgoing;
@@ -49,17 +59,20 @@ public class Node implements Comparable<Node>{
      */
     private final ArrayList<Signal> incomingSignals;
 
-    
     /**
      * All outgoing signals 
      */
     private final ArrayList<Signal> outgoingSignals;
 
-    
     /**
      * All error signals 
      */
     private final ArrayList<Signal> errorSignals;
+
+    /**
+     * The current history that has reached this node if available
+     */
+    private History history;
 
     /**
      * Maps all incoming node ID's to an int from 0 to the number of incoming nodes -1
@@ -78,10 +91,11 @@ public class Node implements Comparable<Node>{
      */
     private double mergedSignal;
 
-    public Node(final GraphNetwork network, final SharedNetworkData networkData)
+    public Node(final GraphNetwork network, final SharedNetworkData networkData, final ActivationFunction activationFunction)
     {
         this.network = Objects.requireNonNull(network);
         this.networkData = Objects.requireNonNull(networkData);
+        this.activationFunction = activationFunction;
         incoming = new ArrayList<Arc>();
         outgoing = new ArrayList<Arc>();
         incomingSignals = new ArrayList<>();
@@ -141,18 +155,26 @@ public class Node implements Comparable<Node>{
         // the second half needs entirely new data
         for(int i = old_size; i < new_size; i++)
         {
-            biases[i] = rand.nextdouble(); 
+            biases[i] = rand.nextDouble(); 
 
             // populate the weights array
             int count = weights[i].length + 1;
             weights[i] = new double[count];
             for(int j = 0; j < count; j++)
             {
-                weights[i][j] = rand.nextdouble();
+                weights[i][j] = rand.nextDouble();
             }
         }
     }
 
+    /**
+     * Notify this node of a new incoming signal
+     * @param signal The value of the incoming signal
+     */
+    void recieveSignal(Signal signal)
+    {
+        incomingSignals.add(signal);
+    }
 
     /**
      * Notify this node that it has recieved an error signal
@@ -167,20 +189,11 @@ public class Node implements Comparable<Node>{
      * Notify this node of a new incoming signal
      * @param signal The value of the incoming signal
      */
-    void recieveSignal(Signal signal)
-    {
-        incomingSignals.add(signal);
-    }
-
-    
-    /**
-     * Notify this node of a new incoming signal
-     * @param signal The value of the incoming signal
-     */
     void transmittingSignal(Signal signal)
     {
         outgoingSignals.add(signal);
     }
+
 
     /**
      * Create a {@code Record} of the recieved and sent signals
@@ -196,12 +209,57 @@ public class Node implements Comparable<Node>{
 
 
     /**
+     * collect all histories from signals and notify the network if two histories are detected
+     */
+    public void collectHistoriesAndAlertMerge()
+    {
+        HashSet<History> histories = incomingSignals.stream()
+            .map(signal -> signal.history)
+            .filter(Objects::nonNull)
+            .collect(Collectors.toCollection(HashSet::new));
+
+        switch(histories.size())
+        {
+            case 0:
+                history = null;
+                break;
+            case 1:
+                history = histories.iterator().next();
+                break;
+            default:
+                network.alertHistoryMerge(histories, this);
+        }
+
+    }
+
+    /**
+     * History is whatever I say it is
+     */
+    public void setHistory(History history)
+    {
+        this.history = history;
+    }
+
+    /**
+     * If this node has recieved a history object, a record is generated and added to the history
+     */
+    public void addRecordToHistory()
+    {
+        if(history != null)
+        {
+            history.addToCurrentRecord(generateStepRecord());
+        }
+    }
+
+    /**
      * Handle all incoming signals and store the resulting strength
      */
-    public void handleIncomingSignals()
+    public void acceptIncomingSignals()
     {
         assert !incomingSignals.isEmpty() : "handleIncomingSignals should never be called if no signals have been recieved.";
         incomingSignals.sort((s1, s2) -> Integer.compare(s1.recievingNode.id, s2.recievingNode.id)); // sorting by id ensure that the weights are applied to the correct node/signal
+
+        collectHistoriesAndAlertMerge();
 
         // map every recieving node id to its corresponding value and combine.
         // for example, an id of 6 may map to 0b0010 and an id of 2 may map to 0b1000
@@ -218,9 +276,27 @@ public class Node implements Comparable<Node>{
             .sum();
             
         mergedSignal += biases[binary_string];
+
+        mergedSignal = activationFunction.activator(mergedSignal);
         
     }
 
+    public void attemptSendOutgoingSignals()
+    {
+        /**
+         * Attempt to send a signal out to every outward connecting neuron
+         * @return a stream containing every node that was sent a signal
+         */
+        double factor = 1f;
+        final double decay = networkData.getLikelyhoodDecay();
+
+        Collections.shuffle(outgoing); // shuffle to ensure no connection has an order-dependent advantage
+        for(Arc connection : outgoing)
+        {
+            connection.sendSignal(mergedSignal, factor);
+            factor *= decay;
+        };
+    }
 
     @Override
     public String toString()

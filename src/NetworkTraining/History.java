@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
+import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Contains the entire history of a signal being passed through the network
@@ -58,7 +60,7 @@ public class History {
         entireHistory.add(currentRecords);
     }
 
-    public History mergeHistories(History h1, History h2)
+    public static History mergeHistories(History h1, History h2)
     {
         History mergedHistory = new History();
 
@@ -107,4 +109,43 @@ public class History {
 
         return mergedHistory;
     }
+
+    
+    public static History mergeHistories(HashSet<History> histories)
+    {
+        History mergedHistory = new History();
+
+        // merge the current step
+        mergedHistory.currentRecords = histories.stream()
+            .flatMap(hist -> hist.currentRecords.stream())
+            .distinct()
+            .collect(Collectors.toCollection(ArrayList::new));
+
+        
+        // Begin merging the histories backwards.
+        // No two history steps (other than the current step) should have any overlap
+        List<Iterator<ArrayList<Record>>> histIters = histories.stream()
+            .map(hist -> hist.entireHistory.descendingIterator())
+            .toList();
+        
+        // skip the current step 
+        histIters.stream().forEach(Iterator::next);
+
+        while(!histIters.isEmpty())
+        {
+            // collect all record arrays into one massive record array
+            ArrayList<Record> mergedStep = histIters.stream()
+                .flatMap(iter -> iter.next().stream())
+                .collect(Collectors.toCollection(ArrayList::new));
+
+            // remove any iterators that have no more elements
+            histIters.stream().filter(Iterator::hasNext);
+                
+            mergedHistory.entireHistory.addFirst(mergedStep);
+            assert mergedStep.size() == (new HashSet<>(mergedStep)).size(): "Failed to merge step; History has been corrupted! \nboth histories contain the same record. This is invalid and should have resulted in a merge event.";
+        }
+
+        return mergedHistory;
+    }
+
 }
