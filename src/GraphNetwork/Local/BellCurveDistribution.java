@@ -47,7 +47,7 @@ public class BellCurveDistribution extends ActivationProbabilityDistribution {
      * @param N_Limiter The fixed number of data points in the distribution 
      */
     @Override
-    protected void reinforceDistribution(double valueToReinforce, int N_Limiter)
+    public void reinforceDistribution(double valueToReinforce, int N_Limiter)
     {
         // Useful constants
         final double Np1Inv = 1f/(N + 1f);
@@ -72,7 +72,7 @@ public class BellCurveDistribution extends ActivationProbabilityDistribution {
      * @param N The fixed number of data points in the distribution 
      */
     @Override
-    protected void diminishDistribution(double valueToDiminish)
+    public void diminishDistribution(double valueToDiminish)
     {
         // Useful constants
         final double Nm1Inv = 1f/(N - 1f);

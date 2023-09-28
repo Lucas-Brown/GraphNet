@@ -21,7 +21,7 @@ public class InputNode extends Node {
     {
         // recieving a signal from null indicates a user-input 
         network.createSignal(null, this, value); 
-        super.mergedSignal = value;
+        super.mergedSignalStrength = value;
     }
 
     @Override

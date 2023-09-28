@@ -6,8 +6,8 @@ package src.GraphNetwork.Local;
 public abstract class ActivationProbabilityDistribution {
     
     public abstract boolean shouldSend(double inputSignal, double factor);
-    protected abstract void reinforceDistribution(double valueToReinforce, int N_Limiter);
-    protected abstract void diminishDistribution(double valueToDiminish);
+    public abstract void reinforceDistribution(double valueToReinforce, int N_Limiter);
+    public abstract void diminishDistribution(double valueToDiminish);
     public abstract double getMostLikelyValue();
 
 }

@@ -25,7 +25,7 @@ public class Arc {
     /**
      * Node transfer function for determining probability and strength of signal forwarding 
      */
-    final ActivationProbabilityDistribution probDist;
+    public final ActivationProbabilityDistribution probDist;
 
     public Arc(final GraphNetwork network, final Node sending, final Node recieving, final ActivationProbabilityDistribution transferFunc)
     {

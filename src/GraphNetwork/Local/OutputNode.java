@@ -2,7 +2,7 @@ package src.GraphNetwork.Local;
 
 import src.GraphNetwork.Global.GraphNetwork;
 import src.GraphNetwork.Global.SharedNetworkData;
-import src.NetworkTraining.NetworkError;
+import src.NetworkTraining.NodeErrorHandling;
 
 /**
  * A node which exposes it's value to the user and can be sent a correction signal 
@@ -29,7 +29,7 @@ public class OutputNode extends Node {
      */
     public double getValue()
     {
-        return mergedSignal;
+        return mergedSignalStrength;
     }
 
     /**
@@ -37,7 +37,7 @@ public class OutputNode extends Node {
      */
     public Double getValueOrNull()
     {
-        return isActive() ? mergedSignal : null;
+        return isActive() ? mergedSignalStrength : null;
     }
 
     /**
@@ -51,20 +51,20 @@ public class OutputNode extends Node {
         {
             if(target == null)
             {
-                diminishFiringChances(history, this);
+                NodeErrorHandling.diminishFiringChances(history, this);
             }
             else
             {
-                correctSignalValue(target);
+                NodeErrorHandling.correctSignalValue(target);
             }
         }
         else
         {
-            sendErrorSignal();
+            NodeErrorHandling.sendErrorSignal();
         }
 
         network.createSignal(null, this, target); 
-        super.mergedSignal = target;
+        super.mergedSignalStrength = target;
     }
 
     

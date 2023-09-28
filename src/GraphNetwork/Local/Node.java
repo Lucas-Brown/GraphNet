@@ -90,7 +90,7 @@ public class Node implements Comparable<Node>{
     /**
      * The signal strength for the current iteration
      */
-    protected double mergedSignal;
+    protected double mergedSignalStrength;
 
     /**
      * Holds the accumulated error signal to this node for training.
@@ -212,6 +212,37 @@ public class Node implements Comparable<Node>{
             }
         }
     }
+    
+    /**
+     * Compute the merged signal strength of a set of incoming signals
+     * @param incomingSignals 
+     * @return
+     */
+    private double computeMergedSignalStrength(ArrayList<Signal> incomingSignals)
+    {
+        // map every recieving node id to its corresponding value and combine.
+        // for example, an id of 6 may map to 0b0010 and an id of 2 may map to 0b1000
+        // binary_string will thus contain the value 0b1010
+        int binary_string = incomingSignals.stream()
+            .mapToInt(signal -> orderedIDMap.get(signal.recievingNode.id)) 
+            .reduce(0, (result, id_bit)  -> result &= id_bit); // effectively the same as a sum in this case
+
+        // Use the binary_string to select which set of weights to apply 
+        double[] input_weights = weights[binary_string];
+
+        double strength = IntStream.range(0, input_weights.length)
+            .mapToDouble(i -> input_weights[i] * incomingSignals.get(i).strength)
+            .sum();
+            
+        strength += biases[binary_string];
+
+        return activationFunction.activator(strength);
+    }
+
+    private double computeMergedSignalStrength() 
+    {
+        return computeMergedSignalStrength(incomingSignals);
+    }
 
 
     /**
@@ -223,7 +254,7 @@ public class Node implements Comparable<Node>{
         return new Record(this, 
         incomingSignals.stream().map(Signal::getSendingNode).toList(),
         outgoingSignals.stream().map(Signal::getRecievingNode).toList(),
-        mergedSignal); 
+        mergedSignalStrength); 
     }
 
 
@@ -279,25 +310,7 @@ public class Node implements Comparable<Node>{
         incomingSignals.sort((s1, s2) -> Integer.compare(s1.recievingNode.id, s2.recievingNode.id)); // sorting by id ensure that the weights are applied to the correct node/signal
 
         collectHistoriesAndAlertMerge();
-
-        // map every recieving node id to its corresponding value and combine.
-        // for example, an id of 6 may map to 0b0010 and an id of 2 may map to 0b1000
-        // binary_string will thus contain the value 0b1010
-        int binary_string = incomingSignals.stream()
-            .mapToInt(signal -> orderedIDMap.get(signal.recievingNode.id)) 
-            .reduce(0, (result, id_bit)  -> result &= id_bit); // effectively the same as a sum in this case
-
-        // Use the binary_string to select which set of weights to apply 
-        double[] input_weights = weights[binary_string];
-
-        mergedSignal = IntStream.range(0, input_weights.length)
-            .mapToDouble(i -> input_weights[i] * incomingSignals.get(i).strength)
-            .sum();
-            
-        mergedSignal += biases[binary_string];
-
-        mergedSignal = activationFunction.activator(mergedSignal);
-        
+        mergedSignalStrength = computeMergedSignalStrength();
     }
 
     public void attemptSendOutgoingSignals()
@@ -312,47 +325,15 @@ public class Node implements Comparable<Node>{
         Collections.shuffle(outgoing); // shuffle to ensure no connection has an order-dependent advantage
         for(Arc connection : outgoing)
         {
-            connection.sendSignal(mergedSignal, factor, history);
+            connection.sendSignal(mergedSignalStrength, factor, history);
             factor *= decay;
         };
-    }
-
-    protected static void diminishFiringChances(History history, Node rootNode)
-    {
-        history.getNodeHistoryIterator(rootNode).forEachRemaining(recordList -> 
-        {
-            recordList.stream().forEach(Node::diminishDistributionOfRecord);
-        });
-    }
-
-    private static void diminishDistributionOfRecord(Record record)
-    {
-        Node currentNode = record.currentNode;
-        /*
-         * Find the arc associated with the transfer between the current node and the output node
-         * Then, diminish the probability of that node  
-         */
-        record.getOutgoingNodes().stream()
-            .map(currentNode::getArc)
-            .forEach(arc -> arc.probDist.diminishDistribution(record.nodeSignalStrength));
-    }
-
-    protected void correctSignalValue(double target)
-    {
-        if(history == null) return; // can't correct signal value without a full history back to an input node
-        double mse = NetworkError.MSE(mergedSignal, target);
-
-    }
-
-    protected void sendErrorSignal()
-    {
-
     }
 
     @Override
     public String toString()
     {
-        return "node " + Integer.toString(id) + ": " + Double.toString(mergedSignal);
+        return "node " + Integer.toString(id) + ": " + Double.toString(mergedSignalStrength);
     }
 
     @Override
