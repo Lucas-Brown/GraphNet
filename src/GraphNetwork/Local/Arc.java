@@ -4,6 +4,7 @@ import java.util.Objects;
 
 import src.GraphNetwork.Global.GraphNetwork;
 import src.GraphNetwork.Global.Signal;
+import src.NetworkTraining.History;
 
 /**
  * A one-way connection between a sending node and a recieving node.
@@ -45,15 +46,16 @@ public class Arc {
      * 
      * @param strength The strength of the signal
      * @param factor A factor to multiply the probability check by
+     * @param factor The history of the node sending the signal if available
      * @return the signal or null if no signal was sent
      */
-    Signal sendSignal(double strength, double factor)
+    Signal sendSignal(double strength, double factor, History history)
     {
         // the sending node should be calling this method and should already 'know' that it is transmitting the signal
         // but for sake of clarity and to make the transferrence of a signal clear, the sending node is notified here
         if(probDist.shouldSend(strength, factor))
         {
-            Signal signal = network.createSignal(sending, recieving, strength);
+            Signal signal = network.createSignal(sending, recieving, strength, history);
             sending.transmittingSignal(signal); 
             recieving.recieveSignal(signal);
         }

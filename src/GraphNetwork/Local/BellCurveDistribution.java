@@ -23,11 +23,10 @@ public class BellCurveDistribution extends ActivationProbabilityDistribution {
      * @param mean mean value of the normal distribution
      * @param standardDeviation standard deviation of the normal distribution
      */
-    public BellCurveDistribution(double mean, double standardDeviation, double strength)
+    public BellCurveDistribution(double mean, double standardDeviation)
     {
         this.mean = mean;
         this.standardDeviation = standardDeviation;
-        this.strength = strength;
         N = 100;
     }
 
@@ -43,22 +42,23 @@ public class BellCurveDistribution extends ActivationProbabilityDistribution {
     }
 
     /**
-     * Compute the updated mean and standard deviation using a fixed-count approximation.
-     * @param newPoint The new data to update the distribution 
-     * @param N The fixed number of data points in the distribution 
+     * Reinforce the mean and standard deviation with {@code valueToReinforce} using a fixed-count approximation.
+     * @param valueToReinforce The new data to 'add' to the distribution data set
+     * @param N_Limiter The fixed number of data points in the distribution 
      */
-    private void updateMeanAndVariance(double newPoint, int N_Limiter)
+    @Override
+    protected void reinforceDistribution(double valueToReinforce, int N_Limiter)
     {
         // Useful constants
         final double Np1Inv = 1f/(N + 1f);
-        final double distanceFromMean = newPoint - mean;
+        final double distanceFromMean = valueToReinforce - mean;
 
         // Compute the updated variance (standard deviation)
         standardDeviation = standardDeviation * standardDeviation + distanceFromMean*distanceFromMean*Np1Inv;
         standardDeviation = (double) Math.sqrt(N*Np1Inv * (standardDeviation));
 
         // Compute the new mean value 
-        mean = (N*mean + newPoint)*Np1Inv;   
+        mean = (N*mean + valueToReinforce)*Np1Inv;   
 
         if(N <= N_Limiter)
         {
@@ -66,22 +66,35 @@ public class BellCurveDistribution extends ActivationProbabilityDistribution {
         } 
     }
 
+    /**
+     * Diminish the mean and standard deviation with {@code valueToDiminish} using a fixed-count approximation.
+     * @param valueToDiminish The new data to 'remove' from the distribution data set
+     * @param N The fixed number of data points in the distribution 
+     */
+    @Override
+    protected void diminishDistribution(double valueToDiminish)
+    {
+        // Useful constants
+        final double Nm1Inv = 1f/(N - 1f);
+        final double distanceFromMean = valueToDiminish - mean;
+
+        // Compute the updated variance (standard deviation)
+        standardDeviation = standardDeviation * standardDeviation - distanceFromMean*distanceFromMean/(N*N);
+        standardDeviation = (double) Math.sqrt(N*Nm1Inv * (standardDeviation));
+
+        // Compute the new mean value 
+        mean = (N*mean - valueToDiminish)*Nm1Inv;   
+
+        if(N > 1)
+        {
+            N--;
+        } 
+    }
+
     @Override
     public boolean shouldSend(double inputSignal, double factor) {
         // Use the normalized normal distribution as a measure of how likely  
         return factor*computeNormalizedDist(inputSignal) >= rand.nextDouble();
-    }
-
-    @Override
-    public double getOutputStrength() {
-        return strength;
-    }
-
-    @Override
-    protected void updateDistribution(double backpropSignal, int N_Limiter) {
-        // Update the distribution mean and variance
-        updateMeanAndVariance(backpropSignal, N_Limiter);
-
     }
 
     @Override

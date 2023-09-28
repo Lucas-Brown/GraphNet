@@ -42,57 +42,64 @@ public class Node implements Comparable<Node>{
     /**
      * The network hyperparameters  
      */
-    private final SharedNetworkData networkData;
+    protected final SharedNetworkData networkData;
 
     /**
      * The activation function 
      */
-    private final ActivationFunction activationFunction;
+    protected final ActivationFunction activationFunction;
 
     /**
      * All incoming and outgoing node connections. 
      */
-    private final ArrayList<Arc> incoming, outgoing;
+    protected final ArrayList<Arc> incoming, outgoing;
 
     /**
      * All incoming signals 
      */
-    private final ArrayList<Signal> incomingSignals;
+    protected final ArrayList<Signal> incomingSignals;
 
     /**
      * All outgoing signals 
      */
-    private final ArrayList<Signal> outgoingSignals;
+    protected final ArrayList<Signal> outgoingSignals;
 
     /**
      * All error signals 
      */
-    private final ArrayList<Signal> errorSignals;
+    protected final ArrayList<Signal> errorSignals;
 
     /**
      * The current history that has reached this node if available
      */
-    private History history;
+    protected History history;
 
     /**
      * Maps all incoming node ID's to an int from 0 to the number of incoming nodes -1
      */
-    private HashMap<Integer, Integer> orderedIDMap;
+    protected HashMap<Integer, Integer> orderedIDMap;
 
     /**
-     * Each possible combinations of inputs has a corresponding unique set of weights and biases
+     * Each possible combinations of inputs has a corresponding unique set of weights, biases, and error signals
      * both grow exponentially, which is bad, but every node should have relatively few connections 
      */
     private double[][] weights;
     private double[] biases;
+    private double[] errorSignal;
 
     /**
      * The signal strength for the current iteration
      */
-    private double mergedSignal;
+    protected double mergedSignal;
+
+    /**
+     * Holds the accumulated error signal to this node for training.
+     */
+    protected double accumulatedError;
 
     public Node(final GraphNetwork network, final SharedNetworkData networkData, final ActivationFunction activationFunction)
     {
+        id = ID_COUNTER++;
         this.network = Objects.requireNonNull(network);
         this.networkData = Objects.requireNonNull(networkData);
         this.activationFunction = activationFunction;
@@ -103,7 +110,7 @@ public class Node implements Comparable<Node>{
         errorSignals = new ArrayList<>();
         weights = new double[1][1];
         biases = new double[0];
-        id = ID_COUNTER++;
+        accumulatedError = 0;
     }
 
     /**
@@ -116,6 +123,18 @@ public class Node implements Comparable<Node>{
         return outgoing.stream().anyMatch(connection -> connection.doesMatchNodes(this, node));
     }
 
+    /**
+     * Get the arc associated with the transfer from this node to the given recieving node
+     * @param recievingNode
+     * @return The arc if present, otherwise null
+     */
+    public Arc getArc(Node recievingNode)
+    {
+        return outgoing.stream()
+            .filter(arc -> arc.doesMatchNodes(this, recievingNode))
+            .findAny()
+            .orElse(null);
+    }
 
     /**
      * Add an incoming connection to the node
@@ -137,6 +156,33 @@ public class Node implements Comparable<Node>{
     public boolean addOutgoingConnection(Arc connection)
     {
         return outgoing.add(connection);
+    }
+
+    /**
+     * Notify this node of a new incoming signal
+     * @param signal The value of the incoming signal
+     */
+    void recieveSignal(Signal signal)
+    {
+        incomingSignals.add(signal);
+    }
+
+    /**
+     * Notify this node that it has recieved an error signal
+     * @param error
+     */
+    void recieveErrorSignal(Signal signal)
+    {
+        errorSignals.add(signal);
+    }
+
+    /**
+     * Notify this node of a new incoming signal
+     * @param signal The value of the incoming signal
+     */
+    void transmittingSignal(Signal signal)
+    {
+        outgoingSignals.add(signal);
     }
 
     /**
@@ -167,33 +213,6 @@ public class Node implements Comparable<Node>{
         }
     }
 
-    /**
-     * Notify this node of a new incoming signal
-     * @param signal The value of the incoming signal
-     */
-    void recieveSignal(Signal signal)
-    {
-        incomingSignals.add(signal);
-    }
-
-    /**
-     * Notify this node that it has recieved an error signal
-     * @param error
-     */
-    void recieveErrorSignal(Signal signal)
-    {
-        errorSignals.add(signal);
-    }
-
-    /**
-     * Notify this node of a new incoming signal
-     * @param signal The value of the incoming signal
-     */
-    void transmittingSignal(Signal signal)
-    {
-        outgoingSignals.add(signal);
-    }
-
 
     /**
      * Create a {@code Record} of the recieved and sent signals
@@ -202,8 +221,8 @@ public class Node implements Comparable<Node>{
     public Record generateStepRecord()
     {
         return new Record(this, 
-        incomingSignals.stream().map(Signal::getSendingNode).toArray(size -> new Node[size]),
-        outgoingSignals.stream().map(Signal::getRecievingNode).toArray(size -> new Node[size]),
+        incomingSignals.stream().map(Signal::getSendingNode).toList(),
+        outgoingSignals.stream().map(Signal::getRecievingNode).toList(),
         mergedSignal); 
     }
 
@@ -227,7 +246,7 @@ public class Node implements Comparable<Node>{
                 history = histories.iterator().next();
                 break;
             default:
-                network.alertHistoryMerge(histories, this);
+                network.notifyHistoryMerge(histories, this);
         }
 
     }
@@ -293,9 +312,41 @@ public class Node implements Comparable<Node>{
         Collections.shuffle(outgoing); // shuffle to ensure no connection has an order-dependent advantage
         for(Arc connection : outgoing)
         {
-            connection.sendSignal(mergedSignal, factor);
+            connection.sendSignal(mergedSignal, factor, history);
             factor *= decay;
         };
+    }
+
+    protected static void diminishFiringChances(History history, Node rootNode)
+    {
+        history.getNodeHistoryIterator(rootNode).forEachRemaining(recordList -> 
+        {
+            recordList.stream().forEach(Node::diminishDistributionOfRecord);
+        });
+    }
+
+    private static void diminishDistributionOfRecord(Record record)
+    {
+        Node currentNode = record.currentNode;
+        /*
+         * Find the arc associated with the transfer between the current node and the output node
+         * Then, diminish the probability of that node  
+         */
+        record.getOutgoingNodes().stream()
+            .map(currentNode::getArc)
+            .forEach(arc -> arc.probDist.diminishDistribution(record.nodeSignalStrength));
+    }
+
+    protected void correctSignalValue(double target)
+    {
+        if(history == null) return; // can't correct signal value without a full history back to an input node
+        double mse = NetworkError.MSE(mergedSignal, target);
+
+    }
+
+    protected void sendErrorSignal()
+    {
+
     }
 
     @Override

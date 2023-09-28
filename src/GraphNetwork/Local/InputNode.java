@@ -4,7 +4,8 @@ import src.GraphNetwork.Global.GraphNetwork;
 import src.GraphNetwork.Global.SharedNetworkData;
 
 /**
- * An input node accepts user data and generates a forward-propogating history.
+ * A node which can be given a value to propagate as a signal 
+ * InputNodes cannot have any incoming connections
  */
 public class InputNode extends Node {
 
@@ -12,9 +13,21 @@ public class InputNode extends Node {
         super(network, networkData, activationFunction);
     }
 
-    public void recieveInputSignal()
+    /**
+     * Send a signal to this node with a 
+     * @param value
+     */
+    public void recieveInputSignal(double value)
     {
-        
+        // recieving a signal from null indicates a user-input 
+        network.createSignal(null, this, value); 
+        super.mergedSignal = value;
+    }
+
+    @Override
+    public boolean addIncomingConnection(Arc connection)
+    {
+        throw new UnsupportedOperationException("Input nodes are not allowed to have any incoming connections.");
     }
     
 }

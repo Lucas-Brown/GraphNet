@@ -1,6 +1,9 @@
 package src.NetworkTraining;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.stream.Stream;
 
 import src.GraphNetwork.Local.Node;
 
@@ -17,23 +20,23 @@ public class Record {
     /**
      * All nodes that the {@link currentNode} recieved signals from
      */
-    private final Node[] incomingNodes;
+    final ArrayList<Node> incomingNodes;
 
     /**
      * All nodes that the {@link currentNode} sent signals to
      */
-    private final Node[] outgoingNodes;
+    final ArrayList<Node> outgoingNodes;
     
     /**
      * The output signal strength of the {@link currentNode} at the recorded time step
      */
     public final double nodeSignalStrength;
 
-    public Record(Node currentNode, Node[] incomingNodes, Node[] outgoingNodes, double nodeSignalStrength)
+    public Record(Node currentNode, Collection<Node> incomingNodes, Collection<Node> outgoingNodes, double nodeSignalStrength)
     {
         this.currentNode = currentNode;
-        this.incomingNodes = incomingNodes;
-        this.outgoingNodes = outgoingNodes;
+        this.incomingNodes = new ArrayList<>(incomingNodes);
+        this.outgoingNodes = new ArrayList<>(outgoingNodes);
         this.nodeSignalStrength = nodeSignalStrength;
     }
     
@@ -41,12 +44,25 @@ public class Record {
         return currentNode;
     }
 
-    public Node[] getIncomingNodes() {
-        return Arrays.copyOf(incomingNodes, incomingNodes.length);
+    public ArrayList<Node> getIncomingNodes() {
+        return new ArrayList<>(incomingNodes);
     }
 
-    public Node[] getOutgoingNodes() {
-        return Arrays.copyOf(outgoingNodes, outgoingNodes.length);
+    public ArrayList<Node> getOutgoingNodes() {
+        return new ArrayList<>(outgoingNodes);
+    }
+
+    Stream<Node> getIncomingNodesStream() {
+        return incomingNodes.stream();
+    }
+
+    Stream<Node> getOutgoingNodesStream() {
+        return outgoingNodes.stream();
+    }
+
+    public boolean hasOutputSignal()
+    {
+        return !outgoingNodes.isEmpty();
     }
 
     @Override
@@ -59,6 +75,23 @@ public class Record {
     public int hashCode()
     {
         return currentNode.hashCode();
+    }
+
+    /**
+     * This equals will also accept a {@code Node} object  
+     */
+    @Override
+    public boolean equals(Object o)
+    {
+        if(o instanceof Record)
+        {
+            return hashCode() == ((Record) o).hashCode();
+        }
+        else if(o instanceof Node)
+        {
+            return hashCode() == ((Node) o).hashCode();
+        }
+        return false;
     }
 
 }

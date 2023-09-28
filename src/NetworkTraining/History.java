@@ -1,11 +1,15 @@
 package src.NetworkTraining;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
+
+import src.GraphNetwork.Local.Node;
 
 /**
  * Contains the entire history of a signal being passed through the network
@@ -17,35 +21,35 @@ public class History {
     /**
      * Every node that the signal(s) have interacted with  
      */
-    private final LinkedList<ArrayList<Record>> entireHistory;
+    private final LinkedList<HashMap<Node, Record>> entireHistory;
 
     /**
      * History is in the making! 
      * Stores all records generated this time step.  
      */
-    private ArrayList<Record> currentRecords;
+    private HashMap<Node, Record> currentRecords;
 
     public History()
     {
         entireHistory = new LinkedList<>();
-        currentRecords = new ArrayList<>();
+        currentRecords = new HashMap<>();
         entireHistory.add(currentRecords);
     }
 
     /**
      * Add the record to the list of all records this time step
-     * @param node
+     * @param record
      */
-    public void addToCurrentRecord(Record node)
+    public void addToCurrentRecord(Record record)
     {
         // the current step should never contain more than one of the same node
-        if(currentRecords.contains(node))
+        if(currentRecords.containsKey(record))
         {
-            throw new RuntimeException("Current records already contain this record: \n" + node.toString());
+            throw new RuntimeException("Current records already contain this record: \n" + record.toString());
         }
         else
         {
-            currentRecords.add(node);
+            currentRecords.put(record.currentNode, record);
         }
     }
 
@@ -54,98 +58,125 @@ public class History {
      */
     public void step()
     {
-        // The size of {@code currentStep} should only change in the event of a history merge
-        currentRecords.trimToSize(); 
-        currentRecords = new ArrayList<>();
+        currentRecords = new HashMap<>();
         entireHistory.add(currentRecords);
     }
 
-    public static History mergeHistories(History h1, History h2)
+    /**
+     * Starting from the record which contains the {@code staringNode}, delete all connected records containing a single outgoing signal 
+     * In other words, delete the chain of signals back to the last node which branched
+     * @param startingNode 
+     */
+    public void decimateTimeline(Node startingNode)
     {
-        History mergedHistory = new History();
+        // get the record associated with the node
+        Iterator<HashMap<Node, Record>> histIter = entireHistory.descendingIterator();
+        List<Node> nodesToDelete = new ArrayList<>(1);
+        List<Record> recordsToDelete = new ArrayList<>(1);
+        nodesToDelete.add(startingNode);
+        recordsToDelete.add(currentRecords.get(startingNode));
 
-        // Ensure h1 is the larger of the histories
-        // This is necessary for later when merging back through time 
-        if(h1.entireHistory.size() < h2.entireHistory.size())
+        // remove the values at the current step
+        HashMap<Node, Record> recordsAtStep = histIter.next();
+        recordsAtStep.values().removeAll(recordsToDelete);
+
+        boolean stillRemovingRecords = true;
+        while(stillRemovingRecords && histIter.hasNext())
         {
-            // swap h1 and h2
-            History temp = h1;
-            h1 = h2;
-            h2 = temp;
+            recordsAtStep = histIter.next();
+            List<Node> lastNodes = nodesToDelete;
+            
+            // get the next set of nodes
+            nodesToDelete = recordsToDelete.stream().flatMap(Record::getIncomingNodesStream).toList(); 
+
+            recordsToDelete = nodesToDelete.stream()
+                .map(recordsAtStep::get) // map each node to it's corresponding record
+                .map(record -> {record.outgoingNodes.removeAll(lastNodes); return record;}) // remove references to previous set
+                .filter(Record::hasOutputSignal) // remove records with no remaining output signals
+                .toList();
+
+            // update nodes to only be those that have singular outputs
+            nodesToDelete = recordsToDelete.stream().map(Record::getCurrentNode).toList();
+                
+            // delete all the records
+            recordsAtStep.values().removeAll(recordsToDelete);
         }
-
-        // Find all history nodes that overlap
-        HashSet<Record> intersection = new HashSet<>(h1.currentRecords);
-        intersection.retainAll(h2.currentRecords);
-
-        if(intersection.size() == 0)
-        {
-            System.err.println("Warning: two histories were merged without any current step overlap. This can cause history records to grow indefinitely and impact training performance.");
-        }
-
-        // merge the current step
-        mergedHistory.currentRecords.addAll(new ArrayList<>(h1.currentRecords));
-        mergedHistory.currentRecords.removeAll(intersection); // this order matters!!
-        mergedHistory.currentRecords.addAll(new ArrayList<>(h2.currentRecords));
-
-        
-        // Begin merging the histories backwards.
-        // No two history steps (other than the current step) should have any overlap
-        Iterator<ArrayList<Record>> h1Iter = h1.entireHistory.descendingIterator();
-        Iterator<ArrayList<Record>> h2Iter = h2.entireHistory.descendingIterator();
-        h1Iter.next(); // skip the current step 
-        h2Iter.next();
-
-        while(h2Iter.hasNext())
-        {
-            ArrayList<Record> mergedStep = new ArrayList<>(h1Iter.next());
-            mergedStep.addAll(h2Iter.next());
-            mergedHistory.entireHistory.addFirst(mergedStep);
-            assert mergedStep.size() == (new HashSet<>(mergedStep)).size(): "Failed to merge step; History has been corrupted! \nboth histories contain the same record. This is invalid and should have resulted in a merge event.";
-        }
-
-        // Creating a new arrayList isn't neccessary but is good practice to avoid issues.
-        h1Iter.forEachRemaining(hNode -> mergedHistory.entireHistory.addFirst(new ArrayList<>(hNode)));
-
-        return mergedHistory;
     }
 
+    public Iterator<List<Record>> getNodeHistoryIterator(Node rootNode)
+    {
+        return new NodeHistoryIterator(rootNode);
+    }
     
     public static History mergeHistories(HashSet<History> histories)
     {
         History mergedHistory = new History();
 
         // merge the current step
+        /* 
         mergedHistory.currentRecords = histories.stream()
             .flatMap(hist -> hist.currentRecords.stream())
             .distinct()
             .collect(Collectors.toCollection(ArrayList::new));
+            */
 
         
         // Begin merging the histories backwards.
         // No two history steps (other than the current step) should have any overlap
-        List<Iterator<ArrayList<Record>>> histIters = histories.stream()
+        List<Iterator<HashMap<Node, Record>>> histIters = histories.stream()
             .map(hist -> hist.entireHistory.descendingIterator())
             .toList();
         
         // skip the current step 
-        histIters.stream().forEach(Iterator::next);
+       // histIters.stream().forEach(Iterator::next);
 
         while(!histIters.isEmpty())
         {
             // collect all record arrays into one massive record array
-            ArrayList<Record> mergedStep = histIters.stream()
-                .flatMap(iter -> iter.next().stream())
-                .collect(Collectors.toCollection(ArrayList::new));
+            HashMap<Node, Record> mergedStep = new HashMap<Node, Record>();
+            histIters.stream()
+                .map(iter -> iter.next())
+                .forEach(subMap -> mergedStep.putAll(subMap));
 
             // remove any iterators that have no more elements
             histIters.stream().filter(Iterator::hasNext);
                 
             mergedHistory.entireHistory.addFirst(mergedStep);
-            assert mergedStep.size() == (new HashSet<>(mergedStep)).size(): "Failed to merge step; History has been corrupted! \nboth histories contain the same record. This is invalid and should have resulted in a merge event.";
+            // assertion would need to be reworked 
+            //assert mergedStep.size() == (new HashSet<>(mergedStep)).size(): "Failed to merge step; History has been corrupted! \nboth histories contain the same record. This is invalid and should have resulted in a merge event.";
         }
 
         return mergedHistory;
     }
 
+
+    private class NodeHistoryIterator implements Iterator<List<Record>> {
+
+        private List<Node> currentStep;
+        private final Iterator<HashMap<Node, Record>> entireHistoryIterator;
+
+        public NodeHistoryIterator(Node rootNode)
+        {
+            currentStep = new ArrayList<>(1);
+            currentStep.add(rootNode);
+            entireHistoryIterator = entireHistory.descendingIterator();
+        }
+
+        @Override
+        public boolean hasNext() {
+            return entireHistoryIterator.hasNext();
+        }
+
+        @Override
+        public List<Record> next() 
+        {
+            HashMap<Node, Record> map = entireHistoryIterator.next(); // get the mapping from nodes to records
+            List<Record> records = currentStep.stream().map(map::get).toList(); // map nodes to records
+            currentStep = records.stream().flatMap(Record::getIncomingNodesStream).toList(); // get every node which transferred a signal to this node for the next iteration
+            return records;
+        }
+    
+        
+    }
+    
 }

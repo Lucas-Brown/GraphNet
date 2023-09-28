@@ -1,11 +1,15 @@
 package src.GraphNetwork.Global;
 
+import src.NetworkTraining.ErrorFunction;
+
 /**
  * A collection of data which modifies the training and firing rates of each node.
  * All nodes are given access to this data to use but modification should be strictly controlled by {@code GraphNetwork}
  */
 public class SharedNetworkData
 {
+
+    public final ErrorFunction errorFunc;
 
     /**
      * Datapoint limiter for the number of data points each distribution represents
@@ -28,8 +32,9 @@ public class SharedNetworkData
      */
     private double globalFiringRateMultiplier;
 
-    SharedNetworkData(int N_Limiter, double epsilon, double likelyhoodDecay, double globalFiringRateMultiplier)
+    SharedNetworkData(ErrorFunction errorFunc, int N_Limiter, double epsilon, double likelyhoodDecay, double globalFiringRateMultiplier)
     {
+        this.errorFunc = errorFunc;
         this.N_Limiter = N_Limiter;
         this.epsilon = epsilon;
         this.likelyhoodDecay = likelyhoodDecay;

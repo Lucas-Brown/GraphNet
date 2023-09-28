@@ -5,22 +5,9 @@ package src.GraphNetwork.Local;
  */
 public abstract class ActivationProbabilityDistribution {
     
-    /**
-     * The output signal strength
-     */
-    protected double strength;
-
     public abstract boolean shouldSend(double inputSignal, double factor);
-    public abstract double getOutputStrength();
-    protected abstract void updateDistribution(double backpropSignal, int N_Limiter);
+    protected abstract void reinforceDistribution(double valueToReinforce, int N_Limiter);
+    protected abstract void diminishDistribution(double valueToDiminish);
     public abstract double getMostLikelyValue();
-
-    /**
-     * Adjusts the signal strength towards a target value 
-     */
-    public void adjustSignalStrength(double target, double epsilon)
-    {
-        strength += (target - strength) * epsilon;
-    }
 
 }

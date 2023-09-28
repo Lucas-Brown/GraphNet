@@ -1,6 +1,7 @@
 package src.GraphNetwork.Global;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -9,14 +10,29 @@ import java.util.TreeSet;
 import src.GraphNetwork.Local.ActivationFunction;
 import src.GraphNetwork.Local.ActivationProbabilityDistribution;
 import src.GraphNetwork.Local.Arc;
+import src.GraphNetwork.Local.InputNode;
 import src.GraphNetwork.Local.Node;
+import src.GraphNetwork.Local.OutputNode;
+import src.NetworkTraining.ErrorFunction;
 import src.NetworkTraining.History;
 
 /**
  * A neural network using a probabalistic directed graph representation.
  * Training currently a work in progress
+ * 
+ * Current idea for training: 
+ * 1) record every node (and respective signal strength) that a chain of signals take
+ * 2) if that chain reaches an output node, there's 2 possible scenarios:
+ * 2a) the output node is supposed to have a value at that time, thus correcting the node is simply the process of backpropagation and reinforce firing probabilities
+ * 2b) the output node was not supposed to have a value at that time, thus all firing probabilities need to be diminished
+ * 3) if the chain doesn't reach the end, then the output node needs to send a signal back through the network to make a connection and create an error signal
+ * 
+ * In some scenarios, it might not matter the exact timing of when the signal reaches an output.
+ * In such cases, training may involve uniformly increasing the likelyhood of firing until any signal reaches an output.
  */
 public class GraphNetwork {
+
+    private boolean isTraining;
 
     /**
      * An object to encapsulate all network hyperparameters
@@ -26,7 +42,7 @@ public class GraphNetwork {
     /**
      * A list of all nodes within the graph network
      */
-    private ArrayList<Node> nodes;
+    private final ArrayList<Node> nodes;
 
     /**
      * A hash set containing every node that recieved a signal this step
@@ -41,7 +57,13 @@ public class GraphNetwork {
     /**
      * A hash set containing every node that recieved an error propogation signal this step
      */
-    private HashSet<Node> errorNodes;
+    private final HashSet<Node> errorNodes;
+
+    
+    /**
+     * A hash set containing every node that requires an error correction
+     */
+    private final HashSet<Node> nodesToCorrect;
 
     /**
      * A list of all history objects that are currently in use
@@ -55,12 +77,13 @@ public class GraphNetwork {
 
     public GraphNetwork()
     {
-        networkData = new SharedNetworkData(1000, 0.2f, 0.9f, 1f);
+        networkData = new SharedNetworkData(new ErrorFunction.MeanSquaredError(), 1000, 0.2f, 0.9f, 1f);
 
         nodes = new ArrayList<>();
         activeNodes = new HashSet<>();
         activeNextNodes = new HashSet<>();
         errorNodes = new HashSet<>();
+        nodesToCorrect = new HashSet<>();
         allActiveHistories = new ArrayList<>();
         historyMergers = new HashMap<>();
     }
@@ -70,11 +93,37 @@ public class GraphNetwork {
      * TODO: Potentially remove external addition of nodes and connections in favor of dynamically adding nodes/edges during training
      * @return The node that was created 
      */
-    public Node createNewNode(final ActivationFunction activationFunction)
+    public Node createHiddenNode(final ActivationFunction activationFunction)
     {
         Node n = new Node(this, networkData, activationFunction);
         nodes.add(n);
         return n;
+    }
+
+    public Node createInputNode(final ActivationFunction activationFunction)
+    {
+        Node n = new InputNode(this, networkData, activationFunction);
+        nodes.add(n);
+        return n;
+    }
+
+    public Node createOutputNode(final ActivationFunction activationFunction)
+    {
+        Node n = new OutputNode(this, networkData, activationFunction);
+        nodes.add(n);
+        return n;
+    }
+
+    public void addNewConnection(Node transmittingNode, Node recievingNode, ActivationProbabilityDistribution transferFunction)
+    {
+        //boolean doesConnectionExist = transmittingNode.DoesContainConnection(recievingNode);
+        //if(!doesConnectionExist)
+        //{
+        Arc connection = new Arc(this, transmittingNode, recievingNode, transferFunction);
+        transmittingNode.addOutgoingConnection(connection);
+        recievingNode.addIncomingConnection(connection);
+        //}
+        //return doesConnectionExist;
     }
 
     /**
@@ -87,6 +136,16 @@ public class GraphNetwork {
     public Signal createSignal(final Node sendingNode, final Node recievingNode, final double strength, History history)
     {
         activeNextNodes.add(recievingNode); // every time a signal is created, the network is notified of the reciever
+        if(isTraining & history == null & sendingNode == null) // null sending node indicates a user-inputted signal
+        {
+            history = new History();
+        }
+
+        if(history != null)
+        {
+            allActiveHistories.add(history);
+        }
+        
         return new Signal(sendingNode, recievingNode, strength, history);
     }
 
@@ -113,6 +172,7 @@ public class GraphNetwork {
      */
     public void step()
     {
+        isTraining = false;
         recieveSignals();
         transmitSignals();
     }
@@ -122,6 +182,7 @@ public class GraphNetwork {
      */
     public void trainingStep()
     {
+        isTraining = true;
         recieveSignals();
         
 
@@ -155,7 +216,7 @@ public class GraphNetwork {
      * @param historiesToMerge
      * @param alertingNode
      */
-    public void alertHistoryMerge(HashSet<History> historiesToMerge, Node alertingNode)
+    public void notifyHistoryMerge(HashSet<History> historiesToMerge, Node alertingNode)
     {
         // if the key already exists, the alerting node just needs to be added
         HashSet<Node> nodes = historyMergers.get(historiesToMerge); 
@@ -190,6 +251,16 @@ public class GraphNetwork {
             
             historyMergers.put(historiesToMerge, nodesInMerge);
         }
+    }
+
+    public void notifyErrorUpdateRequired(Node errorNode)
+    {
+        nodesToCorrect.add(errorNode);
+    }
+
+    public void notifyErrorUpdateRequired(Collection<Node> errorNodes)
+    {
+        nodesToCorrect.addAll(errorNodes);
     }
 
     /**
@@ -244,18 +315,6 @@ public class GraphNetwork {
         //errorNodes = errorNodes.stream().flatMap(Node::TransmitError).collect(Collectors.toCollection(HashSet::new));
     }
 
-
-    public void addNewConnection(Node transmittingNode, Node recievingNode, ActivationProbabilityDistribution transferFunction)
-    {
-        //boolean doesConnectionExist = transmittingNode.DoesContainConnection(recievingNode);
-        //if(!doesConnectionExist)
-        //{
-        Arc connection = new Arc(this, transmittingNode, recievingNode, transferFunction);
-        transmittingNode.addOutgoingConnection(connection);
-        recievingNode.addIncomingConnection(connection);
-        //}
-        //return doesConnectionExist;
-    }
 
     public String allActiveNodesString()
     {
