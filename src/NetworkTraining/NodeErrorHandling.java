@@ -37,13 +37,37 @@ public class NodeErrorHandling {
          */
         record.getOutgoingNodes().stream()
             .map(currentNode::getArc)
-            .forEach(arc -> arc.probDist.diminishDistribution(record.nodeSignalStrength));
+            .forEach(arc -> arc.probDist.diminishDistribution(record.nodeOutputStrength));
+    }
+
+    /**
+     * Reinforce the firing chance of all distributions in the history that reach the root node
+     * @param history
+     * @param rootNode
+     */
+    public static void reinforceFiringChances(History history, Node rootNode)
+    {
+        history.getNodeHistoryIterator(rootNode).forEachRemaining(recordList -> 
+        {
+            recordList.stream().forEach(NodeErrorHandling::diminishDistributionOfRecord);
+        });
+    }
+
+    public static void reinforceDistributionOfRecord(Record record)
+    {
+        Node currentNode = record.currentNode;
+        /*
+         * Find the arc associated with the transfer between the current node and the output node
+         * Then, diminish the probability of that node  
+         */
+        record.getOutgoingNodes().stream()
+            .map(currentNode::getArc)
+            .forEach(arc -> arc.probDist.reinforceDistribution(record.nodeOutputStrength, currentNode.networkData.getN_Limiter()));
     }
 
     /**
      * Compute the error of every node steming from the root node in the history.
      * All errors are assigned to the node and the network as alerted that each node should be queued to have its weights/biases updated.
-     * Lastly, the history is decimated to remove signals which only contribute to the root node.
      * @param history The entire history of the signal leading up to the root node
      * @param rootNode The root node which the signal reached
      * @param target The target value for this node
@@ -83,8 +107,6 @@ public class NodeErrorHandling {
 
             errorMap = nextErrorMap;
         }
-
-        history.decimateTimeline(rootNode);
     }
 
     public static void sendErrorSignal()

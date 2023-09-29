@@ -55,15 +55,16 @@ public class OutputNode extends Node {
             }
             else
             {
-                NodeErrorHandling.correctSignalValue(target);
+                NodeErrorHandling.computeErrorSignalsOfHistory(history, this, target);
+                NodeErrorHandling.reinforceFiringChances(history, this);
             }
+            history.decimateTimeline(this); // remove this timeline
         }
         else
         {
-            NodeErrorHandling.sendErrorSignal();
+            //NodeErrorHandling.sendErrorSignal();
         }
 
-        network.createSignal(null, this, target); 
         super.mergedSignalStrength = target;
     }
 
