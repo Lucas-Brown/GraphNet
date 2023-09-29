@@ -5,11 +5,11 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Objects;
 import java.util.Random;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-import java.util.stream.Stream;
 
 import src.NetworkTraining.History;
 import src.NetworkTraining.Record;
@@ -42,12 +42,12 @@ public class Node implements Comparable<Node>{
     /**
      * The network hyperparameters  
      */
-    protected final SharedNetworkData networkData;
+    public final SharedNetworkData networkData;
 
     /**
      * The activation function 
      */
-    protected final ActivationFunction activationFunction;
+    public final ActivationFunction activationFunction;
 
     /**
      * All incoming and outgoing node connections. 
@@ -80,17 +80,26 @@ public class Node implements Comparable<Node>{
     protected HashMap<Integer, Integer> orderedIDMap;
 
     /**
-     * Each possible combinations of inputs has a corresponding unique set of weights, biases, and error signals
+     * Each possible combinations of inputs has a corresponding unique set of weights and biases
      * both grow exponentially, which is bad, but every node should have relatively few connections 
      */
     private double[][] weights;
     private double[] biases;
+
+    /**
+     * every set of weights and biases can also have an associated error
+     */
     private double[] errorSignal;
 
     /**
-     * The signal strength for the current iteration
+     * The sum of all incoming signals
      */
     protected double mergedSignalStrength;
+
+    /**
+     * The signal strength that this node is outputting
+     */
+    protected double outputStrength;
 
     /**
      * Holds the accumulated error signal to this node for training.
@@ -186,6 +195,16 @@ public class Node implements Comparable<Node>{
     }
 
     /**
+     * Add the error to its corresponding weights and biases
+     * @param bitStr
+     * @param error
+     */
+    public void addToError(int bitStr, double error)
+    {
+        errorSignal[bitStr] += error;
+    }
+
+    /**
      * Adds another layer of depth to the weights and biases hyper array
      */
     private void appendWeightsAndBiases() 
@@ -212,22 +231,62 @@ public class Node implements Comparable<Node>{
             }
         }
     }
+
+    public double[] getWeights(int bitStr)
+    {
+        return weights[bitStr].clone(); // A shallow clone is okay here
+    }
+
+    /**
+     * Get the weight of a node through its node ID and the bit string of the corresponding combination of inputs
+     * @param bitStr
+     * @param nodeId
+     */
+    public double getWeightOfNode(int bitStr, int nodeId)
+    {
+        int nodeBitmask = orderedIDMap.get(nodeId);
+        assert (bitStr & nodeBitmask) > 0 : "bit string does not contain the index of the provided node ID";
+
+        // find the number of ocurrences of 1's up to the index of the node
+        int nodeIdx = 0;
+        int bitStrShifted = bitStr;
+        while(nodeBitmask > 0b1)
+        {
+            if((bitStrShifted & 0b1) == 1)
+            {
+                nodeIdx++;
+            }
+            bitStrShifted = bitStrShifted >> 1;
+            nodeBitmask = nodeBitmask >> 1;
+        }
+
+        return weights[bitStr][nodeIdx];
+    }
+
+    /**
+     * map every incoming node id to its corresponding value and combine.
+     * for example, an id of 6 may map to 0b0010 and an id of 2 may map to 0b1000
+     * binary_string will thus contain the value 0b1010
+     * @param incomingSignals
+     * @return a bit string indicating the weights, bias, and error index to use for the given set of signals
+     */
+    public int nodeSetToBinStr(List<Node> incomingNodes)
+    {
+        return incomingNodes.stream()
+            .mapToInt(node -> orderedIDMap.get(node.id)) 
+            .reduce(0, (result, id_bit)  -> result &= id_bit); // effectively the same as a sum in this case
+    }
     
     /**
      * Compute the merged signal strength of a set of incoming signals
      * @param incomingSignals 
      * @return
      */
-    private double computeMergedSignalStrength(ArrayList<Signal> incomingSignals)
+    private double computeMergedSignalStrength(List<Signal> incomingSignals)
     {
-        // map every recieving node id to its corresponding value and combine.
-        // for example, an id of 6 may map to 0b0010 and an id of 2 may map to 0b1000
-        // binary_string will thus contain the value 0b1010
-        int binary_string = incomingSignals.stream()
-            .mapToInt(signal -> orderedIDMap.get(signal.recievingNode.id)) 
-            .reduce(0, (result, id_bit)  -> result &= id_bit); // effectively the same as a sum in this case
 
         // Use the binary_string to select which set of weights to apply 
+        int binary_string = nodeSetToBinStr(incomingSignals.stream().map(Signal::getSendingNode).toList());
         double[] input_weights = weights[binary_string];
 
         double strength = IntStream.range(0, input_weights.length)
@@ -236,14 +295,14 @@ public class Node implements Comparable<Node>{
             
         strength += biases[binary_string];
 
-        return activationFunction.activator(strength);
+        return strength;
     }
+
 
     private double computeMergedSignalStrength() 
     {
         return computeMergedSignalStrength(incomingSignals);
     }
-
 
     /**
      * Create a {@code Record} of the recieved and sent signals
@@ -254,7 +313,8 @@ public class Node implements Comparable<Node>{
         return new Record(this, 
         incomingSignals.stream().map(Signal::getSendingNode).toList(),
         outgoingSignals.stream().map(Signal::getRecievingNode).toList(),
-        mergedSignalStrength); 
+        mergedSignalStrength,
+        outputStrength); 
     }
 
 
@@ -311,6 +371,7 @@ public class Node implements Comparable<Node>{
 
         collectHistoriesAndAlertMerge();
         mergedSignalStrength = computeMergedSignalStrength();
+        outputStrength = activationFunction.activator(mergedSignalStrength);
     }
 
     public void attemptSendOutgoingSignals()
@@ -325,7 +386,7 @@ public class Node implements Comparable<Node>{
         Collections.shuffle(outgoing); // shuffle to ensure no connection has an order-dependent advantage
         for(Arc connection : outgoing)
         {
-            connection.sendSignal(mergedSignalStrength, factor, history);
+            connection.sendSignal(outputStrength, factor, history);
             factor *= decay;
         };
     }
@@ -333,7 +394,7 @@ public class Node implements Comparable<Node>{
     @Override
     public String toString()
     {
-        return "node " + Integer.toString(id) + ": " + Double.toString(mergedSignalStrength);
+        return "node " + Integer.toString(id) + ": " + Double.toString(outputStrength);
     }
 
     @Override

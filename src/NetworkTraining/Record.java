@@ -28,16 +28,22 @@ public class Record {
     final ArrayList<Node> outgoingNodes;
     
     /**
-     * The output signal strength of the {@link currentNode} at the recorded time step
+     * The merged signal strength of the {@link currentNode} at the recorded time step
      */
     public final double nodeSignalStrength;
 
-    public Record(Node currentNode, Collection<Node> incomingNodes, Collection<Node> outgoingNodes, double nodeSignalStrength)
+    /**
+     * The output signal strength of the {@link currentNode} at the recorded time step
+     */
+    public final double nodeOutputStrength;
+
+    public Record(Node currentNode, Collection<Node> incomingNodes, Collection<Node> outgoingNodes, double nodeSignalStrength, double nodeOutputStrength)
     {
         this.currentNode = currentNode;
         this.incomingNodes = new ArrayList<>(incomingNodes);
         this.outgoingNodes = new ArrayList<>(outgoingNodes);
         this.nodeSignalStrength = nodeSignalStrength;
+        this.nodeOutputStrength = nodeOutputStrength;
     }
     
     public Node getCurrentNode() {
