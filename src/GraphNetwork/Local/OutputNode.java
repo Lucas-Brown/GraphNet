@@ -14,22 +14,13 @@ public class OutputNode extends Node {
     }
 
     /**
-     * Get whether this node is active (i.e. has a valid value)
-     * @return
-     */
-    public boolean isActive()
-    {
-        return !incomingSignals.isEmpty();
-    }
-
-    /**
      * Get the value of this node
      * The caller should first verify if this node is active using {@code isActive} or get the value using {@code getValueOrNull}
      * @return
      */
     public double getValue()
     {
-        return mergedSignalStrength;
+        return outputStrength;
     }
 
     /**
@@ -37,7 +28,7 @@ public class OutputNode extends Node {
      */
     public Double getValueOrNull()
     {
-        return isActive() ? mergedSignalStrength : null;
+        return isActive() ? outputStrength : null;
     }
 
     /**
@@ -47,7 +38,7 @@ public class OutputNode extends Node {
      */
     public void correctOutputValue(Double target)
     {
-        if(isActive())
+        if(isActive() && history != null)
         {
             if(target == null)
             {
@@ -65,7 +56,7 @@ public class OutputNode extends Node {
             //NodeErrorHandling.sendErrorSignal();
         }
 
-        super.mergedSignalStrength = target;
+        //outputStrength = target; // TODO: either enforce no outgoing connections from output nodes or set strength BEFORE signals get sent
     }
 
     

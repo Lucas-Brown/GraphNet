@@ -4,10 +4,7 @@ import java.util.AbstractMap.SimpleEntry;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map.Entry;
-import java.util.stream.Collectors;
 
-import src.GraphNetwork.Global.GraphNetwork;
 import src.GraphNetwork.Local.Node;
 
 /**
@@ -66,8 +63,7 @@ public class NodeErrorHandling {
     }
 
     /**
-     * Compute the error of every node steming from the root node in the history.
-     * All errors are assigned to the node and the network as alerted that each node should be queued to have its weights/biases updated.
+     * Computes the error of every node steming from the root node in the history then updates the weights and biases
      * @param history The entire history of the signal leading up to the root node
      * @param rootNode The root node which the signal reached
      * @param target The target value for this node
@@ -78,20 +74,22 @@ public class NodeErrorHandling {
         // cannot use rootNode.errorSignal since it is an accumulative arror 
         HashMap<Node, IntegerDoublePair> errorMap = new HashMap<>(); 
         Iterator<List<Record>> histIter = history.getNodeHistoryIterator(rootNode);
-        GraphNetwork gn = rootNode.network;
         
         // Compute the error due to the root node
-        Record rootRecord = histIter.next().get(0); // This should only have 1 value in the list
+        List<Record> recordList = histIter.next();
+        List<Record> nextRecords1 = histIter.next();
+
+        Record rootRecord = recordList.get(0); // This should only have 1 value in the list
         int bitStr = rootNode.nodeSetToBinStr(rootRecord.incomingNodes);
         double error = getErrorDerivativeOfRoot(rootRecord, target); // get the error signal of the node
         errorMap.put(rootNode, new IntegerDoublePair(bitStr, error));
-        rootNode.addToError(bitStr, error);
-        gn.notifyErrorUpdateRequired(rootNode);
+        rootNode.updateWeightsAndBias(bitStr, nextRecords1, error);
 
+        recordList = nextRecords1;
         // compute the error for all remaining nodes
         while(histIter.hasNext())
         {
-            List<Record> recordList = histIter.next();
+            final List<Record> nextRecords = histIter.next();
             final HashMap<Node, IntegerDoublePair> finalErrorMap = errorMap; // must be final or effectively final
             HashMap<Node, IntegerDoublePair> nextErrorMap = new HashMap<>(recordList.size());
 
@@ -101,11 +99,12 @@ public class NodeErrorHandling {
                 .forEach(entry -> 
                 {
                     Node node = entry.getKey();
-                    gn.notifyErrorUpdateRequired(node); 
+                    rootNode.updateWeightsAndBias(bitStr, nextRecords, error);
                     nextErrorMap.put(node, entry.getValue());
                 });
 
             errorMap = nextErrorMap;
+            recordList = nextRecords;
         }
     }
 

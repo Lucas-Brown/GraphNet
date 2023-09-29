@@ -59,12 +59,6 @@ public class GraphNetwork {
      */
     private final HashSet<Node> errorNodes;
 
-    
-    /**
-     * A hash set containing every node that requires an error correction
-     */
-    private final HashSet<Node> nodesToCorrect;
-
     /**
      * A list of all history objects that are currently in use
      */
@@ -83,7 +77,6 @@ public class GraphNetwork {
         activeNodes = new HashSet<>();
         activeNextNodes = new HashSet<>();
         errorNodes = new HashSet<>();
-        nodesToCorrect = new HashSet<>();
         allActiveHistories = new ArrayList<>();
         historyMergers = new HashMap<>();
     }
@@ -100,16 +93,16 @@ public class GraphNetwork {
         return n;
     }
 
-    public Node createInputNode(final ActivationFunction activationFunction)
+    public InputNode createInputNode(final ActivationFunction activationFunction)
     {
-        Node n = new InputNode(this, networkData, activationFunction);
+        InputNode n = new InputNode(this, networkData, activationFunction);
         nodes.add(n);
         return n;
     }
 
-    public Node createOutputNode(final ActivationFunction activationFunction)
+    public OutputNode createOutputNode(final ActivationFunction activationFunction)
     {
-        Node n = new OutputNode(this, networkData, activationFunction);
+        OutputNode n = new OutputNode(this, networkData, activationFunction);
         nodes.add(n);
         return n;
     }
@@ -136,7 +129,7 @@ public class GraphNetwork {
     public Signal createSignal(final Node sendingNode, final Node recievingNode, final double strength, History history)
     {
         activeNextNodes.add(recievingNode); // every time a signal is created, the network is notified of the reciever
-        if(isTraining & history == null & sendingNode == null) // null sending node indicates a user-inputted signal
+        if(history == null & sendingNode == null) // null sending node indicates a user-inputted signal
         {
             history = new History();
         }
@@ -172,7 +165,6 @@ public class GraphNetwork {
      */
     public void step()
     {
-        isTraining = false;
         recieveSignals();
         transmitSignals();
     }
@@ -182,14 +174,16 @@ public class GraphNetwork {
      */
     public void trainingStep()
     {
-        isTraining = true;
+        deactivateNodes();
+        advanceHistory();
         recieveSignals();
         
 
 
-        mergeAllHistories();
         transmitSignals();
-        advanceHistory();
+        
+        gatherRecords();
+        mergeAllHistories();
     }
 
     /**
@@ -198,8 +192,8 @@ public class GraphNetwork {
     public void recieveSignals()
     {
         activeNodes = activeNextNodes;
-        activeNodes.forEach(Node::acceptIncomingSignals);
         activeNextNodes = new HashSet<>();
+        activeNodes.forEach(Node::acceptIncomingSignals);
     }
 
     /**
@@ -209,6 +203,11 @@ public class GraphNetwork {
     {
         // Will automatically collect generated signals in {@code activeNextNodes}
         activeNodes.stream().forEach(Node::attemptSendOutgoingSignals);
+    }
+
+    public void deactivateNodes()
+    {
+        activeNodes.stream().forEach(Node::deactivate);
     }
 
     /**
@@ -253,16 +252,6 @@ public class GraphNetwork {
         }
     }
 
-    public void notifyErrorUpdateRequired(Node errorNode)
-    {
-        nodesToCorrect.add(errorNode);
-    }
-
-    public void notifyErrorUpdateRequired(Collection<Node> errorNodes)
-    {
-        nodesToCorrect.addAll(errorNodes);
-    }
-
     /**
      * Merge every history that has been queued
      */
@@ -271,7 +260,7 @@ public class GraphNetwork {
         /**
          * I'm anticipating that each merger might take a while as they can get pretty big...
          */
-        historyMergers.keySet().parallelStream()
+        historyMergers.keySet().stream()
             .forEach(historiesToMerge -> 
             {
                 History mergedHistory = History.mergeHistories(historiesToMerge); // Merge the histories
@@ -284,11 +273,10 @@ public class GraphNetwork {
     }
 
     /**
-     * collect all records and step all histories 
+     * Step all histories 
      */
     public void advanceHistory()
     {
-        gatherRecords();
         allActiveHistories.stream().forEach(History::step);
     }
 

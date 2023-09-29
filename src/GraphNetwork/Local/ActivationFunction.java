@@ -12,7 +12,13 @@ public interface ActivationFunction {
 	public abstract double derivative(double x);
 	public abstract double inverse(double x);
 
-    public static class Linear implements ActivationFunction{ 
+    public static final Linear LINEAR = new Linear(); 
+    public static final Sigmoid SIGMOID = new Sigmoid(); 
+    public static final TanH TANH = new TanH(); 
+    public static final ArcTan ARCTAN = new ArcTan(); 
+    public static final SoftSign SOFTSIGN = new SoftSign(); 
+
+    static class Linear implements ActivationFunction{ 
 
         @Override
         public double activator(double x) {
@@ -31,7 +37,7 @@ public interface ActivationFunction {
         
     }
     
-    public static class Sigmoid implements ActivationFunction{ // (0, 1)
+    static class Sigmoid implements ActivationFunction{ // (0, 1)
         
         @Override
         public double activator(double x) {
@@ -51,7 +57,7 @@ public interface ActivationFunction {
         
     }
     
-    public static class TanH implements ActivationFunction{ // (-1, 1)
+    static class TanH implements ActivationFunction{ // (-1, 1)
 
         @Override
         public double activator(double x) {
@@ -71,7 +77,7 @@ public interface ActivationFunction {
         
     }
     
-    public static class ArcTan implements ActivationFunction{ // ( -pi/2, pi/2)
+    static class ArcTan implements ActivationFunction{ // ( -pi/2, pi/2)
         
         @Override
         public double activator(double x) {
@@ -90,7 +96,7 @@ public interface ActivationFunction {
         
     }
     
-    public static class SoftSign implements ActivationFunction{ // (-1, 1)
+    static class SoftSign implements ActivationFunction{ // (-1, 1)
         
         @Override
         public double activator(double x) {

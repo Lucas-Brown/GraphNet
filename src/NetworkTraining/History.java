@@ -7,6 +7,7 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 import src.GraphNetwork.Local.Node;
@@ -58,6 +59,7 @@ public class History {
      */
     public void step()
     {
+        currentRecords.keySet().stream().forEach(node -> node.setHistory(null));
         currentRecords = new HashMap<>();
         entireHistory.add(currentRecords);
     }
@@ -139,7 +141,7 @@ public class History {
                 .forEach(subMap -> mergedStep.putAll(subMap));
 
             // remove any iterators that have no more elements
-            histIters.stream().filter(Iterator::hasNext);
+            histIters = histIters.stream().filter(Iterator::hasNext).toList();
                 
             mergedHistory.entireHistory.addFirst(mergedStep);
             // assertion would need to be reworked 
@@ -172,7 +174,10 @@ public class History {
         {
             HashMap<Node, Record> map = entireHistoryIterator.next(); // get the mapping from nodes to records
             List<Record> records = currentStep.stream().map(map::get).toList(); // map nodes to records
-            currentStep = records.stream().flatMap(Record::getIncomingNodesStream).toList(); // get every node which transferred a signal to this node for the next iteration
+            currentStep = records.stream()
+                .flatMap(Record::getIncomingNodesStream)
+                .filter(Objects::nonNull)
+                .toList(); // get every node which transferred a signal to this node for the next iteration
             return records;
         }
     

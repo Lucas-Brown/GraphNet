@@ -5,6 +5,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
 import java.util.Random;
@@ -33,6 +34,11 @@ public class Node implements Comparable<Node>{
      * A unique identifying number for this node.
      */
     public final int id;
+
+    /**
+     * Stores whether this node is active in the current step
+     */
+    private boolean isActive;
 
     /**
      * The network that this node belongs to
@@ -77,7 +83,7 @@ public class Node implements Comparable<Node>{
     /**
      * Maps all incoming node ID's to an int from 0 to the number of incoming nodes -1
      */
-    protected HashMap<Integer, Integer> orderedIDMap;
+    protected final HashMap<Integer, Integer> orderedIDMap;
 
     /**
      * Each possible combinations of inputs has a corresponding unique set of weights and biases
@@ -85,11 +91,6 @@ public class Node implements Comparable<Node>{
      */
     private double[][] weights;
     private double[] biases;
-
-    /**
-     * every set of weights and biases can also have an associated error
-     */
-    private double[] errorSignal;
 
     /**
      * The sum of all incoming signals
@@ -100,11 +101,6 @@ public class Node implements Comparable<Node>{
      * The signal strength that this node is outputting
      */
     protected double outputStrength;
-
-    /**
-     * Holds the accumulated error signal to this node for training.
-     */
-    protected double accumulatedError;
 
     public Node(final GraphNetwork network, final SharedNetworkData networkData, final ActivationFunction activationFunction)
     {
@@ -117,9 +113,25 @@ public class Node implements Comparable<Node>{
         incomingSignals = new ArrayList<>();
         outgoingSignals = new ArrayList<>();
         errorSignals = new ArrayList<>();
+        orderedIDMap = new HashMap<>();
         weights = new double[1][1];
-        biases = new double[0];
-        accumulatedError = 0;
+        biases = new double[1];
+        weights[0] = new double[0];
+        isActive = false;
+    }
+
+    /**
+     * Get whether this node is active (i.e. has a valid value)
+     * @return
+     */
+    public boolean isActive()
+    {
+        return isActive;
+    }
+
+    public void deactivate()
+    {
+        isActive = false;
     }
 
     /**
@@ -195,23 +207,13 @@ public class Node implements Comparable<Node>{
     }
 
     /**
-     * Add the error to its corresponding weights and biases
-     * @param bitStr
-     * @param error
-     */
-    public void addToError(int bitStr, double error)
-    {
-        errorSignal[bitStr] += error;
-    }
-
-    /**
      * Adds another layer of depth to the weights and biases hyper array
      */
     private void appendWeightsAndBiases() 
     {
         Random rand = new Random();
         final int old_size = biases.length;
-        final int new_size = 1 << orderedIDMap.size();
+        final int new_size = old_size * 2;
 
         // the first half doesn't need to be changed
         biases = Arrays.copyOf(biases, new_size);
@@ -223,12 +225,28 @@ public class Node implements Comparable<Node>{
             biases[i] = rand.nextDouble(); 
 
             // populate the weights array
-            int count = weights[i].length + 1;
+            int count = weights[i - old_size].length + 1;
             weights[i] = new double[count];
             for(int j = 0; j < count; j++)
             {
                 weights[i][j] = rand.nextDouble();
             }
+        }
+    }
+
+    public void updateWeightsAndBias(int bitStr, List<Record> recordsOfIncomingSignals, double error)
+    {
+        // sorting by id ensure that the weights are applied to the correct node/signal
+        incomingSignals.sort((s1, s2) -> Integer.compare(s1.recievingNode.id, s2.recievingNode.id)); 
+
+        // compute delta to update the weights and bias
+        double delta = -networkData.getEpsilon() * error;
+        biases[bitStr] += delta;
+
+        Iterator<Record> recordIter = recordsOfIncomingSignals.iterator();
+        for(int weight_idx = 0; weight_idx < weights[bitStr].length; weight_idx++)
+        {
+            weights[bitStr][weight_idx] += delta * recordIter.next().nodeOutputStrength;
         }
     }
 
@@ -367,11 +385,13 @@ public class Node implements Comparable<Node>{
     public void acceptIncomingSignals()
     {
         assert !incomingSignals.isEmpty() : "handleIncomingSignals should never be called if no signals have been recieved.";
+        isActive = true;
         incomingSignals.sort((s1, s2) -> Integer.compare(s1.recievingNode.id, s2.recievingNode.id)); // sorting by id ensure that the weights are applied to the correct node/signal
 
         collectHistoriesAndAlertMerge();
         mergedSignalStrength = computeMergedSignalStrength();
         outputStrength = activationFunction.activator(mergedSignalStrength);
+        incomingSignals.clear();
     }
 
     public void attemptSendOutgoingSignals()
@@ -386,8 +406,10 @@ public class Node implements Comparable<Node>{
         Collections.shuffle(outgoing); // shuffle to ensure no connection has an order-dependent advantage
         for(Arc connection : outgoing)
         {
-            connection.sendSignal(outputStrength, factor, history);
-            factor *= decay;
+            if(connection.sendSignal(outputStrength, factor, history) != null)
+            {
+                factor *= decay;
+            }
         };
     }
 

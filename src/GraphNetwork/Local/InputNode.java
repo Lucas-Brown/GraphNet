@@ -2,6 +2,7 @@ package src.GraphNetwork.Local;
 
 import src.GraphNetwork.Global.GraphNetwork;
 import src.GraphNetwork.Global.SharedNetworkData;
+import src.GraphNetwork.Global.Signal;
 
 /**
  * A node which can be given a value to propagate as a signal 
@@ -20,9 +21,13 @@ public class InputNode extends Node {
     public void recieveInputSignal(double value)
     {
         // recieving a signal from null indicates a user-input 
-        network.createSignal(null, this, value); 
-        super.mergedSignalStrength = value;
+        Signal signal = network.createSignal(null, this, value); 
+        history = signal.history;
+        outputStrength = value;
     }
+
+    @Override
+    public void acceptIncomingSignals(){}
 
     @Override
     public boolean addIncomingConnection(Arc connection)
