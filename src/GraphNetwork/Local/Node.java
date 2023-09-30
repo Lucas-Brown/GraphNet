@@ -129,6 +129,11 @@ public class Node implements Comparable<Node>{
         return isActive;
     }
 
+    public void activate()
+    {
+        isActive = true;
+    }
+
     public void deactivate()
     {
         isActive = false;
@@ -204,7 +209,7 @@ public class Node implements Comparable<Node>{
     void transmittingSignal(Signal signal)
     {
         outgoingSignals.add(signal);
-    }
+    } 
 
     /**
      * Adds another layer of depth to the weights and biases hyper array
@@ -385,7 +390,6 @@ public class Node implements Comparable<Node>{
     public void acceptIncomingSignals()
     {
         assert !incomingSignals.isEmpty() : "handleIncomingSignals should never be called if no signals have been recieved.";
-        isActive = true;
         incomingSignals.sort((s1, s2) -> Integer.compare(s1.recievingNode.id, s2.recievingNode.id)); // sorting by id ensure that the weights are applied to the correct node/signal
 
         collectHistoriesAndAlertMerge();
@@ -394,12 +398,11 @@ public class Node implements Comparable<Node>{
         incomingSignals.clear();
     }
 
+    /**
+     * Attempt to send a signal out to every outward connecting neuron
+     */
     public void attemptSendOutgoingSignals()
     {
-        /**
-         * Attempt to send a signal out to every outward connecting neuron
-         * @return a stream containing every node that was sent a signal
-         */
         double factor = 1f;
         final double decay = networkData.getLikelyhoodDecay();
 

@@ -8,7 +8,7 @@ public class Signal
     public final Node sendingNode;
     public final Node recievingNode;
     public final double strength;
-    public History history;
+    public final History history;
     
     Signal(final Node sendingNode, final Node recievingNode, final double strength)
     {

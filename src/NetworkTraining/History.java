@@ -176,7 +176,6 @@ public class History {
             List<Record> records = currentStep.stream().map(map::get).toList(); // map nodes to records
             currentStep = records.stream()
                 .flatMap(Record::getIncomingNodesStream)
-                .filter(Objects::nonNull)
                 .toList(); // get every node which transferred a signal to this node for the next iteration
             return records;
         }

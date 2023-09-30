@@ -69,6 +69,16 @@ public class GraphNetwork {
      */
     private final HashMap<HashSet<History>, HashSet<Node>> historyMergers;
 
+    /**
+     * An operation which is to be defined by the user to set the values of input nodes
+     */
+    private Runnable inputOperation;
+    
+    /**
+     * An operation which is to be defined by the user to correct the values of output nodes during training or get output data
+     */
+    private Runnable outputOperation;
+
     public GraphNetwork()
     {
         networkData = new SharedNetworkData(new ErrorFunction.MeanSquaredError(), 1000, 0.2f, 0.9f, 1f);
@@ -79,6 +89,18 @@ public class GraphNetwork {
         errorNodes = new HashSet<>();
         allActiveHistories = new ArrayList<>();
         historyMergers = new HashMap<>();
+        inputOperation = () -> {};
+        outputOperation = () -> {};
+    }
+
+    public void setInputOperation(Runnable inputOperation)
+    {
+        this.inputOperation = inputOperation;
+    }
+
+    public void setOutputOperation(Runnable outputOperation)
+    {
+        this.outputOperation = outputOperation;
     }
 
     /**
@@ -165,7 +187,9 @@ public class GraphNetwork {
      */
     public void step()
     {
+        inputOperation.run();
         recieveSignals();
+        outputOperation.run();
         transmitSignals();
     }
 
@@ -174,16 +198,18 @@ public class GraphNetwork {
      */
     public void trainingStep()
     {
-        deactivateNodes();
-        advanceHistory();
+        
+        inputOperation.run();
         recieveSignals();
-        
 
-
-        transmitSignals();
-        
-        gatherRecords();
         mergeAllHistories();
+        
+        transmitSignals();
+        gatherRecords();
+        outputOperation.run();
+
+        advanceHistory();
+        deactivateNodes();
     }
 
     /**
@@ -193,6 +219,7 @@ public class GraphNetwork {
     {
         activeNodes = activeNextNodes;
         activeNextNodes = new HashSet<>();
+        activeNodes.forEach(Node::activate);
         activeNodes.forEach(Node::acceptIncomingSignals);
     }
 
@@ -278,6 +305,7 @@ public class GraphNetwork {
     public void advanceHistory()
     {
         allActiveHistories.stream().forEach(History::step);
+        allActiveHistories.clear();
     }
 
     public void gatherRecords()
