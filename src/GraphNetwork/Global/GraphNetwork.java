@@ -81,7 +81,8 @@ public class GraphNetwork {
 
     public GraphNetwork()
     {
-        networkData = new SharedNetworkData(new ErrorFunction.MeanSquaredError(), 1000, 0.2f, 0.9f, 1f);
+        // TODO: remove hardcoding
+        networkData = new SharedNetworkData(new ErrorFunction.MeanSquaredError(), 2, 1, 0.5f, 0.9f, 1f);
 
         nodes = new ArrayList<>();
         activeNodes = new HashSet<>();
@@ -191,6 +192,7 @@ public class GraphNetwork {
         recieveSignals();
         outputOperation.run();
         transmitSignals();
+        deactivateNodes();
     }
 
     /**

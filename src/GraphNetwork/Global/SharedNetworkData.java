@@ -12,9 +12,14 @@ public class SharedNetworkData
     public final ErrorFunction errorFunc;
 
     /**
-     * Datapoint limiter for the number of data points each distribution represents
+     * The weight of adding new data points to the distribution 
      */
-    private int N_Limiter; 
+    private double reinforcmentRate;
+
+    /**
+     * The weight of removing data points from a distribution 
+     */
+    private double diminishmentRate;
 
     /**
      * Step size for adjusting the output values of nodes
@@ -32,17 +37,24 @@ public class SharedNetworkData
      */
     private double globalFiringRateMultiplier;
 
-    SharedNetworkData(ErrorFunction errorFunc, int N_Limiter, double epsilon, double likelyhoodDecay, double globalFiringRateMultiplier)
+    SharedNetworkData(ErrorFunction errorFunc, double reinforcmentRate, double diminishmentRate, double epsilon, double likelyhoodDecay, double globalFiringRateMultiplier)
     {
         this.errorFunc = errorFunc;
-        this.N_Limiter = N_Limiter;
+        this.reinforcmentRate = reinforcmentRate;
+        this.diminishmentRate = diminishmentRate;
         this.epsilon = epsilon;
         this.likelyhoodDecay = likelyhoodDecay;
         this.globalFiringRateMultiplier = globalFiringRateMultiplier;
     }
 
-    public int getN_Limiter() {
-        return N_Limiter;
+    public double getReinforcmentRate()
+    {
+        return reinforcmentRate;
+    }
+
+    public double getDiminishmentRate()
+    {
+        return diminishmentRate;
     }
 
     public double getEpsilon() {

@@ -15,12 +15,15 @@ public class SwitchNet {
     private static InputNode n1;
     private static OutputNode n2;
 
+    private static final double tollerance = 0.01;
+    private static int count = 0;
+
     public static void main(String[] args) {
         GraphNetwork net = new GraphNetwork();
 
         n1 = net.createInputNode(ActivationFunction.SIGMOID);
         n2 = net.createOutputNode(ActivationFunction.SIGMOID);
-        net.addNewConnection(n1, n2, new BellCurveDistribution(1, 1));
+        net.addNewConnection(n1, n2, new BellCurveDistribution(1.2, 1, 1000));
 
         net.setInputOperation(SwitchNet::inputOperation);
         net.setOutputOperation(SwitchNet::outputOperation);
@@ -31,20 +34,22 @@ public class SwitchNet {
             // Transfer all signals
             net.trainingStep();
 
-            System.out.println(net.allActiveNodesString());
+            //System.out.println(net.allActiveNodesString());
 
 
         }
 
         System.out.println("\nTRAINING STOP\n");
 
-        net.setOutputOperation(null);
+        net.setOutputOperation(SwitchNet::scoringOperation);
 
-        for (int i = 0; i < 100; i++) {
+        for (int i = 0; i < 10000; i++) {
             net.step();
 
-            System.out.println(net.allActiveNodesString());
+            //System.out.println(net.allActiveNodesString());
         }
+
+        System.out.println("Score = " + count);
 
     }
 
@@ -56,6 +61,25 @@ public class SwitchNet {
     public static void outputOperation()
     {
         n2.correctOutputValue(alternating ? 1.0 : null);
+    }
+
+    public static void scoringOperation()
+    {
+        if(alternating)
+        {
+            if(n2.isActive() && Math.abs(n2.getValue() - 1) < tollerance)
+            {
+                count++;
+            }
+        }
+        else
+        {
+            if(!n2.isActive())
+            {
+                count++;
+            }
+        }
+            
     }
 
 }

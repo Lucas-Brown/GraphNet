@@ -34,7 +34,7 @@ public class NodeErrorHandling {
          */
         record.getOutgoingNodes().stream()
             .map(currentNode::getArc)
-            .forEach(arc -> arc.probDist.diminishDistribution(record.nodeOutputStrength));
+            .forEach(arc -> arc.probDist.diminishDistribution(record.nodeOutputStrength, currentNode.networkData.getDiminishmentRate()));
     }
 
     /**
@@ -59,7 +59,7 @@ public class NodeErrorHandling {
          */
         record.getOutgoingNodes().stream()
             .map(currentNode::getArc)
-            .forEach(arc -> arc.probDist.reinforceDistribution(record.nodeOutputStrength, currentNode.networkData.getN_Limiter()));
+            .forEach(arc -> arc.probDist.reinforceDistribution(record.nodeOutputStrength, currentNode.networkData.getReinforcmentRate()));
     }
 
     /**

@@ -17,16 +17,18 @@ public class BellCurveDistribution extends ActivationProbabilityDistribution {
      */
     private double mean, standardDeviation;
 
-    private int N;
+    private double N;
+    private double N_Limiter;
 
     /**
      * @param mean mean value of the normal distribution
      * @param standardDeviation standard deviation of the normal distribution
      */
-    public BellCurveDistribution(double mean, double standardDeviation)
+    public BellCurveDistribution(double mean, double standardDeviation, double N_Limiter)
     {
         this.mean = mean;
         this.standardDeviation = standardDeviation;
+        this.N_Limiter = N_Limiter;
         N = 100;
     }
 
@@ -47,10 +49,10 @@ public class BellCurveDistribution extends ActivationProbabilityDistribution {
      * @param N_Limiter The fixed number of data points in the distribution 
      */
     @Override
-    public void reinforceDistribution(double valueToReinforce, int N_Limiter)
+    public void reinforceDistribution(double valueToReinforce, double reinforcmentRate)
     {
         // Useful constants
-        final double Np1Inv = 1f/(N + 1f);
+        final double Np1Inv = 1.0/(N + reinforcmentRate);
         final double distanceFromMean = valueToReinforce - mean;
 
         // Compute the updated variance (standard deviation)
@@ -60,9 +62,10 @@ public class BellCurveDistribution extends ActivationProbabilityDistribution {
         // Compute the new mean value 
         mean = (N*mean + valueToReinforce)*Np1Inv;   
 
-        if(N <= N_Limiter)
+        N += reinforcmentRate;
+        if(N > N_Limiter)
         {
-            N++;
+            N = N_Limiter;
         } 
     }
 
@@ -72,10 +75,10 @@ public class BellCurveDistribution extends ActivationProbabilityDistribution {
      * @param N The fixed number of data points in the distribution 
      */
     @Override
-    public void diminishDistribution(double valueToDiminish)
+    public void diminishDistribution(double valueToDiminish, double diminishmentRate)
     {
         // Useful constants
-        final double Nm1Inv = 1f/(N - 1f);
+        final double Nm1Inv = 1.0/(N - diminishmentRate);
         final double distanceFromMean = valueToDiminish - mean;
 
         // Compute the updated variance (standard deviation)
@@ -85,9 +88,10 @@ public class BellCurveDistribution extends ActivationProbabilityDistribution {
         // Compute the new mean value 
         mean = (N*mean - valueToDiminish)*Nm1Inv;   
 
-        if(N > 1)
+        N -= diminishmentRate;
+        if(N < 1)
         {
-            //N--;
+            N = 1;
         } 
     }
 
