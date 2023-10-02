@@ -26,7 +26,7 @@ public class SwitchNet {
         net.setOutputOperation(SwitchNet::outputOperation);
 
 
-        for (int i = 0; i < 100; i++) {
+        for (int i = 0; i < 100000; i++) {
 
             // Transfer all signals
             net.trainingStep();
@@ -38,8 +38,10 @@ public class SwitchNet {
 
         System.out.println("\nTRAINING STOP\n");
 
+        net.setOutputOperation(null);
+
         for (int i = 0; i < 100; i++) {
-            n1.recieveInputSignal(0);
+            net.step();
 
             System.out.println(net.allActiveNodesString());
         }
@@ -48,12 +50,12 @@ public class SwitchNet {
 
     public static void inputOperation()
     {
-        n1.recieveInputSignal(0);
+        n1.recieveInputSignal((alternating = !alternating) ? 0 : 1);
     }
 
     public static void outputOperation()
     {
-        n2.correctOutputValue((alternating = !alternating) ? 1.0 : null);
+        n2.correctOutputValue(alternating ? 1.0 : null);
     }
 
 }

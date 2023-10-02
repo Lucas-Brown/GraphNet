@@ -62,7 +62,7 @@ public class GraphNetwork {
     /**
      * A list of all history objects that are currently in use
      */
-    private final ArrayList<History> allActiveHistories;
+    private final HashSet<History> allActiveHistories;
 
     /**
      * maps a set of histories to all the nodes that are linked through their histories
@@ -87,7 +87,7 @@ public class GraphNetwork {
         activeNodes = new HashSet<>();
         activeNextNodes = new HashSet<>();
         errorNodes = new HashSet<>();
-        allActiveHistories = new ArrayList<>();
+        allActiveHistories = new HashSet<>();
         historyMergers = new HashMap<>();
         inputOperation = () -> {};
         outputOperation = () -> {};
@@ -95,12 +95,12 @@ public class GraphNetwork {
 
     public void setInputOperation(Runnable inputOperation)
     {
-        this.inputOperation = inputOperation;
+        this.inputOperation = inputOperation == null ? () -> {} : inputOperation;
     }
 
     public void setOutputOperation(Runnable outputOperation)
     {
-        this.outputOperation = outputOperation;
+        this.outputOperation = outputOperation == null ? () -> {} : outputOperation;
     }
 
     /**

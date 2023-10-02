@@ -87,7 +87,7 @@ public class BellCurveDistribution extends ActivationProbabilityDistribution {
 
         if(N > 1)
         {
-            N--;
+            //N--;
         } 
     }
 

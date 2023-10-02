@@ -46,7 +46,7 @@ public class NodeErrorHandling {
     {
         history.getNodeHistoryIterator(rootNode).forEachRemaining(recordList -> 
         {
-            recordList.stream().forEach(NodeErrorHandling::diminishDistributionOfRecord);
+            recordList.stream().forEach(NodeErrorHandling::reinforceDistributionOfRecord);
         });
     }
 

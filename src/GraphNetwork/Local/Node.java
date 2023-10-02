@@ -137,6 +137,8 @@ public class Node implements Comparable<Node>{
     public void deactivate()
     {
         isActive = false;
+        history = null;
+        outgoingSignals.clear();
     }
 
     /**
