@@ -10,7 +10,7 @@ import src.GraphNetwork.Local.Node;
 /**
  * Remembers all signals that were recieved and sent from a particular node 
  */
-public class Record {
+public class Record implements Comparable<Record>{
     
     /**
      * The current node in this history
@@ -37,6 +37,11 @@ public class Record {
      */
     public final double nodeOutputStrength;
 
+    /**
+     * The index key of the current node for the incoming nodes
+     */
+    public final int incomingKey;
+
     public Record(Node currentNode, Collection<Node> incomingNodes, Collection<Node> outgoingNodes, double nodeSignalStrength, double nodeOutputStrength)
     {
         this.currentNode = currentNode;
@@ -44,6 +49,7 @@ public class Record {
         this.outgoingNodes = new ArrayList<>(outgoingNodes);
         this.nodeSignalStrength = nodeSignalStrength;
         this.nodeOutputStrength = nodeOutputStrength;
+        incomingKey = currentNode.nodeSetToBinStr(this.incomingNodes);
     }
     
     public Node getCurrentNode() {
@@ -66,15 +72,15 @@ public class Record {
         return outgoingNodes.stream();
     }
 
-    public boolean hasOutputSignal()
+    public boolean hasNoOutputSignal()
     {
-        return !outgoingNodes.isEmpty();
+        return outgoingNodes.isEmpty();
     }
 
     @Override
     public String toString()
     {
-        return currentNode.toString();
+        return "Record of " + currentNode.toString();
     }
 
     @Override
@@ -98,6 +104,11 @@ public class Record {
             return hashCode() == ((Node) o).hashCode();
         }
         return false;
+    }
+
+    @Override
+    public int compareTo(Record o) {
+        return currentNode.compareTo(o.currentNode);
     }
 
 }

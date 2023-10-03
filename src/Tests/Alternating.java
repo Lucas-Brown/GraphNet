@@ -1,77 +1,111 @@
 package src.Tests;
 
-import java.util.HashSet;
-import java.util.SortedSet;
-import java.util.TreeSet;
-import java.util.function.Consumer;
+import java.util.Random;
 
 import src.GraphNetwork.Global.GraphNetwork;
+import src.GraphNetwork.Local.ActivationFunction;
 import src.GraphNetwork.Local.BellCurveDistribution;
+import src.GraphNetwork.Local.InputNode;
 import src.GraphNetwork.Local.Node;
+import src.GraphNetwork.Local.OutputNode;
 
 /**
  * Test for a graph network alternating between 0 and 1 
  */
 public class Alternating
 {
+    private static GraphNetwork net;
+    private static InputNode n1;
+    private static OutputNode n2;
+    
+    private static boolean waitingFor0 = true;
+    private static final double tollerance = 0.01;
+    private static int count = 0;
 
-    public static void main(String[] args)
-    {
-        GraphNetwork net = new GraphNetwork();
+    public static void main(String[] args) {
+        Random rand = new Random();
+        net = new GraphNetwork();
 
-        Node n1 = net.CreateNewNode();
-        
-        net.AddNewConnection(n1, n1, new BellCurveDistribution(0.1f, 1f, 0.9f));
-        net.AddNewConnection(n1, n1, new BellCurveDistribution(0.9f, 1f, 0.1f));
+        n1 = net.createInputNode(ActivationFunction.SIGMOID);
+        n2 = net.createOutputNode(ActivationFunction.SIGMOID);
+        Node h1 = net.createHiddenNode(ActivationFunction.SIGMOID);
+        Node h2 = net.createHiddenNode(ActivationFunction.SIGMOID);
 
-        /* 
-        Node n2 = new Node();
-        Node n3 = new Node();
-        net.nodes.add(n1);
-        net.nodes.add(n2);
-        net.nodes.add(n3);
+        n1.setName("Input");
+        n2.setName("Output");
+        h1.setName("Hidden 1");
+        h2.setName("Hidden 2");
 
-        net.AddNewConnection(n1, n2, new NormalTransferFunction(0.1f, 1f, 0.9f));
-        net.AddNewConnection(n2, n1, new NormalTransferFunction(0.2f, 1f, 0.8f));
-        net.AddNewConnection(n1, n3, new NormalTransferFunction(0.3f, 1f, 0.7f));
-        net.AddNewConnection(n3, n1, new NormalTransferFunction(0.4f, 1f, 0.6f));
-        net.AddNewConnection(n2, n3, new NormalTransferFunction(0.5f, 1f, 0.5f));
-        net.AddNewConnection(n3, n2, new NormalTransferFunction(0.6f, 1f, 0.4f));
-        */
-        
-        boolean state = false;
-        for(int i = 0; i < 100000; i++)
-        {
+        net.addNewConnection(n1, h1, new BellCurveDistribution(rand.nextDouble(), 1, 1000));
+        net.addNewConnection(n1, h2, new BellCurveDistribution(rand.nextDouble(), 1, 1000));
+        net.addNewConnection(h1, h2, new BellCurveDistribution(rand.nextDouble(), 1, 1000));
+        net.addNewConnection(h2, h1, new BellCurveDistribution(rand.nextDouble(), 1, 1000));
+        net.addNewConnection(h1, n2, new BellCurveDistribution(rand.nextDouble(), 1, 1000));
+        net.addNewConnection(h2, n2, new BellCurveDistribution(rand.nextDouble(), 1, 1000));
+
+        net.setInputOperation(Alternating::inputOperation);
+        net.setOutputOperation(Alternating::outputOperation);
+
+
+        for (int i = 0; i < 100000; i++) {
+
             // Transfer all signals
-            net.RecieveSignals();
+            net.trainingStep();
 
-            // Train the network to output alternating 0 and 1
-            net.CorrectNodeValue(n1, (state = !state) ? 1 : 0);
+            System.out.println(net.allActiveNodesString());
 
-            net.TransmitSignals();
-            net.ReinforceSignals();
-            net.PropagateErrors();
 
         }
 
         System.out.println("\nTRAINING STOP\n");
-        
-        int post_fire_count = 0;
-        for(int i = 0; i < 1000; i++)
-        {
-            net.RecieveSignals();
-            
-            String netStr = net.AllActiveNodesString();
-            if(!netStr.trim().isEmpty())
-            {
-                System.out.println(netStr);
-                post_fire_count++;
-            }
 
-            net.TransmitSignals();
+        //net.setOutputOperation(Alternating::scoringOperation);
+
+        for (int i = 0; i < 10000; i++) {
+            net.step();
+
+            //System.out.println(net.allActiveNodesString());
         }
 
-        System.out.println("steps before auto-stop: " + post_fire_count);
+        System.out.println("Score = " + count);
+
     }
+
+    public static void inputOperation()
+    {
+        if(net.isNetworkDead())
+        {
+            n1.recieveInputSignal(0);
+        }
+    }
+
+    public static void outputOperation()
+    {
+        if(n2.isActive())
+        {
+            n2.correctOutputValue((waitingFor0 = !waitingFor0) ? 0.0 : 1.0);
+        }
+        
+    }
+
+    /* 
+    public static void scoringOperation()
+    {
+        if(alternating)
+        {
+            if(n2.isActive() && Math.abs(n2.getValue() - 1) < tollerance)
+            {
+                count++;
+            }
+        }
+        else
+        {
+            if(!n2.isActive())
+            {
+                count++;
+            }
+        }
+            
+    }*/
 
 }

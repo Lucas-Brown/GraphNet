@@ -1,6 +1,5 @@
 package src.NetworkTraining;
 
-import java.util.AbstractMap.SimpleEntry;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -78,12 +77,11 @@ public class NodeErrorHandling {
         // Compute the error due to the root node
         List<Record> recordList = histIter.next();
         List<Record> nextRecords1 = histIter.next();
-
+        
         Record rootRecord = recordList.get(0); // This should only have 1 value in the list
-        int bitStr = rootNode.nodeSetToBinStr(rootRecord.incomingNodes);
-        double error = getErrorDerivativeOfRoot(rootRecord, target); // get the error signal of the node
-        errorMap.put(rootNode, new IntegerDoublePair(bitStr, error));
-        rootNode.updateWeightsAndBias(bitStr, nextRecords1, error);
+        double first_layer_error = getErrorDerivativeOfRoot(rootRecord, target); // get the error signal of the node
+        errorMap.put(rootNode, new IntegerDoublePair(rootRecord.incomingKey, first_layer_error));
+        rootNode.updateWeightsAndBias(rootRecord.incomingKey, nextRecords1, first_layer_error);
 
         recordList = nextRecords1;
         // compute the error for all remaining nodes
@@ -95,12 +93,11 @@ public class NodeErrorHandling {
 
             // for each record, compute the entry of it's key and error and notify the network to update each node
             recordList.stream()
-                .map(record -> getEntryOfNode(record, finalErrorMap))
-                .forEach(entry -> 
+                .forEach(record -> 
                 {
-                    Node node = entry.getKey();
-                    rootNode.updateWeightsAndBias(bitStr, nextRecords, error);
-                    nextErrorMap.put(node, entry.getValue());
+                    double error = getErrorDerivativeOfHidden(record, finalErrorMap);
+                    record.currentNode.updateWeightsAndBias(record.incomingKey, nextRecords, error);
+                    nextErrorMap.put(record.currentNode, new IntegerDoublePair(record.incomingKey, error));
                 });
 
             errorMap = nextErrorMap;
@@ -126,13 +123,6 @@ public class NodeErrorHandling {
         return d_mse * d_activation;
     }
 
-    private static SimpleEntry<Node, IntegerDoublePair> getEntryOfNode(Record record, HashMap<Node, IntegerDoublePair> errorMap)
-    {
-        int bitStr = record.currentNode.nodeSetToBinStr(record.incomingNodes);
-        double error = getErrorDerivativeOfHidden(record, errorMap);
-        return new SimpleEntry<Node, IntegerDoublePair>(record.currentNode, new IntegerDoublePair(bitStr, error));
-    }
-
     /**
      * Get the derivative of the error for the root node
      * @param record The record of the root node
@@ -148,10 +138,12 @@ public class NodeErrorHandling {
 
     private static double getAccumulatedErrorOfHiddenNode(Record record, HashMap<Node, IntegerDoublePair> errorMap)
     {
+        final int recordId = record.currentNode.id;
         return record.outgoingNodes.stream()
             .mapToDouble(node -> {
-                IntegerDoublePair pair = errorMap.get(node);
-                return pair.doubleValue * node.getWeightOfNode(pair.intValue, node.id);
+                IntegerDoublePair errorAndKey = errorMap.get(node);
+                if(errorAndKey == null) return 0;
+                return errorAndKey.doubleValue * node.getWeightOfNode(errorAndKey.intValue, recordId);
             })
             .sum();
     }

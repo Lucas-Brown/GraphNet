@@ -6,6 +6,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Objects;
 
 import src.GraphNetwork.Local.Node;
 
@@ -91,7 +92,7 @@ public class History {
             recordsToDelete = nodesToDelete.stream()
                 .map(recordsAtStep::get) // map each node to it's corresponding record
                 .map(record -> {record.outgoingNodes.removeAll(lastNodes); return record;}) // remove references to previous set
-                .filter(Record::hasOutputSignal) // remove records with no remaining output signals
+                .filter(Record::hasNoOutputSignal) // only remove records with no output signals
                 .toList();
 
             // update nodes to only be those that have singular outputs
@@ -100,6 +101,7 @@ public class History {
             // delete all the records
             recordsAtStep.values().removeAll(recordsToDelete);
         }
+        System.out.println("stop here");
     }
 
     public Iterator<List<Record>> getNodeHistoryIterator(Node rootNode)
@@ -171,8 +173,10 @@ public class History {
         {
             HashMap<Node, Record> map = entireHistoryIterator.next(); // get the mapping from nodes to records
             List<Record> records = currentStep.stream().map(map::get).toList(); // map nodes to records
+            assert !records.contains(null);
             currentStep = records.stream()
                 .flatMap(Record::getIncomingNodesStream)
+                .distinct()
                 .toList(); // get every node which transferred a signal to this node for the next iteration
             return records;
         }

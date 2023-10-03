@@ -36,6 +36,11 @@ public class Node implements Comparable<Node>{
     public final int id;
 
     /**
+     * A name for this node
+     */
+    public String name; 
+
+    /**
      * Stores whether this node is active in the current step
      */
     private boolean isActive;
@@ -63,12 +68,17 @@ public class Node implements Comparable<Node>{
     /**
      * All incoming signals 
      */
-    protected final ArrayList<Signal> incomingSignals;
+    protected ArrayList<Signal> incomingSignals;
 
     /**
      * All outgoing signals 
      */
-    protected final ArrayList<Signal> outgoingSignals;
+    protected ArrayList<Signal> outgoingSignals;
+
+    /**
+     * All signals that have been processed
+     */
+    private ArrayList<Signal> acceptedSignals;
 
     /**
      * All error signals 
@@ -105,6 +115,7 @@ public class Node implements Comparable<Node>{
     public Node(final GraphNetwork network, final SharedNetworkData networkData, final ActivationFunction activationFunction)
     {
         id = ID_COUNTER++;
+        name = "Node " + id;
         this.network = Objects.requireNonNull(network);
         this.networkData = Objects.requireNonNull(networkData);
         this.activationFunction = activationFunction;
@@ -112,12 +123,18 @@ public class Node implements Comparable<Node>{
         outgoing = new ArrayList<Arc>();
         incomingSignals = new ArrayList<>();
         outgoingSignals = new ArrayList<>();
+        acceptedSignals = new ArrayList<>();
         errorSignals = new ArrayList<>();
         orderedIDMap = new HashMap<>();
         weights = new double[1][1];
         biases = new double[1];
         weights[0] = new double[0];
         isActive = false;
+    }
+
+    public void setName(String name)
+    {
+        this.name = name;
     }
 
     /**
@@ -139,6 +156,7 @@ public class Node implements Comparable<Node>{
         isActive = false;
         history = null;
         outgoingSignals.clear();
+        acceptedSignals.clear();
     }
 
     /**
@@ -243,14 +261,16 @@ public class Node implements Comparable<Node>{
 
     public void updateWeightsAndBias(int bitStr, List<Record> recordsOfIncomingSignals, double error)
     {
-        // sorting by id ensure that the weights are applied to the correct node/signal
-        incomingSignals.sort((s1, s2) -> Integer.compare(s1.recievingNode.id, s2.recievingNode.id)); 
 
         // compute delta to update the weights and bias
         double delta = -networkData.getEpsilon() * error;
         biases[bitStr] += delta;
 
-        Iterator<Record> recordIter = recordsOfIncomingSignals.iterator();
+        // filter out all records which do not correspond to incoming signals to this node
+        Iterator<Record> recordIter = recordsOfIncomingSignals.stream()
+            .filter(signal -> incoming.stream().anyMatch(arc -> arc.sending.id == signal.currentNode.id))
+            .sorted()
+            .iterator();
         for(int weight_idx = 0; weight_idx < weights[bitStr].length; weight_idx++)
         {
             weights[bitStr][weight_idx] += delta * recordIter.next().nodeOutputStrength;
@@ -299,7 +319,7 @@ public class Node implements Comparable<Node>{
     {
         return incomingNodes.stream()
             .mapToInt(node -> orderedIDMap.get(node.id)) 
-            .reduce(0, (result, id_bit)  -> result &= id_bit); // effectively the same as a sum in this case
+            .reduce(0, (result, id_bit)  -> result |= id_bit); // effectively the same as a sum in this case
     }
     
     /**
@@ -336,7 +356,7 @@ public class Node implements Comparable<Node>{
     public Record generateStepRecord()
     {
         return new Record(this, 
-        incomingSignals.stream().map(Signal::getSendingNode).toList(),
+        acceptedSignals.stream().map(Signal::getSendingNode).toList(),
         outgoingSignals.stream().map(Signal::getRecievingNode).toList(),
         mergedSignalStrength,
         outputStrength); 
@@ -397,7 +417,9 @@ public class Node implements Comparable<Node>{
         collectHistoriesAndAlertMerge();
         mergedSignalStrength = computeMergedSignalStrength();
         outputStrength = activationFunction.activator(mergedSignalStrength);
-        incomingSignals.clear();
+
+        acceptedSignals = incomingSignals;
+        incomingSignals = new ArrayList<>();
     }
 
     /**
@@ -421,7 +443,7 @@ public class Node implements Comparable<Node>{
     @Override
     public String toString()
     {
-        return "node " + Integer.toString(id) + ": " + Double.toString(outputStrength);
+        return name + ": " + Double.toString(outputStrength);
     }
 
     @Override

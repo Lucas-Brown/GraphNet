@@ -82,7 +82,7 @@ public class GraphNetwork {
     public GraphNetwork()
     {
         // TODO: remove hardcoding
-        networkData = new SharedNetworkData(new ErrorFunction.MeanSquaredError(), 2, 1, 0.5f, 0.9f, 1f);
+        networkData = new SharedNetworkData(new ErrorFunction.MeanSquaredError(), 2, 1, 0.5f, 1f, 1f);
 
         nodes = new ArrayList<>();
         activeNodes = new HashSet<>();
@@ -214,6 +214,11 @@ public class GraphNetwork {
         deactivateNodes();
     }
 
+    public boolean isNetworkDead()
+    {
+        return activeNodes.isEmpty();
+    }
+
     /**
      * Tell all active nodes to accept all incoming signals
      */
@@ -314,25 +319,6 @@ public class GraphNetwork {
     {
         activeNodes.forEach(Node::addRecordToHistory);
     }
-
-
-    /**
-     * Reinforce the strength of each signal and more closely allign the recieved value to the mean probability. 
-     */
-    public void reinforceSignals()
-    {
-        //activeNodes.forEach(Node::CorrectRecievingValue);
-        //activeNodes.forEach(Node::ReinforceSignalPathways);
-    }
-
-    /**
-     * Propogate all error signals and adjust transfer functions accordingly.
-     */
-    public void propagateErrors()
-    {
-        //errorNodes = errorNodes.stream().flatMap(Node::TransmitError).collect(Collectors.toCollection(HashSet::new));
-    }
-
 
     public String allActiveNodesString()
     {
