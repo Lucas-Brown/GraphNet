@@ -47,12 +47,12 @@ public class Alternating
         net.setOutputOperation(Alternating::outputOperation);
 
 
-        for (int i = 0; i < 100000; i++) {
+        for (int i = 0; i < 1000000; i++) {
 
             // Transfer all signals
             net.trainingStep();
 
-            System.out.println(net.allActiveNodesString());
+            //System.out.println(net.allActiveNodesString());
 
 
         }
@@ -60,11 +60,12 @@ public class Alternating
         System.out.println("\nTRAINING STOP\n");
 
         //net.setOutputOperation(Alternating::scoringOperation);
+        net.setOutputOperation(null);
 
         for (int i = 0; i < 10000; i++) {
             net.step();
 
-            //System.out.println(net.allActiveNodesString());
+            System.out.println(net.allActiveNodesString());
         }
 
         System.out.println("Score = " + count);

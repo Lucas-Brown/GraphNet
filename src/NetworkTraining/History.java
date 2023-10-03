@@ -101,7 +101,6 @@ public class History {
             // delete all the records
             recordsAtStep.values().removeAll(recordsToDelete);
         }
-        System.out.println("stop here");
     }
 
     public Iterator<List<Record>> getNodeHistoryIterator(Node rootNode)
