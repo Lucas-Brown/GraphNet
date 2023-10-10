@@ -82,7 +82,7 @@ public class GraphNetwork {
     public GraphNetwork()
     {
         // TODO: remove hardcoding
-        networkData = new SharedNetworkData(new ErrorFunction.MeanSquaredError(), 2, 1, 0.5f, 1f, 1f);
+        networkData = new SharedNetworkData(new ErrorFunction.MeanSquaredError(), 0.1,  0.5f, 1f, 1f);
 
         nodes = new ArrayList<>();
         activeNodes = new HashSet<>();

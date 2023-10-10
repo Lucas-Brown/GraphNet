@@ -8,26 +8,21 @@ import java.util.Random;
 public class BellCurveDistribution extends ActivationProbabilityDistribution {
 
     /**
-     * Random number generator for probabalistically choosing whether to send a signal
-     */
-    private Random rand = new Random();
-
-    /**
      * mean value and standard deviation of a normal distribution
      */
-    private double mean, standardDeviation;
+    private double mean, variance;
 
     private double N;
     private double N_Limiter;
 
     /**
      * @param mean mean value of the normal distribution
-     * @param standardDeviation standard deviation of the normal distribution
+     * @param variance variance of the normal distribution
      */
-    public BellCurveDistribution(double mean, double standardDeviation, double N_Limiter)
+    public BellCurveDistribution(double mean, double variance, double N_Limiter)
     {
         this.mean = mean;
-        this.standardDeviation = standardDeviation;
+        this.variance = variance;
         this.N_Limiter = N_Limiter;
         N = 100;
     }
@@ -39,60 +34,44 @@ public class BellCurveDistribution extends ActivationProbabilityDistribution {
      */
     private double computeNormalizedDist(double x)
     {
-        final double temp = (x-mean)/standardDeviation;
-        return (double) Math.exp(-temp*temp/2);
+        //final double coef = 1/(standardDeviation*Math.sqrt(2*Math.PI));
+        final double d = x-mean;
+        return Math.exp(-d*d/variance/2);
     }
 
     /**
-     * Reinforce the mean and standard deviation with {@code valueToReinforce} using a fixed-count approximation.
-     * @param valueToReinforce The new data to 'add' to the distribution data set
-     * @param N_Limiter The fixed number of data points in the distribution 
+     * Reinforce the mean and standard deviation with {@code valueToReinforce}.
+     * @param valueToReinforce The new data to add to the distribution data set
      */
     @Override
-    public void reinforceDistribution(double valueToReinforce, double reinforcmentRate)
-    {
+    public void reinforceDistribution(double valueToReinforce)
+    {   
         // Useful constants
-        final double Np1Inv = 1.0/(N + reinforcmentRate);
+        final double weight = 1; // the weight of each new data point.
+        final double NpDelInv = 1.0/(N + weight); 
         final double distanceFromMean = valueToReinforce - mean;
+        final double shift = weight * distanceFromMean * NpDelInv;
 
         // Compute the updated variance (standard deviation)
-        standardDeviation = standardDeviation * standardDeviation + distanceFromMean*distanceFromMean*Np1Inv;
-        standardDeviation = (double) Math.sqrt(N*Np1Inv * (standardDeviation));
+        variance += shift*shift*(N+1);
+        variance *= N*NpDelInv;
 
         // Compute the new mean value 
-        mean = (N*mean + valueToReinforce)*Np1Inv;   
+        mean += shift;   
 
-        N += reinforcmentRate;
+        N += weight;
         if(N > N_Limiter)
         {
             N = N_Limiter;
         } 
     }
-
-    /**
-     * Diminish the mean and standard deviation with {@code valueToDiminish} using a fixed-count approximation.
-     * @param valueToDiminish The new data to 'remove' from the distribution data set
-     * @param N The fixed number of data points in the distribution 
-     */
+    
     @Override
-    public void diminishDistribution(double valueToDiminish, double diminishmentRate)
+    public void diminishDistribution(double valueToDiminish) 
     {
-        // Useful constants
-        final double Nm1Inv = 1.0/(N - diminishmentRate);
-        final double distanceFromMean = valueToDiminish - mean;
-
-        // Compute the updated variance (standard deviation)
-        standardDeviation = standardDeviation * standardDeviation - distanceFromMean*distanceFromMean/(N*N);
-        standardDeviation = (double) Math.sqrt(N*Nm1Inv * (standardDeviation));
-
-        // Compute the new mean value 
-        mean = (N*mean - valueToDiminish)*Nm1Inv;   
-
-        N -= diminishmentRate;
-        if(N < 1)
-        {
-            N = 1;
-        } 
+        // do not make a change? 
+        // reinforcing this distribution with a weight of -1 would effectively act as removing a data point from the distribution
+        // unfortunately, doing this just shifts the distribution away from the reinforced value, causing failiure to converge 
     }
 
     @Override
@@ -102,9 +81,10 @@ public class BellCurveDistribution extends ActivationProbabilityDistribution {
     }
 
     @Override
-    public double getMostLikelyValue()
+    public double getDirectionOfDecreasingLikelyhood(double x)
     {
-        return mean;
+        return x > mean ? 1 : -1;
     }
-    
+
+
 }

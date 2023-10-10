@@ -17,11 +17,6 @@ public class SharedNetworkData
     private double reinforcmentRate;
 
     /**
-     * The weight of removing data points from a distribution 
-     */
-    private double diminishmentRate;
-
-    /**
      * Step size for adjusting the output values of nodes
      */
     private double epsilon;
@@ -37,11 +32,10 @@ public class SharedNetworkData
      */
     private double globalFiringRateMultiplier;
 
-    SharedNetworkData(ErrorFunction errorFunc, double reinforcmentRate, double diminishmentRate, double epsilon, double likelyhoodDecay, double globalFiringRateMultiplier)
+    SharedNetworkData(ErrorFunction errorFunc, double reinforcmentRate, double epsilon, double likelyhoodDecay, double globalFiringRateMultiplier)
     {
         this.errorFunc = errorFunc;
         this.reinforcmentRate = reinforcmentRate;
-        this.diminishmentRate = diminishmentRate;
         this.epsilon = epsilon;
         this.likelyhoodDecay = likelyhoodDecay;
         this.globalFiringRateMultiplier = globalFiringRateMultiplier;
@@ -50,11 +44,6 @@ public class SharedNetworkData
     public double getReinforcmentRate()
     {
         return reinforcmentRate;
-    }
-
-    public double getDiminishmentRate()
-    {
-        return diminishmentRate;
     }
 
     public double getEpsilon() {

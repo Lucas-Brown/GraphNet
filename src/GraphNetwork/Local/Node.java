@@ -176,10 +176,14 @@ public class Node implements Comparable<Node>{
      */
     public Arc getArc(Node recievingNode)
     {
-        return outgoing.stream()
-            .filter(arc -> arc.doesMatchNodes(this, recievingNode))
-            .findAny()
-            .orElse(null);
+        for(Arc arc : outgoing)
+        {
+            if(arc.doesMatchNodes(this, recievingNode))
+            {
+                return arc;
+            }
+        }
+        return null;
     }
 
     /**
@@ -433,7 +437,7 @@ public class Node implements Comparable<Node>{
         Collections.shuffle(outgoing); // shuffle to ensure no connection has an order-dependent advantage
         for(Arc connection : outgoing)
         {
-            if(connection.sendSignal(outputStrength, factor, history) != null)
+            if(connection.sendSignal(mergedSignalStrength, outputStrength, factor, history) != null)
             {
                 factor *= decay;
             }

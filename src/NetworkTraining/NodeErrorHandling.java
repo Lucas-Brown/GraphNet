@@ -33,7 +33,7 @@ public class NodeErrorHandling {
          */
         record.getOutgoingNodes().stream()
             .map(currentNode::getArc)
-            .forEach(arc -> arc.probDist.diminishDistribution(record.nodeOutputStrength, currentNode.networkData.getDiminishmentRate()));
+            .forEach(arc -> arc.probDist.diminishDistribution(record.nodeSignalStrength));
     }
 
     /**
@@ -58,11 +58,12 @@ public class NodeErrorHandling {
          */
         record.getOutgoingNodes().stream()
             .map(currentNode::getArc)
-            .forEach(arc -> arc.probDist.reinforceDistribution(record.nodeOutputStrength, currentNode.networkData.getReinforcmentRate()));
+            .forEach(arc -> arc.probDist.reinforceDistribution(record.nodeSignalStrength));
     }
 
     /**
-     * Computes the error of every node steming from the root node in the history then updates the weights and biases
+     * Updates the weights and biases of all nodes causually related to the root node
+     * Error is computed using the target value
      * @param history The entire history of the signal leading up to the root node
      * @param rootNode The root node which the signal reached
      * @param target The target value for this node
@@ -103,6 +104,46 @@ public class NodeErrorHandling {
             errorMap = nextErrorMap;
             recordList = nextRecords;
         }
+    }
+
+    
+    /**
+     * Updates the weights and biases of all nodes causually related to the root node to decrease the likelyhood of firing.
+     * @param history The entire history of the signal leading up to the root node
+     * @param rootNode The root node which the signal reached
+     */
+    public static void computeNullErrorOfHistory(History history, Node rootNode)
+    {
+        Iterator<List<Record>> histIter = history.getNodeHistoryIterator(rootNode);
+        histIter.next(); // skip the first one as it doesn't output a value;
+
+        List<Record> currentRecords = histIter.next();
+        while(histIter.hasNext())
+        {
+            List<Record> incomingRecords = histIter.next();
+            decreaseLikelyhoodFromWeights(currentRecords, incomingRecords);
+            currentRecords = incomingRecords;
+        }
+    }
+
+    private static void decreaseLikelyhoodFromWeights(List<Record> recordList, List<Record> incomingRecords)
+    {
+        recordList.stream().forEach(record -> decreaseLikelyhoodFromWeights(record, incomingRecords));
+    }
+
+    private static void decreaseLikelyhoodFromWeights(Record record, List<Record> incomingRecords)
+    {
+        final Node rNode = record.currentNode;
+        final double outputStrength = record.nodeOutputStrength; 
+
+        // get the average of the error signals from each output
+        double error = record.outgoingNodes.stream()
+            .map(rNode::getArc)
+            .mapToDouble(arc -> arc.probDist.getDirectionOfDecreasingLikelyhood(outputStrength))
+            .average()
+            .getAsDouble();
+
+        rNode.updateWeightsAndBias(record.incomingKey, incomingRecords, error);
     }
 
     public static void sendErrorSignal()

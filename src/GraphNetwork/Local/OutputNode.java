@@ -42,6 +42,7 @@ public class OutputNode extends Node {
         {
             if(target == null)
             {
+                NodeErrorHandling.computeNullErrorOfHistory(history, this);
                 NodeErrorHandling.diminishFiringChances(history, this);
             }
             else
