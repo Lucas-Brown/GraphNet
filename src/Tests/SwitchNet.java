@@ -37,12 +37,12 @@ public class SwitchNet {
         net.setOutputOperation(SwitchNet::outputOperation);
 
 
-        for (int i = 0; i < 100000; i++) {
+        for (int i = 0; i < 100; i++) {
 
             // Transfer all signals
             net.trainingStep();
 
-            if((i % 1000) == 0 || (i % 1000) == 1)
+            //if((i % 1000) == 0 || (i % 1000) == 1)
                 System.out.println(net.allActiveNodesString());
 
 
