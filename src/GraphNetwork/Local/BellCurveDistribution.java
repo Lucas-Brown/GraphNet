@@ -61,7 +61,7 @@ public class BellCurveDistribution extends ActivationProbabilityDistribution {
         // loop over all scale values
         for(int i = 0; i < shift_divisions; i++)
         {
-            double scale = scale_domain*(1-i)/scale_divisions;
+            double scale = scale_domain*(1d-((double) i)/scale_divisions);
             
             scaleMap[i] = scaleResidual(scale);
             scaleDerivativeMap[i] = scaleResidualDerivative(scale);
@@ -69,7 +69,7 @@ public class BellCurveDistribution extends ActivationProbabilityDistribution {
             // loop over all shift values
             for(int j = 0; j < scale_divisions; j++)
             {
-                double shift = 2*shift_domain * j / (shift_divisions - 1) - shift_domain;
+                double shift = shift_domain*(2d * j / (shift_divisions - 1d) - 1d);
 
                 shiftMap[i][j] = shiftResidual(shift, scale);
                 shiftDerivativeMap[i][j] = shiftResidualDerivative(shift, scale);
@@ -165,6 +165,7 @@ public class BellCurveDistribution extends ActivationProbabilityDistribution {
 
         mean += shift;
         variance *= scale;
+        N++;
     }
 
     private double shiftGuess(double x)
@@ -182,14 +183,14 @@ public class BellCurveDistribution extends ActivationProbabilityDistribution {
         if(reinforce)
         {
             double a = (5*zeta_7halfs - 7*zeta_5halfs)/2;
-            double b = -zeta_5halfs;
+            double b = zeta_5halfs;
             double c = d2/(3*root_2pi*N*var3);
 
-            return 1 - (-b - Math.sqrt(b*b - 4*a*c))/(2*a);
+            return 1 + (b - Math.sqrt(b*b - 4*a*c))/(2*a);
         }
         else
         {
-            return 1 + d2/(3*N*root_2pi*var3*zeta_5halfs)*invWeight(d/variance);
+            return 1 - d2/(3*N*root_2pi*var3*zeta_5halfs)*invWeight(d/variance);
         }
     }
 
@@ -208,13 +209,13 @@ public class BellCurveDistribution extends ActivationProbabilityDistribution {
         DoublePair dp = shiftLERP(shift, scale*variance);
         if(b)
         {
-            return (dp.x1 - d/N)/(dp.x2 + 1/N);
+            return (dp.x1 - d/N)/(dp.x2 + 1d/N);
         }
 
         double inv_weight = invWeight(d/(variance*scale));
         double dynamic = d*(1 - inv_weight)/N;
-        double dynamic_deriv = (1 - inv_weight)*(d*d*inv_weight/(scale2*var2) - 1);
-        return (dp.x1 + dynamic)/(dp.x2 + dynamic_deriv);
+        double dynamic_deriv = (1 - inv_weight)*(d*d*inv_weight/(scale2*var2) - 1)/N;
+        return (dp.x1 - dynamic)/(dp.x2 - dynamic_deriv);
     }  
 
     private double scaleDeltaNewton(double x, boolean b, double shift, double scale)
@@ -306,19 +307,19 @@ public class BellCurveDistribution extends ActivationProbabilityDistribution {
 
     private static DoublePair shiftLERP(double shift, double scale)
     {
-        double i_float = 1-scale*scale_divisions/scale_domain;
-        double j_float = (shift/shift_domain + 1)*(shift_divisions - 1)/2;
+        double i_float = scale_divisions*(1d-scale/scale_domain);
+        double j_float = (shift/shift_domain + 1d)*(shift_divisions - 1d)/2d;
         
         // if the shift or scale is outside of the pre-computed range, recompute the value
-        if(j_float < -shift_divisions/2 || j_float > shift_divisions/2 || i_float < 0 || i_float > scale_divisions)
+        if(i_float < 0 || i_float > scale_divisions || j_float < 0 || j_float > shift_divisions)
         {
             return new DoublePair(shiftResidual(shift, scale), shiftResidualDerivative(shift, scale));
         }
 
         int i = (int)i_float;
         int j = (int)j_float;
-        double wi = i_float - i;
-        double wj = j_float - j;
+        double wi = i == i_float ? 1 : i + 1 - i_float;
+        double wj = j == j_float ? j : j + 1 - j_float;
 
         double w11 = wi*wj;
         double w12 = wi*(1-wj);
@@ -333,7 +334,7 @@ public class BellCurveDistribution extends ActivationProbabilityDistribution {
 
     private static DoublePair scaleLERP(double scale)
     {
-        double i_float = 1-scale*scale_divisions/scale_domain;
+        double i_float = scale_divisions*(1d-scale/scale_domain);
         
         // if the scale is outside of the pre-computed range, recompute the value
         if(i_float < 0 || i_float > scale_divisions)
@@ -342,8 +343,8 @@ public class BellCurveDistribution extends ActivationProbabilityDistribution {
         }
 
         int i = (int)i_float;
-        double w = i_float - i;
-        if(w == 0)
+        double w = i + 1 - i_float;
+        if(w == 1)
         {
             return new DoublePair(scaleMap[i], scaleDerivativeMap[i]);
         }
