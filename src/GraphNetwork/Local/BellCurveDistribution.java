@@ -105,7 +105,7 @@ public class BellCurveDistribution extends ActivationProbabilityDistribution {
      * @param x 
      * @return value of the distribution at the point x. always returns on the interval (0, 1]
      */
-    private double computeNormalizedDist(double x)
+    public double computeNormalizedDist(double x)
     {
         return NormalizedDist(x, mean, variance);
     }
@@ -119,16 +119,33 @@ public class BellCurveDistribution extends ActivationProbabilityDistribution {
     {   
         newtonUpdateMeanAndVariance(valueToReinforce, true);
     }
+
+    /**
+     * reinforces the distribution directly, not accounting for its role within the larger network
+     * @param valueToReinforce
+     */
+    public void reinforceDistributionNoFilter(double valueToReinforce)
+    {   
+        newtonUpdateMeanAndVariance(valueToReinforce, true, 1);
+    }
     
     /**
      * Diminish the distribution using {@code valueToDiminish}.
-     * If you wish to understand how this works, contact me directly. I'm not certain this is correct to begin with
      * @param valueToDiminish The data point to diminish the likelihood
      */
     @Override
     public void diminishDistribution(double valueToDiminish) 
     {
         newtonUpdateMeanAndVariance(valueToDiminish, false);
+    }
+
+    /**
+     * diminishes the distribution directly, not accounting for its role within the larger network
+     * @param valueToDiminish
+     */
+    public void diminishDistributionNoFilter(double valueToDiminish) 
+    {
+        newtonUpdateMeanAndVariance(valueToDiminish, false, 1);
     }
 
     @Override
@@ -151,29 +168,44 @@ public class BellCurveDistribution extends ActivationProbabilityDistribution {
 
     private void newtonUpdateMeanAndVariance(double x, boolean b)
     {
-        double shift = shiftGuess(x);
-        double scale = scaleGuess(x, b);
+        // if no weight is specified, assume the weight should be 1/P(x, b)
+        double weight = computeNormalizedDist(x);
+        weight = b ? 1/weight : 1/(1-weight);
+        newtonUpdateMeanAndVariance(x, b, weight);
+    }
+
+    /**
+     * Update the mean and variance of this distribution to accomodate the addition of a new point.
+     * The new mean and variance are computed using newtons method to minimize the log-likelihood function
+     * @param x the point to add to the distribution
+     * @param b indicates whether the point reinforces the distribution (b=true) or diminishes the distribution (b=false)
+     * @param weight the point's weight
+     */
+    private void newtonUpdateMeanAndVariance(double x, boolean b, double weight)
+    {
+        double shift = shiftGuess(x, weight);
+        double scale = scaleGuess(x, b, weight);
 
         double delta_shift;
         double delta_scale;
         do{
-            delta_shift = shiftDeltaNewton(x, b, shift, scale);
-            delta_scale = scaleDeltaNewton(x, b, shift, scale);
+            delta_shift = shiftDeltaNewton(x, b, shift, scale, weight);
+            delta_scale = scaleDeltaNewton(x, b, shift, scale, weight);
             shift -= delta_shift;
             scale -= delta_scale;
         }while(Math.abs(delta_shift) > TOLLERANCE || Math.abs(delta_scale) > TOLLERANCE);
 
         mean += shift;
         variance *= scale;
-        N++;
+        N += weight;
     }
 
-    private double shiftGuess(double x)
+    private double shiftGuess(double x, double weight)
     {
-        return (x - mean)/(zeta_3halfs*N*variance*root_2pi + 1);
+        return (x - mean)/(zeta_3halfs*N*variance*root_2pi/weight + 1);
     }
 
-    private double scaleGuess(double x, boolean reinforce)
+    private double scaleGuess(double x, boolean reinforce, double weight)
     {
         double d = x - mean;
         double d2 = d*d;
@@ -184,13 +216,13 @@ public class BellCurveDistribution extends ActivationProbabilityDistribution {
         {
             double a = (5*zeta_7halfs - 7*zeta_5halfs)/2;
             double b = zeta_5halfs;
-            double c = d2/(3*root_2pi*N*var3);
+            double c = weight*d2/(3*root_2pi*N*var3);
 
             return 1 + (b - Math.sqrt(b*b - 4*a*c))/(2*a);
         }
         else
         {
-            return 1 - d2/(3*N*root_2pi*var3*zeta_5halfs)*invWeight(d/variance);
+            return 1 - weight*d2/(3*N*root_2pi*var3*zeta_5halfs)*invWeight(d/variance);
         }
     }
 
@@ -200,7 +232,7 @@ public class BellCurveDistribution extends ActivationProbabilityDistribution {
         return 1/(1 - Math.exp(-x*x/2));
     }
 
-    private double shiftDeltaNewton(double x, boolean b, double shift, double scale)
+    private double shiftDeltaNewton(double x, boolean b, double shift, double scale, double weight)
     {
         double d = x - mean - shift; // d = shifted distance from mean
         double scale2 = scale*scale;
@@ -209,16 +241,16 @@ public class BellCurveDistribution extends ActivationProbabilityDistribution {
         DoublePair dp = shiftLERP(shift, scale*variance);
         if(b)
         {
-            return (dp.x1 - d/N)/(dp.x2 + 1d/N);
+            return (dp.x1 - d*weight/N)/(dp.x2 + 1d/N);
         }
 
         double inv_weight = invWeight(d/(variance*scale));
-        double dynamic = d*(1 - inv_weight)/N;
-        double dynamic_deriv = (1 - inv_weight)*(d*d*inv_weight/(scale2*var2) - 1)/N;
+        double dynamic = d*(1 - inv_weight)*weight/N;
+        double dynamic_deriv = (1 - inv_weight)*(d*d*inv_weight/(scale2*var2) - 1)*weight/N;
         return (dp.x1 - dynamic)/(dp.x2 - dynamic_deriv);
     }  
 
-    private double scaleDeltaNewton(double x, boolean b, double shift, double scale)
+    private double scaleDeltaNewton(double x, boolean b, double shift, double scale, double weight)
     {
         double d = x - mean - shift; // d = distance from mean
         double d2 = d*d;
@@ -228,11 +260,11 @@ public class BellCurveDistribution extends ActivationProbabilityDistribution {
         DoublePair dp = scaleLERP(scale*variance);
         if(b)
         {
-            return (dp.x1 + d2/(N*scale*scale2))/dp.x2;
+            return (dp.x1 + d2*weight/(N*scale*scale2))/dp.x2;
         }
 
         double inv_weight = invWeight(d/(variance*scale));
-        double dynamic = d2*(1 - inv_weight)/(N*var2*variance);
+        double dynamic = d2*weight*(1 - inv_weight)/(N*var2*variance);
         double dynamic_deriv = dynamic*d2*inv_weight/(scale*scale2*var2);
         return (dp.x1 + dynamic)/(dp.x2 + dynamic_deriv);
     }  

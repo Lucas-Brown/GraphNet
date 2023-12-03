@@ -9,9 +9,9 @@ public class DistributionConvergence {
         BellCurveDistribution bcd = new BellCurveDistribution(0, 1);
         for(int i=0; i < 10000; i++)
         {
-            bcd.reinforceDistribution(0);
-            bcd.reinforceDistribution(-1);
-            bcd.diminishDistribution(1);
+            bcd.reinforceDistributionNoFilter(0);
+            bcd.reinforceDistributionNoFilter(-1);
+            bcd.diminishDistributionNoFilter(1);
         }
 
         System.out.println();
