@@ -14,8 +14,6 @@ import src.GraphNetwork.Local.InputNode;
 import src.GraphNetwork.Local.Node;
 import src.GraphNetwork.Local.OutputNode;
 import src.NetworkTraining.ErrorFunction;
-import src.NetworkTraining.History;
-
 /**
  * A neural network using a probabalistic directed graph representation.
  * Training currently a work in progress
@@ -60,16 +58,6 @@ public class GraphNetwork {
     private final HashSet<Node> errorNodes;
 
     /**
-     * A list of all history objects that are currently in use
-     */
-    private final HashSet<History> allActiveHistories;
-
-    /**
-     * maps a set of histories to all the nodes that are linked through their histories
-     */
-    private final HashMap<HashSet<History>, HashSet<Node>> historyMergers;
-
-    /**
      * An operation which is to be defined by the user to set the values of input nodes
      */
     private Runnable inputOperation;
@@ -82,14 +70,12 @@ public class GraphNetwork {
     public GraphNetwork()
     {
         // TODO: remove hardcoding
-        networkData = new SharedNetworkData(new ErrorFunction.MeanSquaredError(), 0.1,  0.5f, 1f, 1f);
+        networkData = new SharedNetworkData(new ErrorFunction.MeanSquaredError(), 0.1);
 
         nodes = new ArrayList<>();
         activeNodes = new HashSet<>();
         activeNextNodes = new HashSet<>();
         errorNodes = new HashSet<>();
-        allActiveHistories = new HashSet<>();
-        historyMergers = new HashMap<>();
         inputOperation = () -> {};
         outputOperation = () -> {};
     }
@@ -149,36 +135,24 @@ public class GraphNetwork {
      * @param strength the value associated with the signal
      * @return a signal object containing the sending node, recieving node, and signal strength
      */
-    public Signal createSignal(final Node sendingNode, final Node recievingNode, final double strength, History history)
-    {
-        activeNextNodes.add(recievingNode); // every time a signal is created, the network is notified of the reciever
-        if(history == null & sendingNode == null) // null sending node indicates a user-inputted signal
-        {
-            history = new History();
-        }
-
-        if(history != null)
-        {
-            allActiveHistories.add(history);
-        }
-        
-        return new Signal(sendingNode, recievingNode, strength, history);
-    }
-
     public Signal createSignal(final Node sendingNode, final Node recievingNode, final double strength)
     {
-        return createSignal(sendingNode, recievingNode, strength, null);
+        activeNextNodes.add(recievingNode); // every time a signal is created, the network is notified of the reciever
+        return new Signal(sendingNode, recievingNode, strength);
     }
 
+    
     /**
-     * Creates a new history object and tells the network to track it
-     * @return an empty history object 
+     * Creates a new signal and automattically alerts the network that the recieving node has been activated
+     * @param sendingNode the node sending the signal
+     * @param recievingNode the node recieving the signal
+     * @param strength the value associated with the signal
+     * @return a signal object containing the sending node, recieving node, and signal strength
      */
-    public History createHistory()
+    public Signal createSignal(final Node sendingNode, final Node recievingNode, final double strength)
     {
-        History newHist = new History();
-        allActiveHistories.add(newHist);
-        return newHist;
+        activeNextNodes.add(recievingNode); // every time a signal is created, the network is notified of the reciever
+        return new Signal(sendingNode, recievingNode, strength);
     }
 
 
@@ -200,17 +174,12 @@ public class GraphNetwork {
      */
     public void trainingStep()
     {
-        
         inputOperation.run();
+        outputOperation.run();
         recieveSignals();
-
-        mergeAllHistories();
         
         transmitSignals();
-        gatherRecords();
-        outputOperation.run();
 
-        advanceHistory();
         deactivateNodes();
     }
 
@@ -242,82 +211,6 @@ public class GraphNetwork {
     public void deactivateNodes()
     {
         activeNodes.stream().forEach(Node::deactivate);
-    }
-
-    /**
-     * Nodes should call this method to alert the network that two histories need to be merged.
-     * @param historiesToMerge
-     * @param alertingNode
-     */
-    public void notifyHistoryMerge(HashSet<History> historiesToMerge, Node alertingNode)
-    {
-        // if the key already exists, the alerting node just needs to be added
-        HashSet<Node> nodes = historyMergers.get(historiesToMerge); 
-        if(nodes != null)
-        {
-            nodes.add(alertingNode);
-            return;
-        }
-
-        // since the key was not found, collect all keys which contain any of the histories within historiesToMerge
-        List<HashSet<History>> badKeys = historyMergers.keySet().stream()
-            .filter(histSet -> hasIntersection(histSet, historiesToMerge))
-            .toList();
-
-        // if there are no keys which contain any element in historiesToMerge, then we only need to create a new element
-        // otherwise, all keys and values need to be removed and unioned
-        if(badKeys.size() == 0)
-        {
-            HashSet<Node> nodeList = new HashSet<>();
-            nodeList.add(alertingNode);
-            historyMergers.put(historiesToMerge, nodeList);
-        }
-        else
-        {
-            HashSet<Node> nodesInMerge = new HashSet<>();
-            nodesInMerge.add(alertingNode);
-            badKeys.forEach(key -> 
-            {
-                historiesToMerge.addAll(key);
-                nodesInMerge.addAll(historyMergers.remove(key));
-            });
-            
-            historyMergers.put(historiesToMerge, nodesInMerge);
-        }
-    }
-
-    /**
-     * Merge every history that has been queued
-     */
-    public void mergeAllHistories()
-    {
-        /**
-         * I'm anticipating that each merger might take a while as they can get pretty big...
-         */
-        historyMergers.keySet().stream()
-            .forEach(historiesToMerge -> 
-            {
-                History mergedHistory = History.mergeHistories(historiesToMerge); // Merge the histories
-                allActiveHistories.removeAll(historiesToMerge); // remove the merged histories 
-                allActiveHistories.add(mergedHistory); // add the new merged history
-                historyMergers.get(historiesToMerge) // set every node to have their proper history 
-                    .stream()
-                    .forEach(node -> node.setHistory(mergedHistory));
-            });
-    }
-
-    /**
-     * Step all histories 
-     */
-    public void advanceHistory()
-    {
-        allActiveHistories.stream().forEach(History::step);
-        allActiveHistories.clear();
-    }
-
-    public void gatherRecords()
-    {
-        activeNodes.forEach(Node::addRecordToHistory);
     }
 
     public String allActiveNodesString()

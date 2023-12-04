@@ -2,18 +2,12 @@ package src.GraphNetwork.Local;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
 import java.util.Random;
-import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import src.NetworkTraining.History;
-import src.NetworkTraining.Record;
 import src.GraphNetwork.Global.GraphNetwork;
 import src.GraphNetwork.Global.Signal;
 import src.GraphNetwork.Global.SharedNetworkData;
@@ -86,11 +80,6 @@ public class Node implements Comparable<Node>{
     protected final ArrayList<Signal> errorSignals;
 
     /**
-     * The current history that has reached this node if available
-     */
-    protected History history;
-
-    /**
      * Maps all incoming node ID's to an int from 0 to the number of incoming nodes -1
      */
     protected final HashMap<Integer, Integer> orderedIDMap;
@@ -111,6 +100,11 @@ public class Node implements Comparable<Node>{
      * The signal strength that this node is outputting
      */
     protected double outputStrength;
+
+    /**
+     * The binary representation of the currently incoming signals
+     */
+    private int binary_string;
 
     public Node(final GraphNetwork network, final SharedNetworkData networkData, final ActivationFunction activationFunction)
     {
@@ -154,7 +148,6 @@ public class Node implements Comparable<Node>{
     public void deactivate()
     {
         isActive = false;
-        history = null;
         outgoingSignals.clear();
         acceptedSignals.clear();
     }
@@ -263,21 +256,16 @@ public class Node implements Comparable<Node>{
         }
     }
 
-    public void updateWeightsAndBias(int bitStr, List<Record> recordsOfIncomingSignals, double error)
+    private void updateWeightsAndBias(double error_derivative)
     {
 
         // compute delta to update the weights and bias
-        double delta = -networkData.getEpsilon() * error;
-        biases[bitStr] += delta;
+        double delta = -networkData.getEpsilon() * error_derivative;
+        biases[binary_string] += delta;
 
-        // filter out all records which do not correspond to incoming signals to this node
-        Iterator<Record> recordIter = recordsOfIncomingSignals.stream()
-            .filter(signal -> incoming.stream().anyMatch(arc -> arc.sending.id == signal.currentNode.id))
-            .sorted()
-            .iterator();
-        for(int weight_idx = 0; weight_idx < weights[bitStr].length; weight_idx++)
+        for(int weight_idx = 0; weight_idx < weights[binary_string].length; weight_idx++)
         {
-            weights[bitStr][weight_idx] += delta * recordIter.next().nodeOutputStrength;
+            weights[binary_string][weight_idx] += delta * incomingSignals.get(weight_idx).strength;
         }
     }
 
@@ -334,8 +322,6 @@ public class Node implements Comparable<Node>{
     private double computeMergedSignalStrength(List<Signal> incomingSignals)
     {
 
-        // Use the binary_string to select which set of weights to apply 
-        int binary_string = nodeSetToBinStr(incomingSignals.stream().map(Signal::getSendingNode).toList());
         double[] input_weights = weights[binary_string];
 
         double strength = IntStream.range(0, input_weights.length)
@@ -354,71 +340,16 @@ public class Node implements Comparable<Node>{
     }
 
     /**
-     * Create a {@code Record} of the recieved and sent signals
-     * @return a record
-     */
-    public Record generateStepRecord()
-    {
-        return new Record(this, 
-        acceptedSignals.stream().map(Signal::getSendingNode).toList(),
-        outgoingSignals.stream().map(Signal::getRecievingNode).toList(),
-        mergedSignalStrength,
-        outputStrength); 
-    }
-
-
-    /**
-     * collect all histories from signals and notify the network if two histories are detected
-     */
-    public void collectHistoriesAndAlertMerge()
-    {
-        HashSet<History> histories = incomingSignals.stream()
-            .map(signal -> signal.history)
-            .filter(Objects::nonNull)
-            .collect(Collectors.toCollection(HashSet::new));
-
-        switch(histories.size())
-        {
-            case 0:
-                history = null;
-                break;
-            case 1:
-                history = histories.iterator().next();
-                break;
-            default:
-                network.notifyHistoryMerge(histories, this);
-        }
-
-    }
-
-    /**
-     * History is whatever I say it is
-     */
-    public void setHistory(History history)
-    {
-        this.history = history;
-    }
-
-    /**
-     * If this node has recieved a history object, a record is generated and added to the history
-     */
-    public void addRecordToHistory()
-    {
-        if(history != null)
-        {
-            history.addToCurrentRecord(generateStepRecord());
-        }
-    }
-
-    /**
      * Handle all incoming signals and store the resulting strength
      */
     public void acceptIncomingSignals()
     {
         assert !incomingSignals.isEmpty() : "handleIncomingSignals should never be called if no signals have been recieved.";
         incomingSignals.sort((s1, s2) -> Integer.compare(s1.recievingNode.id, s2.recievingNode.id)); // sorting by id ensure that the weights are applied to the correct node/signal
+        
+        // Compute the binary string of the incoming signals
+        binary_string = nodeSetToBinStr(incomingSignals.stream().map(Signal::getSendingNode).toList());
 
-        collectHistoriesAndAlertMerge();
         mergedSignalStrength = computeMergedSignalStrength();
         outputStrength = activationFunction.activator(mergedSignalStrength);
 
@@ -431,17 +362,31 @@ public class Node implements Comparable<Node>{
      */
     public void attemptSendOutgoingSignals()
     {
-        double factor = 1f;
-        final double decay = networkData.getLikelyhoodDecay();
+        //double factor = 1f;
+        //final double decay = networkData.getLikelyhoodDecay();
 
-        Collections.shuffle(outgoing); // shuffle to ensure no connection has an order-dependent advantage
+        //Collections.shuffle(outgoing); // shuffle to ensure no connection has an order-dependent advantage
+
+        int count = 0;
+        double[] expectedValues = new double[outgoing.size()];
         for(Arc connection : outgoing)
         {
-            if(connection.sendSignal(mergedSignalStrength, outputStrength, factor, history) != null)
+            if(connection.sendSignal(mergedSignalStrength, outputStrength) != null)
             {
-                factor *= decay;
+                expectedValues[count++] = connection.probDist.getMeanValue();
             }
         };
+        updateWeightsAndBias(errorDerivativeOfOutput(expectedValues, count));
+    }
+
+    private double errorDerivativeOfOutput(double[] expectedValues, int count)
+    {
+        double error = 0;
+        for(int i = 0; i < count; i++)
+        {
+            error += networkData.errorFunc.error_derivative(mergedSignalStrength, expectedValues[i]);
+        }
+        return error/count;
     }
 
     @Override

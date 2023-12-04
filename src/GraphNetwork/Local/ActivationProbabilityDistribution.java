@@ -12,10 +12,9 @@ public abstract class ActivationProbabilityDistribution {
      */
     protected Random rand = new Random();
 
-    public abstract boolean shouldSend(double inputSignal, double factor);
+    public abstract boolean shouldSend(double inputSignal);
     public abstract void reinforceDistribution(double valueToReinforce);
     public abstract void diminishDistribution(double valueToDiminish);
-    public abstract double getDirectionOfDecreasingLikelyhood(double x);
-    
+    public abstract double getMeanValue();
 
 }

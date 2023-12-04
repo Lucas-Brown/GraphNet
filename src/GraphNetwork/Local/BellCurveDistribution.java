@@ -149,15 +149,15 @@ public class BellCurveDistribution extends ActivationProbabilityDistribution {
     }
 
     @Override
-    public boolean shouldSend(double inputSignal, double factor) {
+    public boolean shouldSend(double inputSignal) {
         // Use the normalized normal distribution as a measure of how likely  
-        return factor*computeNormalizedDist(inputSignal) >= rand.nextDouble();
+        return computeNormalizedDist(inputSignal) >= rand.nextDouble();
     }
 
     @Override
-    public double getDirectionOfDecreasingLikelyhood(double x)
+    public double getMeanValue()
     {
-        return x > mean ? 1 : -1;
+        return mean;
     }
 
     private static double NormalizedDist(double x, double mean, double variance)

@@ -2,7 +2,6 @@ package src.GraphNetwork.Local;
 
 import src.GraphNetwork.Global.GraphNetwork;
 import src.GraphNetwork.Global.SharedNetworkData;
-import src.NetworkTraining.NodeErrorHandling;
 
 /**
  * A node which exposes it's value to the user and can be sent a correction signal 
