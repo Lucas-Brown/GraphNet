@@ -141,20 +141,6 @@ public class GraphNetwork {
         return new Signal(sendingNode, recievingNode, strength);
     }
 
-    
-    /**
-     * Creates a new signal and automattically alerts the network that the recieving node has been activated
-     * @param sendingNode the node sending the signal
-     * @param recievingNode the node recieving the signal
-     * @param strength the value associated with the signal
-     * @return a signal object containing the sending node, recieving node, and signal strength
-     */
-    public Signal createSignal(final Node sendingNode, final Node recievingNode, final double strength)
-    {
-        activeNextNodes.add(recievingNode); // every time a signal is created, the network is notified of the reciever
-        return new Signal(sendingNode, recievingNode, strength);
-    }
-
 
     /**
      * Step the entire network forward one itteration
@@ -196,7 +182,7 @@ public class GraphNetwork {
         activeNodes = activeNextNodes;
         activeNextNodes = new HashSet<>();
         activeNodes.forEach(Node::activate);
-        activeNodes.forEach(Node::acceptIncomingSignals);
+        activeNodes.forEach(Node::acceptSignals);
     }
 
     /**

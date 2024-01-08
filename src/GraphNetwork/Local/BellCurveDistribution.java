@@ -1,8 +1,14 @@
 package src.GraphNetwork.Local;
 
 import java.util.Random;
+import java.util.function.DoubleUnaryOperator;
+import java.util.function.ToDoubleBiFunction;
+import java.util.function.ToDoubleFunction;
 
 import src.GraphNetwork.Global.DoublePair;
+import src.NetworkTraining.LinearInterpolation2D;
+import src.NetworkTraining.LinearRange;
+import src.NetworkTraining.Range;
 
 /**
  * A distribution which is parameterized similarly to a bell curve but functionally distinct.
@@ -38,45 +44,37 @@ public class BellCurveDistribution extends ActivationProbabilityDistribution {
     public static final double root_2 = Math.sqrt(2d);
     public static final double root_2pi = root_pi*root_2;
 
-    private static final double shift_domain = 10; // pre-compute shift values on [-shift_domain, shift_domain]
-    private static final double scale_domain = 10; // pre-compute scale values on (0, scale_domain]
-    private static final int shift_divisions = 100;
-    private static final int scale_divisions = 100; 
+    private static final double w_domain = 25; // pre-compute w values on [-shift_domain, shift_domain]
+    private static final double eta_domain = 10; // pre-compute eta values on (0, scale_domain]
+    private static final int w_divisions = 500;
+    private static final int eta_divisions = 100; 
+    private static final int integrationDivisions = 1000;
 
-    private static final double[][] shiftMap;
-    private static final double[][] shiftDerivativeMap;
-    private static final double[] scaleMap;
-    private static final double[] scaleDerivativeMap;
+    /**
+     * shift map dimensions are computed as [w][eta]
+     * where eta = lambda^2 * (sigma_0)^2 / (sigma_b)^2 
+     * and w = (u_0 - u_b + a) / (lambda * sigma_0 * sqrt(2)) 
+     * 
+     * using a as the shift parameter and lambda as the scale parameter
+     */
+    private static final LinearInterpolation2D shiftMap;
+    private static final LinearInterpolation2D scaleMap;
 
     /**
      * Construct the linear interpolation maps.
      * TODO: consider non-linear maps, especially for the scale factor
      */
     static{
-        shiftMap = new double[shift_divisions][scale_divisions];
-        shiftDerivativeMap = new double[shift_divisions][scale_divisions];
-        scaleMap = new double[scale_divisions];
-        scaleDerivativeMap = new double[scale_divisions];
+        Range w_range = new LinearRange(-w_domain, w_domain, w_divisions, true, true);
+        Range eta_range = new LinearRange(0, eta_domain, eta_divisions, false, true);
 
-        // loop over all scale values
-        for(int i = 0; i < shift_divisions; i++)
-        {
-            double scale = scale_domain*(1d-((double) i)/scale_divisions);
-            
-            scaleMap[i] = scaleResidual(scale);
-            scaleDerivativeMap[i] = scaleResidualDerivative(scale);
+        ToDoubleFunction<DoubleUnaryOperator> infiniteIntegral = func -> Integrate((double t) -> {return InfiniteToFiniteIntegralTransform(func, t);});
 
-            // loop over all shift values
-            for(int j = 0; j < scale_divisions; j++)
-            {
-                double shift = shift_domain*(2d * j / (shift_divisions - 1d) - 1d);
+        ToDoubleBiFunction<Double, Double> shiftFunction = (w, eta) -> infiniteIntegral.applyAsDouble((double x) -> {return ShiftIntegrand(x, w, eta);});
+        ToDoubleBiFunction<Double, Double> scaleFunction = (w, eta) -> infiniteIntegral.applyAsDouble((double x) -> {return ScaleIntegrand(x, w, eta);});
 
-                shiftMap[i][j] = shiftResidual(shift, scale);
-                shiftDerivativeMap[i][j] = shiftResidualDerivative(shift, scale);
-
-            }
-        }
-
+        shiftMap = new LinearInterpolation2D(w_range, eta_range, shiftFunction);
+        scaleMap = new LinearInterpolation2D(w_range, eta_range, scaleFunction);
     }
 
     /**
@@ -287,54 +285,70 @@ public class BellCurveDistribution extends ActivationProbabilityDistribution {
     }
 
     /**
-     * Compute the residual of the shift factor
-     * @param shift 
-     * @param scale
-     * @return
+     * Compute the value of the shift integrand at a given point
+     * @param x The x-value to evaluate. x indicates the variable to be integrated over from 0 to infinity
+     * @param w The shift parameter
+     * @param eta The scale parameter 
+     * @return The integrand value
      */
-    private static double shiftResidual(double shift, double scale)
+    private static double ShiftIntegrand(double x, double w, double eta)
     {
-        double exponent_value = -shift*shift/(2*root_pi*scale*scale);
-        return shift*scale*root_2pi*Math.pow(zeta_3halfs, Math.exp(exponent_value)); // yup... a double exponential for some reason. This was approximated without proof
+        if(x == 0)
+        {
+            return -4 * eta * w * Math.exp(-eta*w*w);
+        }
+
+        final double wminx = w-x;
+        final double wplusx = w+x;
+        double value = Math.exp(-eta * wminx * wminx) - Math.exp(-eta * wplusx * wplusx);
+        value /= Math.expm1(-x*x);
+        return x * value;
     }
 
     /**
-     * Compute the derivative (wrt the shift) of the residual of the shift factor 
-     * @param shift 
-     * @param scale
-     * @return
+     * Compute the value of the scale integrand at a given point
+     * @param x The x-value to evaluate. x indicates the variable to be integrated over from 0 to infinity
+     * @param w The shift parameter
+     * @param eta The scale parameter 
+     * @return The integrand value
      */
-    private static double shiftResidualDerivative(double shift, double scale)
+    private static double ScaleIntegrand(double x, double w, double eta)
     {
-        if(shift == 0) return scale*root_2pi*zeta_3halfs;
+        if(x == 0)
+        {
+            return 2 * Math.exp(-eta*w*w);
+        }
 
-        double res = shiftResidual(shift, scale);
-        // build up the derivative in steps
-        double derivative = Math.log(res/(shift*scale*root_2pi));
-        derivative *= -shift/(scale*scale*root_pi);
-        derivative += 1/shift;
-        return derivative * res;
+        final double wminx = w-x;
+        final double wplusx = w+x;
+        double value = Math.exp(-eta * wminx * wminx) + Math.exp(-eta * wplusx * wplusx);
+        value /= Math.expm1(-x*x);
+        return -x*x * value;
     }
 
     /**
-     * Compute the residual of the scale factor
-     * @param scale
-     * @return
+     * Use the transformation x = e^(t/(1-t)) - 1 to convert an integral from the bounds [0, Infinity) to [0, 1]
+     * @param func the function being integrated over
+     * @param t the evaluation point on the bounds [0, 1]
+     * @return the transformed value at the given point
      */
-    private static double scaleResidual(double scale)
+    private static double InfiniteToFiniteIntegralTransform(DoubleUnaryOperator func, double t)
     {
-        return root_2pi*scale*scale*scale*(hurwitz_zeta(3d/2, scale*scale) - zeta_3halfs);
+        final double temp = 1d/(1-t);
+        final double x = Math.expm1(t*temp); 
+        return func.applyAsDouble(x) * (x + 1) * temp*temp;
     }
 
     /**
-     * Compute the derivative (wrt the scale) of the residual of the scale factor 
-     * @param scale
+     * Integrate a function on the bounds of 0 to 1
+     * @param func
      * @return
      */
-    private static double scaleResidualDerivative(double scale)
+    private static double Integrate(DoubleUnaryOperator func)
     {
-        double scale2 = scale*scale;
-        return 3*root_2pi*scale2*(hurwitz_zeta(3d/2, scale2) - scale2*hurwitz_zeta(5d/2, scale2) - zeta_3halfs);
+        Range t_range = new LinearRange(0, 1, integrationDivisions-2, false, false);
+        double intermediate = t_range.stream().map(func).sum()/integrationDivisions;
+        return intermediate + (func.applyAsDouble(0) + func.applyAsDouble(1)) / 2;
     }
 
     private static DoublePair shiftLERP(double shift, double scale)

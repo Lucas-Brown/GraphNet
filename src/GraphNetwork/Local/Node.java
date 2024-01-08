@@ -342,13 +342,31 @@ public class Node implements Comparable<Node>{
     /**
      * Handle all incoming signals and store the resulting strength
      */
-    public void acceptIncomingSignals()
+    public void acceptSignals()
     {
-        assert !incomingSignals.isEmpty() : "handleIncomingSignals should never be called if no signals have been recieved.";
-        incomingSignals.sort((s1, s2) -> Integer.compare(s1.recievingNode.id, s2.recievingNode.id)); // sorting by id ensure that the weights are applied to the correct node/signal
+        assert !incomingSignals.isEmpty() || !errorSignals.isEmpty() : "handleIncomingSignals should never be called if no signals have been recieved.";
         
         // Compute the binary string of the incoming signals
         binary_string = nodeSetToBinStr(incomingSignals.stream().map(Signal::getSendingNode).toList());
+        
+        acceptIncomingSignals();
+    }
+
+    private void acceptIncomingSignals()
+    {
+        incomingSignals.sort((s1, s2) -> Integer.compare(s1.recievingNode.id, s2.recievingNode.id)); // sorting by id ensure that the weights are applied to the correct node/signal
+        
+
+        mergedSignalStrength = computeMergedSignalStrength();
+        outputStrength = activationFunction.activator(mergedSignalStrength);
+
+        acceptedSignals = incomingSignals;
+        incomingSignals = new ArrayList<>();
+    }
+
+    private void acceptErrorSignals()
+    {
+        errorSignals.sort((s1, s2) -> Integer.compare(s1.recievingNode.id, s2.recievingNode.id)); // sorting by id ensure that the weights are applied to the correct node/signal
 
         mergedSignalStrength = computeMergedSignalStrength();
         outputStrength = activationFunction.activator(mergedSignalStrength);
