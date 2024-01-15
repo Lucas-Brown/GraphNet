@@ -6,7 +6,14 @@ import java.util.stream.DoubleStream;
 
 public abstract class Range implements Iterable<double[]>{
     
+    protected final int n_divisions;
     protected double[] values;
+
+    public Range(int n_divisions)
+    {
+        this.n_divisions = n_divisions;
+        values = new double[n_divisions];
+    }
 
     /**
      * Check whether the provided value is within the range

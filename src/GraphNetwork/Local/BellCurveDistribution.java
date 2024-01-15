@@ -44,10 +44,10 @@ public class BellCurveDistribution extends ActivationProbabilityDistribution {
     public static final double root_2 = Math.sqrt(2d);
     public static final double root_2pi = root_pi*root_2;
 
-    private static final double w_domain = 25; // pre-compute w values on [-shift_domain, shift_domain]
+    private static final double w_domain = 20; // pre-compute w values on [-shift_domain, shift_domain]
     private static final double eta_domain = 10; // pre-compute eta values on (0, scale_domain]
     private static final int w_divisions = 500;
-    private static final int eta_divisions = 100; 
+    private static final int eta_divisions = 500; 
     private static final int integrationDivisions = 1000;
 
     /**
@@ -68,10 +68,9 @@ public class BellCurveDistribution extends ActivationProbabilityDistribution {
         Range w_range = new LinearRange(-w_domain, w_domain, w_divisions, true, true);
         Range eta_range = new LinearRange(0, eta_domain, eta_divisions, false, true);
 
-        ToDoubleFunction<DoubleUnaryOperator> infiniteIntegral = func -> Integrate((double t) -> {return InfiniteToFiniteIntegralTransform(func, t);});
 
-        ToDoubleBiFunction<Double, Double> shiftFunction = (w, eta) -> infiniteIntegral.applyAsDouble((double x) -> {return ShiftIntegrand(x, w, eta);});
-        ToDoubleBiFunction<Double, Double> scaleFunction = (w, eta) -> infiniteIntegral.applyAsDouble((double x) -> {return ScaleIntegrand(x, w, eta);});
+        ToDoubleBiFunction<Double, Double> shiftFunction = (w, eta) -> infiniteIntegral((double x) -> ShiftIntegrand(x, w, eta));
+        ToDoubleBiFunction<Double, Double> scaleFunction = (w, eta) -> infiniteIntegral((double x) -> ScaleIntegrand(x, w, eta));
 
         shiftMap = new LinearInterpolation2D(w_range, eta_range, shiftFunction);
         scaleMap = new LinearInterpolation2D(w_range, eta_range, scaleFunction);
@@ -293,16 +292,33 @@ public class BellCurveDistribution extends ActivationProbabilityDistribution {
      */
     private static double ShiftIntegrand(double x, double w, double eta)
     {
+        // Limit as x -> 0 
         if(x == 0)
         {
             return -4 * eta * w * Math.exp(-eta*w*w);
         }
 
+        // As x becomes large, the shift integrand (y) approaches 0
+        // once y = 0.001, approximate y = 0 to reduce computation and avoid inf/nan in later steps
+        if(x > 1.17083311923 * w + 2.18931364315)
+        {
+            return 0;
+        }
+
         final double wminx = w-x;
         final double wplusx = w+x;
         double value = Math.exp(-eta * wminx * wminx) - Math.exp(-eta * wplusx * wplusx);
-        value /= Math.expm1(-x*x);
-        return x * value;
+        value *= x;
+
+        // beyond x > 3, the value of Math.expm1(-x*x) is approximately 1
+        if(x > 3)
+        {
+            return value; 
+        }
+        else
+        {
+            return value / Math.expm1(-x*x);
+        }
     }
 
     /**
@@ -319,24 +335,48 @@ public class BellCurveDistribution extends ActivationProbabilityDistribution {
             return 2 * Math.exp(-eta*w*w);
         }
 
+        // As x becomes large, the scale integrand (y) approaches 0
+        // once y = 0.001, approximate y = 0 to reduce computation and avoid inf/nan in later steps
+        if(x > 1.41205967868 * w + 2.43434774198)
+        {
+            return 0;
+        }
+
         final double wminx = w-x;
         final double wplusx = w+x;
         double value = Math.exp(-eta * wminx * wminx) + Math.exp(-eta * wplusx * wplusx);
-        value /= Math.expm1(-x*x);
-        return -x*x * value;
+        value *= x*x;
+
+        // beyond x > 3, the value of Math.expm1(-x*x) is approximately 1
+        if(x > 3)
+        {
+            return value; 
+        }
+        else
+        {
+            return - value / Math.expm1(-x*x);
+        }
     }
 
     /**
      * Use the transformation x = e^(t/(1-t)) - 1 to convert an integral from the bounds [0, Infinity) to [0, 1]
-     * @param func the function being integrated over
+     * @param func the function being integrated over. MUST converge EXPONENTIALLY to 0 as x -> infinity
      * @param t the evaluation point on the bounds [0, 1]
      * @return the transformed value at the given point
      */
-    private static double InfiniteToFiniteIntegralTransform(DoubleUnaryOperator func, double t)
+    private static double infiniteToFiniteIntegralTransform(DoubleUnaryOperator func, double t)
     {
         final double temp = 1d/(1-t);
         final double x = Math.expm1(t*temp); 
-        return func.applyAsDouble(x) * (x + 1) * temp*temp;
+        // if x is effectively infinite, then the provided function is assumed to have a value of 0 due to convergence requirement
+        if(Double.isInfinite(x))
+        {
+            return 0;
+        }
+        final double transformedIntegral = func.applyAsDouble(x) * (x + 1) * temp*temp;
+        
+        assert Double.isFinite(transformedIntegral);
+        return transformedIntegral;
     }
 
     /**
@@ -344,63 +384,22 @@ public class BellCurveDistribution extends ActivationProbabilityDistribution {
      * @param func
      * @return
      */
-    private static double Integrate(DoubleUnaryOperator func)
+    private static double integrate(DoubleUnaryOperator func)
     {
         Range t_range = new LinearRange(0, 1, integrationDivisions-2, false, false);
         double intermediate = t_range.stream().map(func).sum()/integrationDivisions;
         return intermediate + (func.applyAsDouble(0) + func.applyAsDouble(1)) / 2;
     }
-
-    private static DoublePair shiftLERP(double shift, double scale)
+    
+    /**
+     * Integrates the given function on the bounds [0, infinity)
+     * @return 
+     */
+    private static double infiniteIntegral(DoubleUnaryOperator func) 
     {
-        double i_float = scale_divisions*(1d-scale/scale_domain);
-        double j_float = (shift/shift_domain + 1d)*(shift_divisions - 1d)/2d;
-        
-        // if the shift or scale is outside of the pre-computed range, recompute the value
-        if(i_float < 0 || i_float > scale_divisions || j_float < 0 || j_float > shift_divisions)
-        {
-            return new DoublePair(shiftResidual(shift, scale), shiftResidualDerivative(shift, scale));
-        }
-
-        int i = (int)i_float;
-        int j = (int)j_float;
-        double wi = i == i_float ? 1 : i + 1 - i_float;
-        double wj = j == j_float ? j : j + 1 - j_float;
-
-        double w11 = wi*wj;
-        double w12 = wi*(1-wj);
-        double w21 = (1-wi)*wj;
-        double w22 = (1-wi)*(1-wj);
-
-        double res = w11*shiftMap[i][j]+w12*shiftMap[i][j+1]+w21*shiftMap[i+1][j]+w22*shiftMap[i+1][j+1];
-        double resD = w11*shiftDerivativeMap[i][j]+w12*shiftDerivativeMap[i][j+1]
-                     +w21*shiftDerivativeMap[i+1][j]+w22*shiftDerivativeMap[i+1][j+1];
-        return new DoublePair(res, resD);
+        double intVal = integrate((double t) -> infiniteToFiniteIntegralTransform(func, t));
+        assert Double.isFinite(intVal);
+        return intVal;
     }
-
-    private static DoublePair scaleLERP(double scale)
-    {
-        double i_float = scale_divisions*(1d-scale/scale_domain);
-        
-        // if the scale is outside of the pre-computed range, recompute the value
-        if(i_float < 0 || i_float > scale_divisions)
-        {
-            return new DoublePair(scaleResidual(scale), scaleResidualDerivative(scale));
-        }
-
-        int i = (int)i_float;
-        double w = i + 1 - i_float;
-        if(w == 1)
-        {
-            return new DoublePair(scaleMap[i], scaleDerivativeMap[i]);
-        }
-        else
-        {
-            double res = w*scaleMap[i]+(1-w)*scaleMap[i+1];
-            double resD = w*scaleDerivativeMap[i]+(1-w)*scaleDerivativeMap[i+1];
-            return new DoublePair(res, resD);
-        }
-    }
-
 
 }

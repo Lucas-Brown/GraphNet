@@ -4,10 +4,10 @@ public class LinearRange extends Range{
     
     private final double lowerBound;
     private final double upperBound;
-    private final int n_divisions;
 
     public LinearRange(double lowerBound, double upperBound, int n_divisions, boolean isLowerInclusive, boolean isUpperInclusive) 
     {
+        super(n_divisions);
         int start = 0;
         int spacing = n_divisions - 1;
 
@@ -29,7 +29,6 @@ public class LinearRange extends Range{
             values[i] = (i + start) * delta + lowerBound;
         }
         
-        this.n_divisions = n_divisions;
         this.lowerBound = values[0];
         this.upperBound = values[n_divisions - 1];
     }

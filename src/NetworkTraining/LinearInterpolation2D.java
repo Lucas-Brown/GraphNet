@@ -23,7 +23,7 @@ public class LinearInterpolation2D implements Interpolation{
         final int x_len = x_range.getNumberOfPoints();
         final int y_len = y_range.getNumberOfPoints();
 
-        return IntStream.range(0, x_len).parallel().mapToObj(i -> 
+        return IntStream.range(0, x_len).mapToObj(i -> 
         {
             final double xi = x_range.getValue(i);
             
