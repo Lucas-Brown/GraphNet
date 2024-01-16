@@ -95,7 +95,7 @@ public class BellCurveDistribution extends ActivationProbabilityDistribution {
     {
         this.mean = mean;
         this.variance = variance;
-        N = 1;
+        N = 2;
     }
 
     /**
@@ -229,14 +229,13 @@ public class BellCurveDistribution extends ActivationProbabilityDistribution {
      * @param x the value of the fixed point
      * @param b whether the fixed point is reinforcing 
      * @param weight the weight of the fixed point to the distribution
-     * @param mu_arr an array of mean-values 
-     * @param sigma_arr an array of variances
+     * @param bcd_arr an array of distributions
      * @param n_arr the number of points each distribution is approximating. 
      * @param shift the shift from the mean value of THIS distribution
      * @param scale the scale of the variance of THIS distribution
      * @return
      */
-    private double netShiftResidue(double x, boolean b, double weight, double[] mu_arr, double[] sigma_arr, double[] n_arr, double shift, double scale)
+    private double netShiftResidue(double x, boolean b, double weight, BellCurveDistribution[] bcd_arr, double[] n_arr, double shift, double scale)
     {
         double d = x - mean - shift;
         double net = weight * d;
@@ -247,26 +246,26 @@ public class BellCurveDistribution extends ActivationProbabilityDistribution {
             net *= 1/Math.expm1(-d*d/(2*scaled_var2)); 
         }
 
-        return net + netShiftResidue(mu_arr, sigma_arr, n_arr, shift, scale);
+        return net + netShiftResidue(bcd_arr, n_arr, shift, scale);
     }  
 
     /**
      * See the other netShiftResidue
-     * @param mu_arr
-     * @param sigma_arr
+     * @param bcd_arr
      * @param shift
      * @param scale
      * @return
      */
-    private double netShiftResidue(final double[] mu_arr, final double[] sigma_arr, double[] n_arr, final double shift, final double scale)
+    private double netShiftResidue(final BellCurveDistribution[] bcd_arr, double[] n_arr, final double shift, final double scale)
     {
-        assert mu_arr.length == sigma_arr.length && mu_arr.length == n_arr.length;
-        return IntStream.range(0, mu_arr.length).mapToDouble(i -> 
+        assert bcd_arr.length == n_arr.length;
+        return IntStream.range(0, bcd_arr.length).mapToDouble(i -> 
         {
-            double w = (mean - mu_arr[i] - shift) / (root_2 * scale * variance);
-            double eta = scale * variance / sigma_arr[i];
+            BellCurveDistribution bcd = bcd_arr[i];
+            double w = (mean - bcd.mean - shift) / (root_2 * scale * variance);
+            double eta = scale * variance / bcd.variance;
             eta *= eta;
-            return getShiftParameter(w, eta, sigma_arr[i], n_arr[i]);
+            return getShiftParameter(w, eta, bcd.variance, n_arr[i]);
         }).sum();
     }
 
@@ -275,14 +274,13 @@ public class BellCurveDistribution extends ActivationProbabilityDistribution {
      * @param x the value of the fixed point
      * @param b whether the fixed point is reinforcing 
      * @param weight the weight of the fixed point to the distribution
-     * @param mu_arr an array of mean-values 
-     * @param sigma_arr an array of variances
+     * @param bcd_arr an array of distributions
      * @param n_arr the number of points each distribution is approximating. 
      * @param shift the shift from the mean value of THIS distribution
      * @param scale the scale of the variance of THIS distribution
      * @return
      */
-    private double netShiftResidueDerivative(double x, boolean b, double weight, double[] mu_arr, double[] sigma_arr, double[] n_arr, double shift, double scale)
+    private double netShiftResidueDerivative(double x, boolean b, double weight, BellCurveDistribution[] bcd_arr, double[] n_arr, double shift, double scale)
     {
         if(b)
         {
@@ -296,26 +294,26 @@ public class BellCurveDistribution extends ActivationProbabilityDistribution {
         final double inv_expm1 = 1/Math.expm1(-d*d/(2*scaled_var2));
         double net = weight * (1 - inv_expm1) * (d*d*inv_expm1/scaled_var2 - 1);
         
-        return net + netShiftResidueDerivative(mu_arr, sigma_arr, n_arr, shift, scale);
+        return net + netShiftResidueDerivative(bcd_arr, n_arr, shift, scale);
     }  
 
     /**
      * See the other netShiftResidueDerivative
-     * @param mu_arr
-     * @param sigma_arr
+     * @param bcd_arr
      * @param shift
      * @param scale
      * @return
      */
-    private double netShiftResidueDerivative(final double[] mu_arr, final double[] sigma_arr, double[] n_arr, final double shift, final double scale)
+    private double netShiftResidueDerivative(final BellCurveDistribution[] bcd_arr, double[] n_arr, final double shift, final double scale)
     {
-        assert mu_arr.length == sigma_arr.length && mu_arr.length == n_arr.length;
-        return IntStream.range(0, mu_arr.length).mapToDouble(i -> 
+        assert bcd_arr.length == n_arr.length;
+        return IntStream.range(0, bcd_arr.length).mapToDouble(i -> 
         {
-            double w = (mean - mu_arr[i] - shift) / (root_2 * scale * variance);
-            double eta = scale * variance / sigma_arr[i];
+            BellCurveDistribution bcd = bcd_arr[i];
+            double w = (mean - bcd.mean - shift) / (root_2 * scale * variance);
+            double eta = scale * variance / bcd.variance;
             eta *= eta;
-            return getShiftParameterDerivative(w, eta, sigma_arr[i], n_arr[i]);
+            return getShiftParameterDerivative(w, eta, bcd.variance, n_arr[i]);
         }).sum();
     }
 
@@ -325,15 +323,14 @@ public class BellCurveDistribution extends ActivationProbabilityDistribution {
      * @param x the value of the fixed point
      * @param b whether the fixed point is reinforcing 
      * @param weight the weight of the fixed point to the distribution
-     * @param mu_arr an array of mean-values 
-     * @param sigma_arr an array of variances
+     * @param bcd_arr an array of distributions
      * @param n_arr the number of points each distribution is approximating. 
      * @param B_arr The amplitude factor of the distribution 
      * @param shift the shift from the mean value of THIS distribution
      * @param scale the scale of the variance of THIS distribution
      * @return
      */
-    private double netScaleResidue(double x, boolean b, double weight, double[] mu_arr, double[] sigma_arr, double[] n_arr, final double[] B_arr, double shift, double scale)
+    private double netScaleResidue(double x, boolean b, double weight, BellCurveDistribution[] bcd_arr, double[] n_arr, final double[] B_arr, double shift, double scale)
     {
         double d2 = x - mean - shift;
         d2 *= d2;
@@ -346,28 +343,28 @@ public class BellCurveDistribution extends ActivationProbabilityDistribution {
             net *= 1/Math.expm1(-d2/(2*scaled_var2)); 
         }
 
-        return net + netScaleResidue(mu_arr, sigma_arr, n_arr, B_arr, shift, scale);
+        return net + netScaleResidue(bcd_arr, n_arr, B_arr, shift, scale);
     }  
 
     /**
      * See the other netScaleResidue
-     * @param mu_arr
-     * @param sigma_arr
+     * @param bcd_arr
      * @param n_arr
      * @param B_arr
      * @param shift
      * @param scale
      * @return
      */
-    private double netScaleResidue(final double[] mu_arr, final double[] sigma_arr, double[] n_arr, final double[] B_arr, final double shift, final double scale)
+    private double netScaleResidue(final BellCurveDistribution[] bcd_arr, double[] n_arr, final double[] B_arr, final double shift, final double scale)
     {
-        assert mu_arr.length == sigma_arr.length && mu_arr.length == n_arr.length && mu_arr.length == B_arr.length;
-        return IntStream.range(0, mu_arr.length).mapToDouble(i -> 
+        assert bcd_arr.length == n_arr.length && bcd_arr.length == B_arr.length;
+        return IntStream.range(0, bcd_arr.length).mapToDouble(i -> 
         {
-            double w = (mean - mu_arr[i] - shift) / (root_2 * scale * variance);
-            double eta = scale * variance / sigma_arr[i];
+            BellCurveDistribution bcd = bcd_arr[i];
+            double w = (mean - bcd.mean - shift) / (root_2 * scale * variance);
+            double eta = scale * variance / bcd.variance;
             eta *= eta;
-            return getScaleParameter(w, eta, sigma_arr[i], n_arr[i], B_arr[i]);
+            return getScaleParameter(w, eta, bcd.variance, n_arr[i], B_arr[i]);
         }).sum();
     }
 
@@ -376,15 +373,14 @@ public class BellCurveDistribution extends ActivationProbabilityDistribution {
      * @param x the value of the fixed point
      * @param b whether the fixed point is reinforcing 
      * @param weight the weight of the fixed point to the distribution
-     * @param mu_arr an array of mean-values 
-     * @param sigma_arr an array of variances
+     * @param bcd_arr an array of distributions
      * @param n_arr the number of points each distribution is approximating. 
      * @param B_arr The amplitude factor of the distribution 
      * @param shift the shift from the mean value of THIS distribution
      * @param scale the scale of the variance of THIS distribution
      * @return
      */
-    private double netScaleResidueDerivative(double x, boolean b, double weight, double[] mu_arr, double[] sigma_arr, double[] n_arr, final double[] B_arr, double shift, double scale)
+    private double netScaleResidueDerivative(double x, boolean b, double weight, BellCurveDistribution[] bcd_arr, double[] n_arr, final double[] B_arr, double shift, double scale)
     {
         if(b)
         {
@@ -398,7 +394,7 @@ public class BellCurveDistribution extends ActivationProbabilityDistribution {
         final double inv_expm1 = 1/Math.expm1(-d*d/(2*scaled_var2));
         double net = d*(1 - inv_expm1) * (d*d*inv_expm1/scaled_var2 - 2);
         
-        return net + netScaleResidueDerivative(mu_arr, sigma_arr, n_arr, B_arr, shift, scale);
+        return net + netScaleResidueDerivative(bcd_arr, n_arr, B_arr, shift, scale);
     }  
 
     /**
@@ -410,15 +406,16 @@ public class BellCurveDistribution extends ActivationProbabilityDistribution {
      * @param scale
      * @return
      */
-    private double netScaleResidueDerivative(final double[] mu_arr, final double[] sigma_arr, double[] n_arr, final double[] B_arr, final double shift, final double scale)
+    private double netScaleResidueDerivative(final BellCurveDistribution[] bcd_arr, double[] n_arr, final double[] B_arr, final double shift, final double scale)
     {
-        assert mu_arr.length == sigma_arr.length && mu_arr.length == n_arr.length && mu_arr.length == B_arr.length;
-        return IntStream.range(0, mu_arr.length).mapToDouble(i -> 
+        assert bcd_arr.length == n_arr.length && bcd_arr.length == B_arr.length;
+        return IntStream.range(0, bcd_arr.length).mapToDouble(i -> 
         {
-            double w = (mean - mu_arr[i] - shift) / (root_2 * scale * variance);
-            double eta = scale * variance / sigma_arr[i];
+            BellCurveDistribution bcd = bcd_arr[i];
+            double w = (mean - bcd.mean - shift) / (root_2 * scale * variance);
+            double eta = scale * variance / bcd.variance;
             eta *= eta;
-            return getScaleParameterDerivative(w, eta, sigma_arr[i], n_arr[i], B_arr[i]);
+            return getScaleParameterDerivative(w, eta, bcd.variance, n_arr[i], B_arr[i]);
         }).sum();
     }
 
