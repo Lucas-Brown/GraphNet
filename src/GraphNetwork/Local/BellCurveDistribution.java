@@ -4,6 +4,7 @@ import java.util.Random;
 import java.util.function.DoubleUnaryOperator;
 import java.util.function.ToDoubleBiFunction;
 import java.util.function.ToDoubleFunction;
+import java.util.stream.IntStream;
 
 import src.GraphNetwork.Global.DoublePair;
 import src.NetworkTraining.LinearInterpolation2D;
@@ -223,29 +224,204 @@ public class BellCurveDistribution extends ActivationProbabilityDistribution {
         }
     }
 
-
-    private double invWeight(double x)
+    /**
+     * Compute the net shift residue for a fixed point and a set of weighted gaussians
+     * @param x the value of the fixed point
+     * @param b whether the fixed point is reinforcing 
+     * @param weight the weight of the fixed point to the distribution
+     * @param mu_arr an array of mean-values 
+     * @param sigma_arr an array of variances
+     * @param n_arr the number of points each distribution is approximating. 
+     * @param shift the shift from the mean value of THIS distribution
+     * @param scale the scale of the variance of THIS distribution
+     * @return
+     */
+    private double netShiftResidue(double x, boolean b, double weight, double[] mu_arr, double[] sigma_arr, double[] n_arr, double shift, double scale)
     {
-        return 1/(1 - Math.exp(-x*x/2));
-    }
-
-    private double shiftDeltaNewton(double x, boolean b, double shift, double scale, double weight)
-    {
-        double d = x - mean - shift; // d = shifted distance from mean
-        double scale2 = scale*scale;
-        double var2 = variance*variance;
-
-        DoublePair dp = shiftLERP(shift, scale*variance);
-        if(b)
+        double d = x - mean - shift;
+        double net = weight * d;
+        double scaled_var2 = variance * shift;
+        scaled_var2 *= scaled_var2;
+        if(!b)
         {
-            return (dp.x1 - d*weight/N)/(dp.x2 + 1d/N);
+            net *= 1/Math.expm1(-d*d/(2*scaled_var2)); 
         }
 
-        double inv_weight = invWeight(d/(variance*scale));
-        double dynamic = d*(1 - inv_weight)*weight/N;
-        double dynamic_deriv = (1 - inv_weight)*(d*d*inv_weight/(scale2*var2) - 1)*weight/N;
-        return (dp.x1 - dynamic)/(dp.x2 - dynamic_deriv);
+        return net + netShiftResidue(mu_arr, sigma_arr, n_arr, shift, scale);
     }  
+
+    /**
+     * See the other netShiftResidue
+     * @param mu_arr
+     * @param sigma_arr
+     * @param shift
+     * @param scale
+     * @return
+     */
+    private double netShiftResidue(final double[] mu_arr, final double[] sigma_arr, double[] n_arr, final double shift, final double scale)
+    {
+        assert mu_arr.length == sigma_arr.length && mu_arr.length == n_arr.length;
+        return IntStream.range(0, mu_arr.length).mapToDouble(i -> 
+        {
+            double w = (mean - mu_arr[i] - shift) / (root_2 * scale * variance);
+            double eta = scale * variance / sigma_arr[i];
+            eta *= eta;
+            return getShiftParameter(w, eta, sigma_arr[i], n_arr[i]);
+        }).sum();
+    }
+
+    /**
+     * Compute the net shift residue derivative for a fixed point and a set of weighted gaussians
+     * @param x the value of the fixed point
+     * @param b whether the fixed point is reinforcing 
+     * @param weight the weight of the fixed point to the distribution
+     * @param mu_arr an array of mean-values 
+     * @param sigma_arr an array of variances
+     * @param n_arr the number of points each distribution is approximating. 
+     * @param shift the shift from the mean value of THIS distribution
+     * @param scale the scale of the variance of THIS distribution
+     * @return
+     */
+    private double netShiftResidueDerivative(double x, boolean b, double weight, double[] mu_arr, double[] sigma_arr, double[] n_arr, double shift, double scale)
+    {
+        if(b)
+        {
+            return -weight;
+        }
+
+        final double d = x - mean - shift;
+        double scaled_var2 = variance * shift;
+        scaled_var2 *= scaled_var2;
+
+        final double inv_expm1 = 1/Math.expm1(-d*d/(2*scaled_var2));
+        double net = weight * (1 - inv_expm1) * (d*d*inv_expm1/scaled_var2 - 1);
+        
+        return net + netShiftResidueDerivative(mu_arr, sigma_arr, n_arr, shift, scale);
+    }  
+
+    /**
+     * See the other netShiftResidueDerivative
+     * @param mu_arr
+     * @param sigma_arr
+     * @param shift
+     * @param scale
+     * @return
+     */
+    private double netShiftResidueDerivative(final double[] mu_arr, final double[] sigma_arr, double[] n_arr, final double shift, final double scale)
+    {
+        assert mu_arr.length == sigma_arr.length && mu_arr.length == n_arr.length;
+        return IntStream.range(0, mu_arr.length).mapToDouble(i -> 
+        {
+            double w = (mean - mu_arr[i] - shift) / (root_2 * scale * variance);
+            double eta = scale * variance / sigma_arr[i];
+            eta *= eta;
+            return getShiftParameterDerivative(w, eta, sigma_arr[i], n_arr[i]);
+        }).sum();
+    }
+
+
+    /**
+     * Compute the net scale residue for a fixed point and a set of weighted gaussians
+     * @param x the value of the fixed point
+     * @param b whether the fixed point is reinforcing 
+     * @param weight the weight of the fixed point to the distribution
+     * @param mu_arr an array of mean-values 
+     * @param sigma_arr an array of variances
+     * @param n_arr the number of points each distribution is approximating. 
+     * @param B_arr The amplitude factor of the distribution 
+     * @param shift the shift from the mean value of THIS distribution
+     * @param scale the scale of the variance of THIS distribution
+     * @return
+     */
+    private double netScaleResidue(double x, boolean b, double weight, double[] mu_arr, double[] sigma_arr, double[] n_arr, final double[] B_arr, double shift, double scale)
+    {
+        double d2 = x - mean - shift;
+        d2 *= d2;
+
+        double net = weight * d2;
+        double scaled_var2 = variance * shift;
+        scaled_var2 *= scaled_var2;
+        if(!b)
+        {
+            net *= 1/Math.expm1(-d2/(2*scaled_var2)); 
+        }
+
+        return net + netScaleResidue(mu_arr, sigma_arr, n_arr, B_arr, shift, scale);
+    }  
+
+    /**
+     * See the other netScaleResidue
+     * @param mu_arr
+     * @param sigma_arr
+     * @param n_arr
+     * @param B_arr
+     * @param shift
+     * @param scale
+     * @return
+     */
+    private double netScaleResidue(final double[] mu_arr, final double[] sigma_arr, double[] n_arr, final double[] B_arr, final double shift, final double scale)
+    {
+        assert mu_arr.length == sigma_arr.length && mu_arr.length == n_arr.length && mu_arr.length == B_arr.length;
+        return IntStream.range(0, mu_arr.length).mapToDouble(i -> 
+        {
+            double w = (mean - mu_arr[i] - shift) / (root_2 * scale * variance);
+            double eta = scale * variance / sigma_arr[i];
+            eta *= eta;
+            return getScaleParameter(w, eta, sigma_arr[i], n_arr[i], B_arr[i]);
+        }).sum();
+    }
+
+    /**
+     * Compute the net scale residue derivative for a fixed point and a set of weighted gaussians
+     * @param x the value of the fixed point
+     * @param b whether the fixed point is reinforcing 
+     * @param weight the weight of the fixed point to the distribution
+     * @param mu_arr an array of mean-values 
+     * @param sigma_arr an array of variances
+     * @param n_arr the number of points each distribution is approximating. 
+     * @param B_arr The amplitude factor of the distribution 
+     * @param shift the shift from the mean value of THIS distribution
+     * @param scale the scale of the variance of THIS distribution
+     * @return
+     */
+    private double netScaleResidueDerivative(double x, boolean b, double weight, double[] mu_arr, double[] sigma_arr, double[] n_arr, final double[] B_arr, double shift, double scale)
+    {
+        if(b)
+        {
+            return -2*weight*x;
+        }
+
+        final double d = x - mean - shift;
+        double scaled_var2 = variance * shift;
+        scaled_var2 *= scaled_var2;
+
+        final double inv_expm1 = 1/Math.expm1(-d*d/(2*scaled_var2));
+        double net = d*(1 - inv_expm1) * (d*d*inv_expm1/scaled_var2 - 2);
+        
+        return net + netScaleResidueDerivative(mu_arr, sigma_arr, n_arr, B_arr, shift, scale);
+    }  
+
+    /**
+     * See other netScaleResidueDerivative
+     * @param mu_arr
+     * @param sigma_arr
+     * @param n_arr
+     * @param shift
+     * @param scale
+     * @return
+     */
+    private double netScaleResidueDerivative(final double[] mu_arr, final double[] sigma_arr, double[] n_arr, final double[] B_arr, final double shift, final double scale)
+    {
+        assert mu_arr.length == sigma_arr.length && mu_arr.length == n_arr.length && mu_arr.length == B_arr.length;
+        return IntStream.range(0, mu_arr.length).mapToDouble(i -> 
+        {
+            double w = (mean - mu_arr[i] - shift) / (root_2 * scale * variance);
+            double eta = scale * variance / sigma_arr[i];
+            eta *= eta;
+            return getScaleParameterDerivative(w, eta, sigma_arr[i], n_arr[i], B_arr[i]);
+        }).sum();
+    }
+
 
     private double scaleDeltaNewton(double x, boolean b, double shift, double scale, double weight)
     {
@@ -400,6 +576,67 @@ public class BellCurveDistribution extends ActivationProbabilityDistribution {
         double intVal = integrate((double t) -> infiniteToFiniteIntegralTransform(func, t));
         assert Double.isFinite(intVal);
         return intVal;
+    }
+
+    /**
+     * Returns the interpolated shift parameter 
+     * @param w
+     * @param eta
+     * @param sigma_b
+     * @param n
+     * @return
+     */
+    private double getShiftParameter(double w, double eta, double sigma_b, double n)
+    {
+        final double coef = root_2*n*sigma_b*eta/root_pi;
+        return coef * shiftMap.interpolate(w, eta);
+    }
+
+    /**
+     * Returns the derivative of the interpolated shift parameter 
+     * @param w
+     * @param eta
+     * @param sigma_b
+     * @param n
+     * @return
+     */
+    private double getShiftParameterDerivative(double w, double eta, double sigma_b, double n)
+    {
+        final double coef = root_2*n*sigma_b*eta/root_pi;
+        return coef * shiftMap.interpolateDerivative(w, eta)[0];
+    }
+
+    /**
+     * Returns the interpolated scale parameter 
+     * @param w
+     * @param eta
+     * @param sigma_b
+     * @param B The amplitude coeficient to the weight approximation 
+     * @param n
+     * @return
+     */
+    private double getScaleParameter(double w, double eta, double sigma_b, double n, double B)
+    {
+        final double coef = n*sigma_b*sigma_b*Math.pow(eta, 3d/2);
+        return coef * (2/root_pi * scaleMap.interpolate(w, eta) - zeta_3halfs/B);
+    }
+
+    /**
+     * Returns the derivative of the interpolated scale parameter 
+     * @param w
+     * @param eta
+     * @param sigma_b
+     * @param B The amplitude coeficient to the weight approximation 
+     * @param n
+     * @return
+     */
+    private double getScaleParameterDerivative(double w, double eta, double sigma_b, double n, double B)
+    {
+        // incrementally build the derivative
+        double deriv = -zeta_3halfs/B;
+        deriv += 2/root_pi * scaleMap.interpolate(w, eta);
+        deriv += 4/(3*root_pi) * eta * scaleMap.interpolateDerivative(w, eta)[1]; // index 1 = derivative with respect to the second parameter (eta)
+        return deriv * 3 * variance * sigma_b * eta;
     }
 
 }
