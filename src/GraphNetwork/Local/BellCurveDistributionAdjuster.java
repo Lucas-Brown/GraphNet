@@ -64,9 +64,6 @@ public class BellCurveDistributionAdjuster {
     // The variance of the parent distribution
     private double variance;
 
-    // The square of the variance
-    private double var2;
-
     // All distributions which will create a residual in updating the parent distribution
     private ArrayList<BellCurveDistribution> influincingDistributions;
 
@@ -92,6 +89,40 @@ public class BellCurveDistributionAdjuster {
     private double scale;
 
 
+public BellCurveDistributionAdjuster(BellCurveDistribution parentDistribution)
+{
+    this.parentDistribution = parentDistribution;
+    mean = parentDistribution.getMeanValue();
+    variance = parentDistribution.getVariance();   
+}
+
+// Set up functions
+
+/**
+ * Reinforce or diminish this distribution for a given point
+ * @param x
+ * @param isReinforcing
+ * @param weight
+ */
+public void addPoint(double x, boolean isReinforcing, double weight)
+{
+    update_points.add(x);
+    points_b.add(isReinforcing);
+    point_weights.add(weight);
+}
+
+/**
+ * Reinforce or diminish this distribution for a given distribution
+ * @param bcd 
+ * @param weight
+ */
+public void addPoint(BellCurveDistribution bcd, double weight)
+{
+    influincingDistributions.add(bcd);
+    distribution_weights.add(weight);
+}
+
+// End set up
 // Begin Newton's method 
     
 /**
@@ -122,52 +153,75 @@ public class BellCurveDistributionAdjuster {
         return (root_pi/var2 * varShiftSum + pointSum) / (root_pi*parentDistribution.getN() + root_pi/var2 *varSum + pointCount);
     }
 
-    private double scaleGuess(double x, boolean reinforce, double weight)
+    private double scaleGuess()
     {
-        double d = x - mean;
-        double d2 = d*d;
-        double var3 = variance*variance*variance;
+        // Use a cubic approximation for distributions and a quadratic approximation for points
+        // Start by iteratively constructing the coefficents
 
-        // this hurts
-        if(reinforce)
-        {
-            double a = (5*zeta_7halfs - 7*zeta_5halfs)/2;
-            double b = zeta_5halfs;
-            double c = weight*d2/(3*root_2pi*N*var3);
+        // ax^3 + bx^2 + c = 0
+        double a = 0;
+        double b = 0;
+        double c = 0;
 
-            return 1 + (b - Math.sqrt(b*b - 4*a*c))/(2*a);
-        }
-        else
+        // parent distribution contribution
+        double deriv = getScaleParameterDerivative(0, 1, variance, 1)/3;
+        c += parentDistribution.getN()*(getScaleParameter(0, 1, variance, 1) - deriv);
+        a += parentDistribution.getN() * deriv;
+
+        // individual points
+        for(int i = 0; i < update_points.size(); i++)
         {
-            return 1 - weight*d2/(3*N*root_2pi*var3*zeta_5halfs)*invWeight(d/variance);
+            deriv = scaleDerivativeResiduePoint(update_points.get(i), points_b.get(i), point_weights.get(i))/2;
+            b += deriv;
+            c += scaleResiduePoint(update_points.get(i), points_b.get(i), point_weights.get(i)) - deriv;
         }
+
+        // distributions
+        for(int i = 0; i < influincingDistributions.size(); i++)
+        {
+            deriv = scaleDerivativeResidueDistribution(influincingDistributions.get(i), distribution_weights.get(i))/3;
+            b += deriv;
+            c += scaleResidueDistribution(influincingDistributions.get(i), distribution_weights.get(i)) - deriv;
+        }
+
+        return solveSimpleCubic(a, b, c);
     }
 
 
     /**
-     * Update the mean and variance of this distribution to accomodate the addition of a new point.
-     * The new mean and variance are computed using newtons method to minimize the log-likelihood function
-     * @param x the point to add to the distribution
-     * @param b indicates whether the point reinforces the distribution (b=true) or diminishes the distribution (b=false)
-     * @param weight the point's weight
+     * Update the mean and variance using newtons method
      */
-    private void newtonUpdate(double x, boolean b, double weight)
+    private void newtonUpdate()
     {
-        double shift = shiftGuess(x, weight);
-        double scale = scaleGuess(x, b, weight);
+        // set initial values to make "getRelativeShift" and "getRelativeScale" return proper values
+        shift = 0;
+        scale = 1;
+
+        // get a good initial guess 
+        shift = shiftGuess();
+        scale = scaleGuess();
 
         double delta_shift;
         double delta_scale;
         do{
-            delta_shift = shiftDeltaNewton(x, b, shift, scale, weight);
-            delta_scale = scaleDeltaNewton(x, b, shift, scale, weight);
+            delta_shift = netShiftResidue()/netShiftDerivativeResidue();
+            delta_scale = netScaleResidue()/netScaleDerivativeResidue();
             shift -= delta_shift;
             scale -= delta_scale;
         }while(Math.abs(delta_shift) > TOLLERANCE || Math.abs(delta_scale) > TOLLERANCE);
 
         mean += shift;
         variance *= scale;
-        N += weight;
+    }
+
+    public double getMean()
+    {
+        return mean;
+    }
+
+    public double getVariance()
+    {
+        return variance;
     }
 
 // End newton's method
@@ -226,6 +280,12 @@ public class BellCurveDistributionAdjuster {
     {
         double d = x - mean - shift;
         double net = weight * d;
+        
+        if(d == 0)
+        {
+            return net;
+        }
+
         double scaled_var2 = variance * shift;
         scaled_var2 *= scaled_var2;
         if(!b)
@@ -300,6 +360,11 @@ public class BellCurveDistributionAdjuster {
         }
 
         final double d = x - mean - shift;
+        if(d == 0)
+        {
+            return 0;
+        }
+
         double scaled_var2 = variance * shift;
         scaled_var2 *= scaled_var2;
 
@@ -370,8 +435,13 @@ public class BellCurveDistributionAdjuster {
     {
         double d2 = x - mean - shift;
         d2 *= d2;
-
         double net = weight * d2;
+
+        if(d2 == 0)
+        {
+            return net;
+        }
+
         double scaled_var2 = variance * shift;
         scaled_var2 *= scaled_var2;
         if(!b)
@@ -627,6 +697,26 @@ public class BellCurveDistributionAdjuster {
     }
 
 
+    /**
+     * Solve the equation a*x^3 + b*x^2 + c = 0 assuming a,b < 0 and c > 0
+     * @param a
+     * @param b
+     * @param c
+     * @return the singular x-solution
+     */
+    private static double solveSimpleCubic(double a, double b, double c)
+    {
+        assert a < 0;
+        assert b < 0;
+        assert c > 0;
+        double a2 = a*a;
+
+        double radical = 3*Math.sqrt(3*(27*a2*a2*c*c + 4*a2*b*b*b*c));
+        radical -= 27*a2*c + 2*b*b;
+        radical = Math.cbrt(radical/2); 
+
+        return (radical/a + b*b/(a*radical) - b/a)/3;
+    }
 
 
 
