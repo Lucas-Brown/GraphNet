@@ -51,7 +51,7 @@ public class BellCurveDistribution extends ActivationProbabilityDistribution {
     {
         this.mean = mean;
         this.variance = variance;
-        N = 2;
+        N = 10;
     }
 
     /**

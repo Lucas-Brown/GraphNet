@@ -6,6 +6,14 @@
     "configurations": [
         {
             "type": "java",
+            "name": "DistributionCorrectionTests",
+            "request": "launch",
+            "mainClass": "src.Tests.DistributionCorrectionTests",
+            "projectName": "GraphNet_6831250",
+            "vmArgs": "-enableassertions"
+        },
+        {
+            "type": "java",
             "name": "Current File",
             "request": "launch",
             "mainClass": "${file}",

@@ -1,5 +1,7 @@
 package src.NetworkTraining;
 
+import org.junit.Test;
+
 public class LinearRange extends Range{
     
     private final double lowerBound;
@@ -44,11 +46,19 @@ public class LinearRange extends Range{
         double floatingIndex = getFloatingIndex(x);
         if(floatingIndex < 0 || floatingIndex >= n_divisions)
         {
-            return -1;
+            return -2;
         }
         else
         {
-            return (int) floatingIndex; 
+            int index = (int) floatingIndex;
+            if(floatingIndex % 1d == 0)
+            {
+                return index - 1;
+            }
+            else
+            {
+                return index;
+            }
         }
     }
 
@@ -56,7 +66,7 @@ public class LinearRange extends Range{
     public double getIndexResidualWeight(double x) 
     {
         double floatingIndex = getFloatingIndex(x);
-        return floatingIndex % 1.0;
+        return Math.ceil(floatingIndex) - floatingIndex;
     }
     
 }

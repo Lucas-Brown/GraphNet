@@ -50,8 +50,21 @@ public class LinearInterpolation2D implements Interpolation{
         int i = x_range.getNearestIndex(x);
         int j = y_range.getNearestIndex(y);
 
-        double wx = 1 - x_range.getIndexResidualWeight(x);
-        double wy = 1 - y_range.getIndexResidualWeight(y);
+        double wx = x_range.getIndexResidualWeight(x);
+        double wy = y_range.getIndexResidualWeight(y);
+
+        // account for the edge case where x or y are exactly 0
+        if(i == -1)
+        {
+            i++;
+            wx += 1;
+        }
+
+        if(j == -1)
+        {
+            j++;
+            wy += 1;
+        }
 
         return wx*wy*samplePoints[i][j]
             + (1-wx)*wy*samplePoints[i+1][j]

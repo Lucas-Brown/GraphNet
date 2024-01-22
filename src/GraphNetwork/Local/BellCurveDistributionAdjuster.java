@@ -27,7 +27,7 @@ public class BellCurveDistributionAdjuster {
     private static final double eta_domain = 10; // pre-compute eta values on (0, scale_domain]
     private static final int w_divisions = 500;
     private static final int eta_divisions = 500; 
-    private static final int integrationDivisions = 1000;
+    private static final int integrationDivisions = 100;
 
     /**
      * shift map dimensions are computed as [w][eta]
@@ -47,12 +47,8 @@ public class BellCurveDistributionAdjuster {
         Range w_range = new LinearRange(-w_domain, w_domain, w_divisions, true, true);
         Range eta_range = new LinearRange(0, eta_domain, eta_divisions, false, true);
 
-
-        ToDoubleBiFunction<Double, Double> shiftFunction = (w, eta) -> infiniteIntegral((double x) -> ShiftIntegrand(x, w, eta));
-        ToDoubleBiFunction<Double, Double> scaleFunction = (w, eta) -> infiniteIntegral((double x) -> ScaleIntegrand(x, w, eta));
-
-        shiftMap = new LinearInterpolation2D(w_range, eta_range, shiftFunction);
-        scaleMap = new LinearInterpolation2D(w_range, eta_range, scaleFunction);
+        shiftMap = new LinearInterpolation2D(w_range, eta_range, BellCurveDistributionAdjuster::shiftFunction);
+        scaleMap = new LinearInterpolation2D(w_range, eta_range, BellCurveDistributionAdjuster::scaleFunction);
     }
 
     // The distribution that is being updated
@@ -94,6 +90,13 @@ public BellCurveDistributionAdjuster(BellCurveDistribution parentDistribution)
     this.parentDistribution = parentDistribution;
     mean = parentDistribution.getMeanValue();
     variance = parentDistribution.getVariance();   
+
+    
+    influincingDistributions = new ArrayList<>();
+    distribution_weights = new ArrayList<>();
+    update_points = new ArrayList<>();
+    points_b = new ArrayList<>();
+    point_weights = new ArrayList<>();
 }
 
 // Set up functions
@@ -116,7 +119,7 @@ public void addPoint(double x, boolean isReinforcing, double weight)
  * @param bcd 
  * @param weight
  */
-public void addPoint(BellCurveDistribution bcd, double weight)
+public void addDistribution(BellCurveDistribution bcd, double weight)
 {
     influincingDistributions.add(bcd);
     distribution_weights.add(weight);
@@ -191,7 +194,7 @@ public void addPoint(BellCurveDistribution bcd, double weight)
     /**
      * Update the mean and variance using newtons method
      */
-    private void newtonUpdate()
+    public void newtonUpdate()
     {
         // set initial values to make "getRelativeShift" and "getRelativeScale" return proper values
         shift = 0;
@@ -212,6 +215,17 @@ public void addPoint(BellCurveDistribution bcd, double weight)
 
         mean += shift;
         variance *= scale;
+
+        clear();
+    }
+
+    private void clear()
+    {
+        influincingDistributions.clear();
+        distribution_weights.clear();
+        update_points.clear();
+        points_b.clear();
+        point_weights.clear();
     }
 
     public double getMean()
@@ -594,14 +608,14 @@ public void addPoint(BellCurveDistribution bcd, double weight)
 
         // As x becomes large, the shift integrand (y) approaches 0
         // once y = 0.001, approximate y = 0 to reduce computation and avoid inf/nan in later steps
-        if(x > 1.17083311923 * w + 2.18931364315)
+        if(x > 1.17083311923 * Math.abs(w) + 2.18931364315)
         {
             return 0;
         }
 
         final double wminx = w-x;
         final double wplusx = w+x;
-        double value = Math.exp(-eta * wminx * wminx) - Math.exp(-eta * wplusx * wplusx);
+        double value = Math.exp(-eta * wplusx * wplusx) - Math.exp(-eta * wminx * wminx);
         value *= x;
 
         // beyond x > 3, the value of Math.expm1(-x*x) is approximately 1
@@ -611,7 +625,7 @@ public void addPoint(BellCurveDistribution bcd, double weight)
         }
         else
         {
-            return value / Math.expm1(-x*x);
+            return - value / Math.expm1(-x*x);
         }
     }
 
@@ -631,14 +645,14 @@ public void addPoint(BellCurveDistribution bcd, double weight)
 
         // As x becomes large, the scale integrand (y) approaches 0
         // once y = 0.001, approximate y = 0 to reduce computation and avoid inf/nan in later steps
-        if(x > 1.41205967868 * w + 2.43434774198)
+        if(x > 1.41205967868 * Math.abs(w) + 2.43434774198)
         {
             return 0;
         }
 
         final double wminx = w-x;
         final double wplusx = w+x;
-        double value = Math.exp(-eta * wminx * wminx) + Math.exp(-eta * wplusx * wplusx);
+        double value = Math.exp(-eta * wplusx * wplusx) + Math.exp(-eta * wminx * wminx);
         value *= x*x;
 
         // beyond x > 3, the value of Math.expm1(-x*x) is approximately 1
@@ -658,7 +672,7 @@ public void addPoint(BellCurveDistribution bcd, double weight)
      * @param t the evaluation point on the bounds [0, 1]
      * @return the transformed value at the given point
      */
-    private static double infiniteToFiniteIntegralTransform(DoubleUnaryOperator func, double t)
+    public static double infiniteToFiniteIntegralTransform(DoubleUnaryOperator func, double t)
     {
         final double temp = 1d/(1-t);
         final double x = Math.expm1(t*temp); 
@@ -678,18 +692,19 @@ public void addPoint(BellCurveDistribution bcd, double weight)
      * @param func
      * @return
      */
-    private static double integrate(DoubleUnaryOperator func)
+    public static double integrate(DoubleUnaryOperator func)
     {
         Range t_range = new LinearRange(0, 1, integrationDivisions-2, false, false);
-        double intermediate = t_range.stream().map(func).sum()/integrationDivisions;
-        return intermediate + (func.applyAsDouble(0) + func.applyAsDouble(1)) / 2;
+        double intermediate = t_range.stream().map(func).sum();
+        intermediate += (func.applyAsDouble(0) + func.applyAsDouble(1)) / 2;
+        return intermediate/integrationDivisions;
     }
     
     /**
      * Integrates the given function on the bounds [0, infinity)
      * @return 
      */
-    private static double infiniteIntegral(DoubleUnaryOperator func) 
+    public static double infiniteIntegral(DoubleUnaryOperator func) 
     {
         double intVal = integrate((double t) -> infiniteToFiniteIntegralTransform(func, t));
         assert Double.isFinite(intVal);
@@ -718,6 +733,33 @@ public void addPoint(BellCurveDistribution bcd, double weight)
         return (radical/a + b*b/(a*radical) - b/a)/3;
     }
 
+    public static double shiftFunction(double w, double eta)
+    {
+        return infiniteIntegral((double x) -> ShiftIntegrand(x, w, eta));
+    } 
 
+    public static double scaleFunction(double w, double eta)
+    {
+        return infiniteIntegral((double x) -> ScaleIntegrand(x, w, eta));
+    } 
 
+    public static double getShiftIntegralValue(double w, double eta)
+    {
+        return shiftMap.interpolate(w, eta);
+    }
+    
+    public static double getShiftIntegralDerivativeValue(double w, double eta)
+    {
+        return shiftMap.interpolateDerivative(w, eta)[0];
+    }
+
+    public static double getScaleIntegralValue(double w, double eta)
+    {
+        return scaleMap.interpolate(w, eta);
+    }
+    
+    public static double getScaleIntegralDerivativeValue(double w, double eta)
+    {
+        return scaleMap.interpolateDerivative(w, eta)[0];
+    }
 }
