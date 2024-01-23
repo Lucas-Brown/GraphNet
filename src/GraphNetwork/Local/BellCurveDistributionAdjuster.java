@@ -2,7 +2,6 @@ package src.GraphNetwork.Local;
 
 import java.util.ArrayList;
 import java.util.function.DoubleUnaryOperator;
-import java.util.function.ToDoubleBiFunction;
 import java.util.stream.IntStream;
 
 import src.NetworkTraining.LinearInterpolation2D;
@@ -11,7 +10,7 @@ import src.NetworkTraining.Range;
 
 public class BellCurveDistributionAdjuster {
     
-    private static final double TOLLERANCE = 1E-6; // tollerance for newton's method  
+    private static final double TOLLERANCE = 1E-12; // tollerance for newton's method  
 
     /**
      * pre-compute a few values of the riemann-zeta function
@@ -23,11 +22,11 @@ public class BellCurveDistributionAdjuster {
     public static final double root_2 = Math.sqrt(2d);
     public static final double root_2pi = root_pi*root_2;
 
-    private static final double w_domain = 20; // pre-compute w values on [-shift_domain, shift_domain]
-    private static final double eta_domain = 10; // pre-compute eta values on (0, scale_domain]
+    private static final double w_domain = 10; // pre-compute w values on [-shift_domain, shift_domain]
+    private static final double eta_domain = 10; // pre-compute eta values on [1/scale_domain, scale_domain]
     private static final int w_divisions = 500;
     private static final int eta_divisions = 500; 
-    private static final int integrationDivisions = 100;
+    private static final int integrationDivisions = 1000;
 
     /**
      * shift map dimensions are computed as [w][eta]
@@ -45,10 +44,10 @@ public class BellCurveDistributionAdjuster {
      */
     static{
         Range w_range = new LinearRange(-w_domain, w_domain, w_divisions, true, true);
-        Range eta_range = new LinearRange(0, eta_domain, eta_divisions, false, true);
+        Range eta_range = new LinearRange(1/eta_domain, eta_domain, eta_divisions, true, true);
 
-        shiftMap = new LinearInterpolation2D(w_range, eta_range, BellCurveDistributionAdjuster::shiftFunction);
-        scaleMap = new LinearInterpolation2D(w_range, eta_range, BellCurveDistributionAdjuster::scaleFunction);
+        shiftMap = new LinearInterpolation2D(w_range, eta_range, BellCurveDistributionAdjuster::shiftFunctionNoTransform);
+        scaleMap = new LinearInterpolation2D(w_range, eta_range, BellCurveDistributionAdjuster::scaleFunctionNoTransform);
     }
 
     // The distribution that is being updated
@@ -600,26 +599,37 @@ public void addDistribution(BellCurveDistribution bcd, double weight)
      */
     private static double ShiftIntegrand(double x, double w, double eta)
     {
-        // Limit as x -> 0 
-        if(x == 0)
-        {
-            return -4 * eta * w * Math.exp(-eta*w*w);
-        }
-
-        // As x becomes large, the shift integrand (y) approaches 0
-        // once y = 0.001, approximate y = 0 to reduce computation and avoid inf/nan in later steps
-        if(x > 1.17083311923 * Math.abs(w) + 2.18931364315)
+        // special case
+        if(w == 0)
         {
             return 0;
         }
 
+        // Use series expansion around x=0 to avoid infinities from expm1 
+        if(x <= 0.1)
+        {
+            double temp = -4 - 2/3*(4*eta*eta*w*w - 6*eta + 3) * x*x;
+            return temp * w * eta * Math.exp(-eta*w*w);
+        }
+
+        double w_abs = Math.abs(w);
+
+        // As x becomes large, the shift integrand approaches 0
+        if(x >= w_abs + Math.sqrt(Math.log(w_abs/TOLLERANCE)/eta))
+        {
+            return 0;
+        }
+        
         final double wminx = w-x;
         final double wplusx = w+x;
+
+
         double value = Math.exp(-eta * wplusx * wplusx) - Math.exp(-eta * wminx * wminx);
         value *= x;
+        return - value / Math.expm1(-x*x);
 
-        // beyond x > 3, the value of Math.expm1(-x*x) is approximately 1
-        if(x > 3)
+        /* 
+        if(x >= Math.sqrt(Math.log(1/TOLLERANCE)))
         {
             return value; 
         }
@@ -627,6 +637,7 @@ public void addDistribution(BellCurveDistribution bcd, double weight)
         {
             return - value / Math.expm1(-x*x);
         }
+        */
     }
 
     /**
@@ -638,24 +649,44 @@ public void addDistribution(BellCurveDistribution bcd, double weight)
      */
     private static double ScaleIntegrand(double x, double w, double eta)
     {
-        if(x == 0)
+        // Use series expansion around x=0 to avoid infinities from expm1 
+        if(x <= 0.1)
         {
-            return 2 * Math.exp(-eta*w*w);
+            double temp = 2 +(4*eta*eta*w*w - 2*eta + 1) * x*x;
+            return temp * Math.exp(-eta*w*w);
         }
 
-        // As x becomes large, the scale integrand (y) approaches 0
-        // once y = 0.001, approximate y = 0 to reduce computation and avoid inf/nan in later steps
-        if(x > 1.41205967868 * Math.abs(w) + 2.43434774198)
+        
+        double w_abs = Math.abs(w);
+
+        // As x becomes large, the scale integrand approaches 0
+        if(w_abs == 0)
         {
-            return 0;
+            if(x >= Math.sqrt(Math.log(2/TOLLERANCE)/eta))
+            {
+                return 0;
+            }
+        }
+        else
+        {
+            if(x >= w_abs + Math.sqrt(Math.log(w_abs*w_abs/TOLLERANCE)/eta))
+            {
+                return 0;
+            }
         }
 
         final double wminx = w-x;
         final double wplusx = w+x;
         double value = Math.exp(-eta * wplusx * wplusx) + Math.exp(-eta * wminx * wminx);
         value *= x*x;
+        value /= -Math.expm1(-x*x);
+        if(!Double.isFinite(value)) 
+        {
+            System.err.println();
+        }
+        return value;
 
-        // beyond x > 3, the value of Math.expm1(-x*x) is approximately 1
+        /*
         if(x > 3)
         {
             return value; 
@@ -664,6 +695,7 @@ public void addDistribution(BellCurveDistribution bcd, double weight)
         {
             return - value / Math.expm1(-x*x);
         }
+         */
     }
 
     /**
@@ -683,21 +715,27 @@ public void addDistribution(BellCurveDistribution bcd, double weight)
         }
         final double transformedIntegral = func.applyAsDouble(x) * (x + 1) * temp*temp;
         
+        if(!Double.isFinite(transformedIntegral))
+        {
+            System.err.println(); // just need a place to stop
+        }
         assert Double.isFinite(transformedIntegral);
         return transformedIntegral;
     }
 
     /**
-     * Integrate a function on the bounds of 0 to 1
+     * Integrate a function on the bounds of [a, b]
      * @param func
+     * @param a
+     * @param b
      * @return
      */
-    public static double integrate(DoubleUnaryOperator func)
+    public static double integrate(DoubleUnaryOperator func, double a, double b)
     {
-        Range t_range = new LinearRange(0, 1, integrationDivisions-2, false, false);
+        Range t_range = new LinearRange(a, b, integrationDivisions-2, false, false);
         double intermediate = t_range.stream().map(func).sum();
-        intermediate += (func.applyAsDouble(0) + func.applyAsDouble(1)) / 2;
-        return intermediate/integrationDivisions;
+        intermediate += (func.applyAsDouble(a) + func.applyAsDouble(b)) / 2;
+        return intermediate*(b-a)/integrationDivisions;
     }
     
     /**
@@ -706,11 +744,10 @@ public void addDistribution(BellCurveDistribution bcd, double weight)
      */
     public static double infiniteIntegral(DoubleUnaryOperator func) 
     {
-        double intVal = integrate((double t) -> infiniteToFiniteIntegralTransform(func, t));
+        double intVal = integrate((double t) -> infiniteToFiniteIntegralTransform(func, t), 0, 1);
         assert Double.isFinite(intVal);
         return intVal;
     }
-
 
     /**
      * Solve the equation a*x^3 + b*x^2 + c = 0 assuming a,b < 0 and c > 0
@@ -732,6 +769,28 @@ public void addDistribution(BellCurveDistribution bcd, double weight)
 
         return (radical/a + b*b/(a*radical) - b/a)/3;
     }
+
+    public static double shiftFunctionNoTransform(double w, double eta)
+    {
+        if(w == 0) return 0;
+        double upper_bound = Math.abs(w) + Math.sqrt(Math.log(Math.abs(w)/TOLLERANCE)/eta);
+        return integrate((double x) -> ShiftIntegrand(x, w, eta), 0, upper_bound);
+    } 
+
+    public static double scaleFunctionNoTransform(double w, double eta)
+    {
+        double upper_bound;
+        if(w == 0)
+        {
+            upper_bound = Math.sqrt(Math.log(2/TOLLERANCE)/eta);
+        }
+        else
+        {
+            upper_bound = Math.abs(w) + Math.sqrt(Math.log(w*w/TOLLERANCE)/eta);
+        }
+
+        return integrate((double x) -> ScaleIntegrand(x, w, eta), 0, upper_bound);
+    } 
 
     public static double shiftFunction(double w, double eta)
     {
@@ -760,6 +819,6 @@ public void addDistribution(BellCurveDistribution bcd, double weight)
     
     public static double getScaleIntegralDerivativeValue(double w, double eta)
     {
-        return scaleMap.interpolateDerivative(w, eta)[0];
+        return scaleMap.interpolateDerivative(w, eta)[1];
     }
 }

@@ -8,6 +8,9 @@ import java.util.stream.IntStream;
 import org.junit.Test;
 import src.GraphNetwork.Local.BellCurveDistributionAdjuster;
 
+/**
+ * Many of these tests fail simply because the interpolation method for the scale is linear.
+ */
 public class AdjusterPrecompTest {
     
     private final double tollerance = 1E-2;
@@ -62,9 +65,21 @@ public class AdjusterPrecompTest {
     }
 
     @Test
+    public void shiftDirectTestNoTransform()
+    {
+        testAllValues(BellCurveDistributionAdjuster::shiftFunctionNoTransform, target_shift);    
+    }
+
+    @Test
+    public void scaleDirectTestNoTransform()
+    {
+        testAllValues(BellCurveDistributionAdjuster::scaleFunctionNoTransform, target_scale);    
+    }
+
+    @Test
     public void integrationTest()
     {
-        assertEquals(Math.expm1(1), BellCurveDistributionAdjuster.integrate(Math::exp), tollerance);
+        assertEquals(Math.expm1(1), BellCurveDistributionAdjuster.integrate(Math::exp, 0, 1), tollerance);
     }
 
     @Test
