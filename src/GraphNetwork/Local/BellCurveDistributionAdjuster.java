@@ -201,7 +201,7 @@ public void addDistribution(BellCurveDistribution bcd, double weight)
 
         // get a good initial guess 
         shift = shiftGuess();
-        scale = scaleGuess();
+        //scale = scaleGuess(); // it's not working and I don't want to deal with it
 
         double delta_shift;
         double delta_scale;
@@ -303,7 +303,7 @@ public void addDistribution(BellCurveDistribution bcd, double weight)
         scaled_var2 *= scaled_var2;
         if(!b)
         {
-            net *= 1/Math.expm1(-d*d/(2*scaled_var2)); 
+            net *= 1 + 1/Math.expm1(-d*d/(2*scaled_var2)); 
         }
 
         return net;
@@ -353,7 +353,7 @@ public void addDistribution(BellCurveDistribution bcd, double weight)
 
 
         // contribution from distributions
-        net += influincingDistributions.stream().mapToDouble(this::shiftResidueDistribution).sum();
+        net += influincingDistributions.stream().mapToDouble(this::shiftDerivativeResidueDistribution).sum();
 
         return net;
     }
@@ -381,7 +381,7 @@ public void addDistribution(BellCurveDistribution bcd, double weight)
         double scaled_var2 = variance * shift;
         scaled_var2 *= scaled_var2;
 
-        final double inv_expm1 = 1/Math.expm1(-d*d/(2*scaled_var2));
+        final double inv_expm1 = -1/Math.expm1(-d*d/(2*scaled_var2));
         return weight * (1 - inv_expm1) * (d*d*inv_expm1/scaled_var2 - 1);
     }  
 
@@ -459,7 +459,7 @@ public void addDistribution(BellCurveDistribution bcd, double weight)
         scaled_var2 *= scaled_var2;
         if(!b)
         {
-            net *= 1/Math.expm1(-d2/(2*scaled_var2)); 
+            net *= (1 + 1/Math.expm1(-d2/(2*scaled_var2))); 
         }
 
         return net;
@@ -501,7 +501,7 @@ public void addDistribution(BellCurveDistribution bcd, double weight)
     private double netScaleDerivativeResidue()
     {
         // contribution from parent distribution
-        double net = parentDistribution.getN() * shiftDerivativeResidueDistribution(parentDistribution);
+        double net = parentDistribution.getN() * scaleDerivativeResidueDistribution(parentDistribution, 1);
 
         // contribution from individual points
         net += IntStream.range(0, update_points.size())
@@ -534,8 +534,8 @@ public void addDistribution(BellCurveDistribution bcd, double weight)
         double scaled_var2 = variance * shift;
         scaled_var2 *= scaled_var2;
 
-        final double inv_expm1 = 1/Math.expm1(-d*d/(2*scaled_var2));
-        return d*(1 - inv_expm1) * (d*d*inv_expm1/scaled_var2 - 2);
+        final double inv_expm1 = -1/Math.expm1(-d*d/(2*scaled_var2));
+        return weight*d*(1 - inv_expm1) * (d*d*inv_expm1/scaled_var2 - 2);
     }  
 
     /**
