@@ -6,12 +6,14 @@ import java.util.function.DoubleBinaryOperator;
 import java.util.stream.IntStream;
 
 import org.junit.Test;
+
+import src.GraphNetwork.Local.BellCurveDistribution;
 import src.GraphNetwork.Local.BellCurveDistributionAdjuster;
 
 /**
  * Many of these tests fail simply because the interpolation method for the scale is linear.
  */
-public class AdjusterPrecompTest {
+public class BellCurveDistributionAdjusterTests{
     
     private final double tollerance = 1E-2;
     private final double[] w_values = new double[]{-2,-2,-2,0,0,0,2,2,2};
@@ -87,4 +89,24 @@ public class AdjusterPrecompTest {
     {
         assertEquals(1d, BellCurveDistributionAdjuster.infiniteIntegral(x -> Math.exp(-x)), tollerance);
     }
+
+    @Test
+    public void solveSimpleCubicTest()
+    {
+        assertEquals(0.9368, BellCurveDistributionAdjuster.solveSimpleCubic(-3.2, -2.7, 5), 1E-4);
+    }
+
+    @Test
+    public void testNewtonUpdate()
+    {
+        BellCurveDistribution parent = new BellCurveDistribution(0, 1);
+        BellCurveDistributionAdjuster adjuster = new BellCurveDistributionAdjuster(parent);
+
+        adjuster.addPoint(1, true, 1);
+        adjuster.newtonUpdate();
+
+        assertEquals(0.035750626998, adjuster.getMean(), 1E-3);
+        assertEquals(1.0226023097, adjuster.getVariance(), 1E-3);
+    }
+
 }

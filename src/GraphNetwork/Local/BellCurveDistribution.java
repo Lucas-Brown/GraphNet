@@ -49,9 +49,20 @@ public class BellCurveDistribution extends ActivationProbabilityDistribution {
      */
     public BellCurveDistribution(double mean, double variance)
     {
+        this(mean, variance, 10);
+    }
+
+    
+    /**
+     * @param mean mean value of the normal distribution
+     * @param variance variance of the normal distribution
+     * @param N the number of points this distribution approximates
+     */
+    public BellCurveDistribution(double mean, double variance, double N)
+    {
         this.mean = mean;
         this.variance = variance;
-        N = 10;
+        this.N = N;
     }
 
     /**

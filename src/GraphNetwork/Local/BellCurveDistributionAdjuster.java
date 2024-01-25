@@ -10,7 +10,7 @@ import src.NetworkTraining.Range;
 
 public class BellCurveDistributionAdjuster {
     
-    private static final double TOLLERANCE = 1E-12; // tollerance for newton's method  
+    private static final double TOLLERANCE = 1E-6; // tollerance for newton's method  
 
     /**
      * pre-compute a few values of the riemann-zeta function
@@ -201,7 +201,7 @@ public void addDistribution(BellCurveDistribution bcd, double weight)
 
         // get a good initial guess 
         shift = shiftGuess();
-        //scale = scaleGuess(); // it's not working and I don't want to deal with it
+        scale = scaleGuess(); 
 
         double delta_shift;
         double delta_scale;
@@ -246,7 +246,7 @@ public void addDistribution(BellCurveDistribution bcd, double weight)
      */
     private double getRelativeShift(BellCurveDistribution bcd)
     {
-        return (mean - bcd.getMeanValue() - shift) / (root_2 * scale * variance);
+        return (mean - bcd.getMeanValue() + shift) / (root_2 * scale * variance);
     }
 
     /**
@@ -393,7 +393,7 @@ public void addDistribution(BellCurveDistribution bcd, double weight)
     {
         final double w = getRelativeShift(bcd);
         final double eta = getRelativeScale(bcd);
-        return getShiftParameterDerivative(w, eta, bcd.getVariance());
+        return getShiftParameterDerivative(w, eta);
     }
 
     
@@ -401,13 +401,12 @@ public void addDistribution(BellCurveDistribution bcd, double weight)
      * Returns the derivative of the interpolated shift parameter 
      * @param w
      * @param eta
-     * @param sigma_b
      * @param n
      * @return
      */
-    private double getShiftParameterDerivative(double w, double eta, double sigma_b)
+    private double getShiftParameterDerivative(double w, double eta)
     {
-        final double coef = root_2*sigma_b*eta/root_pi;
+        final double coef = Math.sqrt(eta)/root_pi;
         return coef * shiftMap.interpolateDerivative(w, eta)[0];
     }
 
@@ -488,7 +487,8 @@ public void addDistribution(BellCurveDistribution bcd, double weight)
      */
     private double getScaleParameter(double w, double eta, double sigma_b, double B)
     {
-        final double coef = sigma_b*sigma_b*Math.pow(eta, 3d/2);
+        final double root_eta = Math.sqrt(eta);
+        final double coef = sigma_b*sigma_b*root_eta*root_eta*root_eta; // eta^(3/2)
         return coef * (2/root_pi * scaleMap.interpolate(w, eta) - zeta_3halfs/B);
     }
 
@@ -764,15 +764,16 @@ public void addDistribution(BellCurveDistribution bcd, double weight)
      * @param c
      * @return the singular x-solution
      */
-    private static double solveSimpleCubic(double a, double b, double c)
+    public static double solveSimpleCubic(double a, double b, double c)
     {
         assert a < 0;
         assert b < 0;
         assert c > 0;
         double a2 = a*a;
+        double b3 = b*b*b;
 
-        double radical = 3*Math.sqrt(3*(27*a2*a2*c*c + 4*a2*b*b*b*c));
-        radical -= 27*a2*c + 2*b*b;
+        double radical = 3*Math.sqrt(3*(27*a2*a2*c*c + 4*a2*b3*c));
+        radical -= 27*a2*c + 2*b3;
         radical = Math.cbrt(radical/2); 
 
         return (radical/a + b*b/(a*radical) - b/a)/3;
@@ -829,4 +830,5 @@ public void addDistribution(BellCurveDistribution bcd, double weight)
     {
         return scaleMap.interpolateDerivative(w, eta)[1];
     }
+
 }
