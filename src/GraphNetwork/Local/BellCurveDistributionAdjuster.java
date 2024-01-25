@@ -563,11 +563,19 @@ public void addDistribution(BellCurveDistribution bcd, double weight)
      */
     private double getScaleParameterDerivative(double w, double eta, double sigma_b, double B)
     {
-        // incrementally build the derivative
-        double deriv = -zeta_3halfs/B;
-        deriv += 2/root_pi * scaleMap.interpolate(w, eta);
-        deriv += 4/(3*root_pi) * eta * scaleMap.interpolateDerivative(w, eta)[1]; // index 1 = derivative with respect to the second parameter (eta)
-        return deriv * 3 * variance * sigma_b * eta;
+        double[] w_eta_derivatives = scaleMap.interpolateDerivative(w, eta);
+
+        // incrementally build the derivative with respect to the scale parameter
+        // non-derivative part
+        double deriv = 3*(scaleMap.interpolate(w, eta) - root_pi*zeta_3halfs/(2*B));
+        // derivative part for w
+        deriv -= w * w_eta_derivatives[0];
+
+        // derivative part for eta
+        deriv += eta * w_eta_derivatives[1];
+
+        // all multiplied by a coefficient
+        return 2*variance*sigma_b*eta*deriv/root_pi;
     }
 
 // End scale derivative
