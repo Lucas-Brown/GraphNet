@@ -5,6 +5,7 @@ import static org.junit.Assert.assertEquals;
 import org.junit.Test;
 
 import src.NetworkTraining.LinearRange;
+import src.NetworkTraining.MultiplicitiveRange;
 
 public class RangeTest {
 
@@ -62,6 +63,16 @@ public class RangeTest {
         assertEquals(0, range.getNearestIndex(0.25));
         assertEquals(1, range.getNearestIndex(0.3));
         assertEquals(3, range.getNearestIndex(1));
+    }
+
+    
+    @Test
+    public void testMultiplicitiveRangeResidue()
+    {
+        MultiplicitiveRange range = new MultiplicitiveRange(0.5, 8, 5, true, true);
+        assertEquals(0, range.getIndexResidualWeight(1),  tollerance);
+        assertEquals(0.4150374992788439, range.getIndexResidualWeight(1.5), tollerance);
+        assertEquals(0, range.getIndexResidualWeight(2), tollerance);
     }
 
 }

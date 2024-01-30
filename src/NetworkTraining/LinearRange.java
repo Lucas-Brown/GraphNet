@@ -4,8 +4,8 @@ import org.junit.Test;
 
 public class LinearRange extends Range{
     
-    private final double lowerBound;
-    private final double upperBound;
+    protected final double lowerBound;
+    protected final double upperBound;
 
     public LinearRange(double lowerBound, double upperBound, int n_divisions, boolean isLowerInclusive, boolean isUpperInclusive) 
     {
@@ -35,38 +35,10 @@ public class LinearRange extends Range{
         this.upperBound = values[n_divisions - 1];
     }
 
-    private double getFloatingIndex(double x)
+    @Override
+    protected double getFloatingIndex(double x)
     {
         return (n_divisions - 1) * (x - lowerBound)/(upperBound - lowerBound);
-    }
-
-    @Override
-    public int getNearestIndex(double x) 
-    {
-        double floatingIndex = getFloatingIndex(x);
-        if(floatingIndex < 0 || floatingIndex >= n_divisions)
-        {
-            return -2;
-        }
-        else
-        {
-            int index = (int) floatingIndex;
-            if(floatingIndex % 1d == 0)
-            {
-                return index - 1;
-            }
-            else
-            {
-                return index;
-            }
-        }
-    }
-
-    @Override
-    public double getIndexResidualWeight(double x) 
-    {
-        double floatingIndex = getFloatingIndex(x);
-        return Math.ceil(floatingIndex) - floatingIndex;
     }
     
 }

@@ -6,6 +6,7 @@ import java.util.stream.IntStream;
 
 import src.NetworkTraining.LinearInterpolation2D;
 import src.NetworkTraining.LinearRange;
+import src.NetworkTraining.MultiplicitiveRange;
 import src.NetworkTraining.Range;
 
 public class BellCurveDistributionAdjuster {
@@ -44,7 +45,7 @@ public class BellCurveDistributionAdjuster {
      */
     static{
         Range w_range = new LinearRange(-w_domain, w_domain, w_divisions, true, true);
-        Range eta_range = new LinearRange(1/eta_domain, eta_domain, eta_divisions, true, true);
+        Range eta_range = new MultiplicitiveRange(1/eta_domain, eta_domain, eta_divisions, true, true);
 
         shiftMap = new LinearInterpolation2D(w_range, eta_range, BellCurveDistributionAdjuster::shiftFunctionNoTransform);
         scaleMap = new LinearInterpolation2D(w_range, eta_range, BellCurveDistributionAdjuster::scaleFunctionNoTransform);
@@ -58,6 +59,9 @@ public class BellCurveDistributionAdjuster {
 
     // The variance of the parent distribution
     private double variance;
+
+    // The number of points in the parent distribution
+    private double N;
 
     // All distributions which will create a residual in updating the parent distribution
     private ArrayList<BellCurveDistribution> influincingDistributions;
@@ -89,7 +93,7 @@ public BellCurveDistributionAdjuster(BellCurveDistribution parentDistribution)
     this.parentDistribution = parentDistribution;
     mean = parentDistribution.getMeanValue();
     variance = parentDistribution.getVariance();   
-
+    N = parentDistribution.getN();
     
     influincingDistributions = new ArrayList<>();
     distribution_weights = new ArrayList<>();
@@ -152,7 +156,7 @@ public void addDistribution(BellCurveDistribution bcd, double weight)
             varShiftSum += sigma_b2 * (bcd.getMeanValue() - mu_0);
         }
 
-        return (root_pi/var2 * varShiftSum + pointSum) / (root_pi*parentDistribution.getN() + root_pi/var2 *varSum + pointCount);
+        return (root_pi/var2 * varShiftSum + pointSum) / (root_pi*N + root_pi/var2 *varSum + pointCount);
     }
 
     private double scaleGuess()
@@ -167,8 +171,8 @@ public void addDistribution(BellCurveDistribution bcd, double weight)
 
         // parent distribution contribution
         double deriv = getScaleParameterDerivative(0, 1, variance, 1)/3;
-        c += parentDistribution.getN()*(getScaleParameter(0, 1, variance, 1) - deriv);
-        a += parentDistribution.getN() * deriv;
+        c += N *(getScaleParameter(0, 1, variance, 1) - deriv);
+        a += N * deriv;
 
         // individual points
         for(int i = 0; i < update_points.size(); i++)
@@ -215,6 +219,7 @@ public void addDistribution(BellCurveDistribution bcd, double weight)
         mean += shift;
         variance *= scale;
 
+        N += update_points.size() + influincingDistributions.size();
         clear();
     }
 
@@ -235,6 +240,11 @@ public void addDistribution(BellCurveDistribution bcd, double weight)
     public double getVariance()
     {
         return variance;
+    }
+
+    public double getN()
+    {
+        return N;
     }
 
 // End newton's method
@@ -269,7 +279,7 @@ public void addDistribution(BellCurveDistribution bcd, double weight)
     private double netShiftResidue()
     {
         // contribution from parent distribution
-        double net = parentDistribution.getN() * shiftResidueDistribution(parentDistribution);
+        double net = N * shiftResidueDistribution(parentDistribution);
 
         // contribution from individual points
         net += IntStream.range(0, update_points.size())
@@ -344,7 +354,7 @@ public void addDistribution(BellCurveDistribution bcd, double weight)
     private double netShiftDerivativeResidue()
     {
         // contribution from parent distribution
-        double net = parentDistribution.getN() * shiftDerivativeResidueDistribution(parentDistribution);
+        double net = N * shiftDerivativeResidueDistribution(parentDistribution);
 
         // contribution from individual points
         net += IntStream.range(0, update_points.size())
@@ -420,7 +430,7 @@ public void addDistribution(BellCurveDistribution bcd, double weight)
     private double netScaleResidue()
     {
         // contribution from parent distribution
-        double net = parentDistribution.getN() * scaleResidueDistribution(parentDistribution, 1);
+        double net = N * scaleResidueDistribution(parentDistribution, 1);
 
         // contribution from individual points
         net += IntStream.range(0, update_points.size())
@@ -501,7 +511,7 @@ public void addDistribution(BellCurveDistribution bcd, double weight)
     private double netScaleDerivativeResidue()
     {
         // contribution from parent distribution
-        double net = parentDistribution.getN() * scaleDerivativeResidueDistribution(parentDistribution, 1);
+        double net = N * scaleDerivativeResidueDistribution(parentDistribution, 1);
 
         // contribution from individual points
         net += IntStream.range(0, update_points.size())

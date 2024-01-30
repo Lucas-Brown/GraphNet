@@ -135,6 +135,13 @@ public class BellCurveDistribution extends ActivationProbabilityDistribution {
         return N;
     }
 
+    public void setParamsFromAdjuster(BellCurveDistributionAdjuster bcda)
+    {
+        mean = bcda.getMean();
+        variance = bcda.getVariance();
+        N = bcda.getN();
+    }
+
     private static double NormalizedDist(double x, double mean, double variance)
     {
         final double d = x-mean;

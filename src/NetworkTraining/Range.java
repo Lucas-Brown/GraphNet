@@ -1,10 +1,9 @@
 package src.NetworkTraining;
 
 import java.util.Arrays;
-import java.util.Iterator;
 import java.util.stream.DoubleStream;
 
-public abstract class Range implements Iterable<double[]>{
+public abstract class Range{
     
     protected final int n_divisions;
     protected double[] values;
@@ -50,11 +49,6 @@ public abstract class Range implements Iterable<double[]>{
         return values[index];
     }
 
-    public Iterator<double[]> iterator()
-    {
-        return Arrays.asList(values).iterator();
-    }
-
     public DoubleStream stream()
     {
         return Arrays.stream(values);
@@ -65,8 +59,28 @@ public abstract class Range implements Iterable<double[]>{
      * @param x
      * @return
      */
-    public abstract int getNearestIndex(double x);
     
+    public int getNearestIndex(double x) 
+    {
+        double floatingIndex = getFloatingIndex(x);
+        if(floatingIndex < 0 || floatingIndex >= n_divisions)
+        {
+            return -2;
+        }
+        else
+        {
+            int index = (int) floatingIndex;
+            if(floatingIndex % 1d == 0)
+            {
+                return index - 1;
+            }
+            else
+            {
+                return index;
+            }
+        }
+    }
+
     /**
      * Returns how close x is to the nearest value less than x
      * Different range mappings may choose to weigh how close a value is to the next nearest index.
@@ -76,6 +90,13 @@ public abstract class Range implements Iterable<double[]>{
      * @param x
      * @return
      */
-    public abstract double getIndexResidualWeight(double x);
+     public double getIndexResidualWeight(double x) 
+     {
+         double floatingIndex = getFloatingIndex(x);
+         return Math.ceil(floatingIndex) - floatingIndex;
+     }
+    
+    protected abstract double getFloatingIndex(double x);
+
 
 }

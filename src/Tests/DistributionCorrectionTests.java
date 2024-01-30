@@ -15,6 +15,7 @@ public class DistributionCorrectionTests {
         {
             adjuster.addPoint(1, true, 1);
             adjuster.newtonUpdate();
+            parent.setParamsFromAdjuster(adjuster);
         }
 
         System.out.println(adjuster.getMean());
