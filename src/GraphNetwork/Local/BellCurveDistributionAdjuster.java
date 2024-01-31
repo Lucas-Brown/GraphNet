@@ -41,7 +41,6 @@ public class BellCurveDistributionAdjuster {
 
     /**
      * Construct the linear interpolation maps.
-     * TODO: consider non-linear maps, especially for the scale factor
      */
     static{
         Range w_range = new LinearRange(-w_domain, w_domain, w_divisions, true, true);
@@ -779,6 +778,8 @@ public void addDistribution(BellCurveDistribution bcd, double weight)
         assert a < 0;
         assert b < 0;
         assert c > 0;
+
+        /* 
         double a2 = a*a;
         double b3 = b*b*b;
 
@@ -787,6 +788,19 @@ public void addDistribution(BellCurveDistribution bcd, double weight)
         radical = Math.cbrt(radical/2); 
 
         return (radical/a + b*b/(a*radical) - b/a)/3;
+        */
+
+        // normalize constants to avoid rounding errors
+        b /= a;
+        c /= a;
+
+        double b3 = b*b*b;
+
+        double radical = 3*Math.sqrt(3*(27*c*c + 4*b3*c));
+        radical -= 27*c + 2*b3;
+        radical = Math.cbrt(radical/2); 
+
+        return (radical + b*b/radical - b)/3;
     }
 
     public static double shiftFunctionNoTransform(double w, double eta)
