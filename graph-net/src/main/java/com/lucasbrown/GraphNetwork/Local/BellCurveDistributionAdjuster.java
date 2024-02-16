@@ -9,6 +9,8 @@ import com.lucasbrown.NetworkTraining.LinearRange;
 import com.lucasbrown.NetworkTraining.MultiplicitiveRange;
 import com.lucasbrown.NetworkTraining.Range;
 
+import jsat.math.Function;
+
 
 public class BellCurveDistributionAdjuster {
     
@@ -202,6 +204,38 @@ public void addDistribution(BellCurveDistribution bcd, double weight)
         // set initial values to make "getRelativeShift" and "getRelativeScale" return proper values
         shift = 0;
         scale = 1;
+
+        // get a good initial guess 
+        shift = shiftGuess();
+        scale = scaleGuess(); 
+
+        double delta_shift;
+        double delta_scale;
+        do{
+            delta_shift = netShiftResidue()/netShiftDerivativeResidue();
+            delta_scale = netScaleResidue()/netScaleDerivativeResidue();
+            shift -= delta_shift;
+            scale -= delta_scale;
+        }while(Math.abs(delta_shift) > TOLLERANCE || Math.abs(delta_scale) > TOLLERANCE);
+
+        mean += shift;
+        variance *= scale;
+
+        N += update_points.size() + influincingDistributions.size();
+        clear();
+    }
+
+    
+    /**
+     * Update the mean and variance using nelder-mead method
+     */
+    public void nelderMeadUpdate()
+    {
+        // set initial values to make "getRelativeShift" and "getRelativeScale" return proper values
+        shift = 0;
+        scale = 1;
+
+        Function toMaximize = new DoubleFunction()
 
         // get a good initial guess 
         shift = shiftGuess();

@@ -7,6 +7,9 @@
   <groupId>com.lucasbrown</groupId>
   <artifactId>graph-net</artifactId>
   <version>1.0</version>
+  <configuration>
+      <enableAssertions>true</enableAssertions>
+  </configuration>
 
   <name>graph-net</name>
   <!-- FIXME change it to the project's website -->
