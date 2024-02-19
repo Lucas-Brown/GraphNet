@@ -10,20 +10,31 @@ public class LinearInterpolation2D implements Interpolation{
     private final ToDoubleBiFunction<Double, Double> generatingFunction;
     private final double[][] samplePoints;
 
-    public LinearInterpolation2D(Range x_range, Range y_range, final ToDoubleBiFunction<Double, Double> generatingFunction)
+    public LinearInterpolation2D(Range x_range, Range y_range, final ToDoubleBiFunction<Double, Double> generatingFunction, boolean parallelize)
     {
         this.x_range = x_range;
         this.y_range = y_range;
         this.generatingFunction = generatingFunction;
-        samplePoints = generateSamples();
+        samplePoints = generateSamples(parallelize);
     }
 
-    private double[][] generateSamples()
+    public LinearInterpolation2D(Range x_range, Range y_range, final ToDoubleBiFunction<Double, Double> generatingFunction)
+    {
+        this(x_range, y_range, generatingFunction, false);
+    }
+
+    private double[][] generateSamples(boolean parallelize)
     {
         final int x_len = x_range.getNumberOfPoints();
         final int y_len = y_range.getNumberOfPoints();
 
-        return IntStream.range(0, x_len).mapToObj(i -> 
+        IntStream stream = IntStream.range(0, x_len);
+        if(parallelize)
+        {
+            stream = stream.parallel();
+        }
+
+        return stream.mapToObj(i -> 
         {
             final double xi = x_range.getValue(i);
             

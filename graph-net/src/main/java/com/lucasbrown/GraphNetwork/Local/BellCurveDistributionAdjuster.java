@@ -1,6 +1,7 @@
 package com.lucasbrown.GraphNetwork.Local;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.function.DoubleUnaryOperator;
 import java.util.stream.IntStream;
 
@@ -9,49 +10,42 @@ import com.lucasbrown.NetworkTraining.LinearRange;
 import com.lucasbrown.NetworkTraining.MultiplicitiveRange;
 import com.lucasbrown.NetworkTraining.Range;
 
+import jsat.linear.DenseVector;
+import jsat.linear.Vec;
 import jsat.math.Function;
+import jsat.math.optimization.NelderMead;
 
 
-public class BellCurveDistributionAdjuster {
+public class BellCurveDistributionAdjuster implements Function{
     
-    private static final double TOLLERANCE = 1E-6; // tollerance for newton's method  
+    private static final double TOLLERANCE = 1E-6; // tollerance for optimization
+    private static final double DIGITS_OF_PRECISION = 10;
+    private static final int integrationDivisions = 10000;
+    private static final int NM_ITTERATION_LIMIT = 10000;
 
-    /**
-     * pre-compute a few values of the riemann-zeta function
-     */
-    public static final double zeta_3halfs = riemann_zeta(3d/2);
-    public static final double zeta_5halfs = riemann_zeta(5d/2);
-    public static final double zeta_7halfs = riemann_zeta(7d/2);
-    public static final double root_pi = Math.sqrt(Math.PI);
-    public static final double root_2 = Math.sqrt(2d);
-    public static final double root_2pi = root_pi*root_2;
+    private static final double root_pi = Math.sqrt(Math.PI);
+    private static final double root_2 = Math.sqrt(2d);
+    private static final double root_2pi = root_pi*root_2;
 
-    private static final double w_domain = 10; // pre-compute w values on [-shift_domain, shift_domain]
-    private static final double eta_domain = 10; // pre-compute eta values on [1/scale_domain, scale_domain]
+    // range of values to pre-compute for the relative shift from [-w_domain, w_domain]
+    private static final double w_domain = 10;
+
+    // number of pre-computed relative shift values  
     private static final int w_divisions = 500;
-    private static final int eta_divisions = 500; 
-    private static final int integrationDivisions = 1000;
+
+    // range of values to pre-compute for the relative scale from [1/eta_domain, eta_domain]
+    private static final double eta_domain = 10;
+
+    // number of pre-computed relative scale values  
+    private static final int eta_divisions = 500;
 
     /**
-     * shift map dimensions are computed as [w][eta]
-     * where eta = lambda^2 * (sigma_0)^2 / (sigma_b)^2 
-     * and w = (u_0 - u_b + a) / (lambda * sigma_0 * sqrt(2)) 
-     * 
-     * using a as the shift parameter and lambda as the scale parameter
+     * Expected likelihood value map dimensions are computed as [w][eta]
      */
-    private static final LinearInterpolation2D shiftMap;
-    private static final LinearInterpolation2D scaleMap;
+    private static LinearInterpolation2D expectationMap;
 
-    /**
-     * Construct the linear interpolation maps.
-     */
-    static{
-        Range w_range = new LinearRange(-w_domain, w_domain, w_divisions, true, true);
-        Range eta_range = new MultiplicitiveRange(1/eta_domain, eta_domain, eta_divisions, true, true);
-
-        shiftMap = new LinearInterpolation2D(w_range, eta_range, BellCurveDistributionAdjuster::shiftFunctionNoTransform);
-        scaleMap = new LinearInterpolation2D(w_range, eta_range, BellCurveDistributionAdjuster::scaleFunctionNoTransform);
-    }
+    // Indicates whether the expectation map has been initialized 
+    private static boolean is_map_initialized = false;
 
     // The distribution that is being updated
     private final BellCurveDistribution parentDistribution;
@@ -68,10 +62,7 @@ public class BellCurveDistributionAdjuster {
     // All distributions which will create a residual in updating the parent distribution
     private ArrayList<BellCurveDistribution> influincingDistributions;
 
-    /**
-        The filter amplitudes of all corresponding influicing distributions.  
-        This is not a traditional weight, but rather, is intended to indicate the influence from convolutions of distributions as filters
-    */
+    // The weight of each distribution
     private ArrayList<Double> distribution_weights;
 
     // The x-values of all points being used to reinforce/diminish the distribution 
@@ -83,16 +74,13 @@ public class BellCurveDistributionAdjuster {
     // The weight of each point
     private ArrayList<Double> point_weights;
 
-    // The shift value. Used during iterative updating
-    private double shift;
-
-    // The scale value. Used during iterative updating
-    private double scale;
+    private final boolean is_using_map;
 
 
-public BellCurveDistributionAdjuster(BellCurveDistribution parentDistribution)
+public BellCurveDistributionAdjuster(BellCurveDistribution parentDistribution, boolean use_map)
 {
     this.parentDistribution = parentDistribution;
+    is_using_map = use_map;
     mean = parentDistribution.getMeanValue();
     variance = parentDistribution.getVariance();   
     N = parentDistribution.getN();
@@ -102,6 +90,19 @@ public BellCurveDistributionAdjuster(BellCurveDistribution parentDistribution)
     update_points = new ArrayList<>();
     points_b = new ArrayList<>();
     point_weights = new ArrayList<>();
+
+    if(use_map & !is_map_initialized)
+    {
+        Range w_range = new LinearRange(-w_domain, w_domain, w_divisions, true, true);
+        Range eta_range = new MultiplicitiveRange(1/eta_domain, eta_domain, eta_divisions, true, true);
+
+        expectationMap = new LinearInterpolation2D(w_range, eta_range, BellCurveDistributionAdjuster::computeNonAnalyticComponent, true);
+    }
+}
+
+public BellCurveDistributionAdjuster(BellCurveDistribution parentDistribution)
+{
+    this(parentDistribution, true);
 }
 
 // Set up functions
@@ -131,131 +132,7 @@ public void addDistribution(BellCurveDistribution bcd, double weight)
 }
 
 // End set up
-// Begin Newton's method 
-    
-/**
- * Estimates the new shift value
- * @return
- */
-    private double shiftGuess()
-    {
-        double mu_0 = parentDistribution.getMeanValue();
-        double var2 = parentDistribution.getVariance() * parentDistribution.getVariance();
 
-        double pointSum = IntStream.range(0, update_points.size())
-            .filter(points_b::get)
-            .mapToDouble(i -> update_points.get(i) - mean)
-            .sum();
-
-        long pointCount = points_b.stream().filter(b -> b).count();
-
-        double varSum = 0;
-        double varShiftSum = 0;
-        for(BellCurveDistribution bcd : influincingDistributions)
-        {
-            double sigma_b2 = bcd.getVariance() * bcd.getVariance();
-            varSum += sigma_b2;
-            varShiftSum += sigma_b2 * (bcd.getMeanValue() - mu_0);
-        }
-
-        return (root_pi/var2 * varShiftSum + pointSum) / (root_pi*N + root_pi/var2 *varSum + pointCount);
-    }
-
-    private double scaleGuess()
-    {
-        // Use a cubic approximation for distributions and a quadratic approximation for points
-        // Start by iteratively constructing the coefficents
-
-        // ax^3 + bx^2 + c = 0
-        double a = 0;
-        double b = 0;
-        double c = 0;
-
-        // parent distribution contribution
-        double deriv = getScaleParameterDerivative(0, 1, variance, 1)/3;
-        c += N *(getScaleParameter(0, 1, variance, 1) - deriv);
-        a += N * deriv;
-
-        // individual points
-        for(int i = 0; i < update_points.size(); i++)
-        {
-            deriv = scaleDerivativeResiduePoint(update_points.get(i), points_b.get(i), point_weights.get(i))/2;
-            b += deriv;
-            c += scaleResiduePoint(update_points.get(i), points_b.get(i), point_weights.get(i)) - deriv;
-        }
-
-        // distributions
-        for(int i = 0; i < influincingDistributions.size(); i++)
-        {
-            deriv = scaleDerivativeResidueDistribution(influincingDistributions.get(i), distribution_weights.get(i))/3;
-            b += deriv;
-            c += scaleResidueDistribution(influincingDistributions.get(i), distribution_weights.get(i)) - deriv;
-        }
-
-        return solveSimpleCubic(a, b, c);
-    }
-
-
-    /**
-     * Update the mean and variance using newtons method
-     */
-    public void newtonUpdate()
-    {
-        // set initial values to make "getRelativeShift" and "getRelativeScale" return proper values
-        shift = 0;
-        scale = 1;
-
-        // get a good initial guess 
-        shift = shiftGuess();
-        scale = scaleGuess(); 
-
-        double delta_shift;
-        double delta_scale;
-        do{
-            delta_shift = netShiftResidue()/netShiftDerivativeResidue();
-            delta_scale = netScaleResidue()/netScaleDerivativeResidue();
-            shift -= delta_shift;
-            scale -= delta_scale;
-        }while(Math.abs(delta_shift) > TOLLERANCE || Math.abs(delta_scale) > TOLLERANCE);
-
-        mean += shift;
-        variance *= scale;
-
-        N += update_points.size() + influincingDistributions.size();
-        clear();
-    }
-
-    
-    /**
-     * Update the mean and variance using nelder-mead method
-     */
-    public void nelderMeadUpdate()
-    {
-        // set initial values to make "getRelativeShift" and "getRelativeScale" return proper values
-        shift = 0;
-        scale = 1;
-
-        Function toMaximize = new DoubleFunction()
-
-        // get a good initial guess 
-        shift = shiftGuess();
-        scale = scaleGuess(); 
-
-        double delta_shift;
-        double delta_scale;
-        do{
-            delta_shift = netShiftResidue()/netShiftDerivativeResidue();
-            delta_scale = netScaleResidue()/netScaleDerivativeResidue();
-            shift -= delta_shift;
-            scale -= delta_scale;
-        }while(Math.abs(delta_shift) > TOLLERANCE || Math.abs(delta_scale) > TOLLERANCE);
-
-        mean += shift;
-        variance *= scale;
-
-        N += update_points.size() + influincingDistributions.size();
-        clear();
-    }
 
     private void clear()
     {
@@ -281,16 +158,176 @@ public void addDistribution(BellCurveDistribution bcd, double weight)
         return N;
     }
 
-// End newton's method
-    
+    public void applyAdjustments()
+    {
+        NelderMead nm = new NelderMead();
+        List<Vec> init_points = new ArrayList<>(3);
+
+        init_points.add(new DenseVector(new double[]{-0.2, -0.2})); 
+        init_points.add(new DenseVector(new double[]{0.2, -0.2}));
+        init_points.add(new DenseVector(new double[]{0, 0.2}));
+
+        Vec solution = nm.optimize(TOLLERANCE, NM_ITTERATION_LIMIT, this, init_points);
+        mean += solution.get(0);
+        variance *= Math.exp(solution.get(1)); 
+
+        double weight_sum = point_weights.stream().mapToDouble(w -> w).sum();
+        weight_sum += distribution_weights.stream().mapToDouble(w -> w).sum();
+        N += weight_sum;
+        clear();
+    }
+
+    @Override
+    public double f(double... theta) {
+        return -logLikelihoodOfParameters(theta[0], Math.exp(theta[1])); // use exponential transformation to enforce that variance > 0
+    }
+
+    @Override
+    public double f(Vec theta) {
+        return f(theta.arrayCopy());
+    }
+
+    /**
+     * The total log-likelihood for a choice of parameters
+     * @param shift
+     * @param scale
+     * @return
+     */
+    public double logLikelihoodOfParameters(double shift, double scale)
+    {
+        double likelihood = parentDistribution.getN() * logLikelihoodOfDistribution(parentDistribution, shift, scale);
+        likelihood += logLikelihoodOfPoints(shift, scale);
+        likelihood += logLikelihoodOfDistributions(shift, scale);
+
+        return likelihood;
+    }
+
+    /**
+     * Get the cumulative log-likelihood of all points added to this adjuster 
+     * @param shift
+     * @param scale
+     * @return
+     */
+    public double logLikelihoodOfPoints(double shift, double scale)
+    {
+        final double mean = parentDistribution.getMeanValue() + shift;
+        final double variance = parentDistribution.getVariance()*scale;
+        return IntStream.range(0, update_points.size())
+            .mapToDouble(i -> point_weights.get(i) * logLikelihood(update_points.get(i), points_b.get(i), mean, variance))
+            .sum();
+    }
+
+    /**
+     * The log-likelihood for a single data point with position x and reinforcement value b
+     * @param x position
+     * @param b reinforcement state (true for reinforcment, false for diminishment)
+     * @param mean 
+     * @param variance 
+     * @return
+     */
+    public double logLikelihood(double x, boolean b, double mean, double variance)
+    {
+        if(x == mean) return 0;
+
+        final double rate = -(x-mean)*(x-mean)/ (2 * variance * variance);
+        final double rate_exp = Math.exp(rate);
+        final double omega = -Math.log(2*Math.PI * variance * variance)/2;
+        if(b)
+        {
+            return 2*rate+omega;
+        }
+        else
+        {
+            return Math.log(1 - rate_exp) + rate + omega;
+        }
+    }
+
+    /**
+     * The cumulative log-likelihood of all distributions
+     * @param shift
+     * @param scale
+     * @return
+     */
+    public double logLikelihoodOfDistributions(double shift, double scale)
+    {
+        return IntStream.range(0, influincingDistributions.size())
+            .mapToDouble(i -> distribution_weights.get(i) * logLikelihoodOfDistribution(influincingDistributions.get(i), shift, scale))
+            .sum();
+    }
+
+    /**
+     * The log-likelihood of a distribution for a set of shift and scale parameters
+     * @param bcd
+     * @param shift
+     * @param scale
+     * @return
+     */
+    public double logLikelihoodOfDistribution(BellCurveDistribution bcd, double shift, double scale)
+    {
+        final double w = getRelativeShift(bcd, shift, scale);
+        final double eta = getRelativeScale(bcd, shift, scale);
+
+        double analytic_comp = getAnalyticComponent(scale, w, eta);
+        double non_analytic_comp;
+        if(is_using_map)
+        {
+            non_analytic_comp = getNonAnalyticComponent(w, eta);
+        } 
+        else
+        {
+            non_analytic_comp = computeNonAnalyticComponent(w, eta);
+        }
+        return analytic_comp + non_analytic_comp;
+    }
+
+    private double getAnalyticComponent(double scale, double w, double eta) 
+    {
+        double value = (root_2 + 1) * w*w;
+        value += (2*root_2 + 1)/(4*eta);
+        value /= root_2;
+
+        value += Math.log(2 * Math.PI * scale * scale * variance * variance)/2;
+        return -value;
+    }
+
+    private static double getNonAnalyticComponent(double w, double eta) 
+    {
+        return expectationMap.interpolate(w, eta);
+    }
+
+    private static double computeNonAnalyticComponent(double w, double eta)
+    {
+        return Math.sqrt(eta) * infiniteIntegral(x -> logLikelihoodProbabilityDensity(x, w, eta)) / root_pi;
+    }
+
+    /**
+     * Probability density function with parameters w and eta
+     * @param x
+     * @param w
+     * @param eta
+     * @return
+     */
+    public static double logLikelihoodProbabilityDensity(double x, double w, double eta)
+    {
+        final double rate_exp_plus = Math.exp(-eta*(x+w)*(x+w));
+        final double rate_exp_minus = Math.exp(-eta*(x-w)*(x-w));
+        final double erf = Math.exp(-x*x);
+
+        double expectation_function = Math.log(1-erf);
+        double p_dist_plus = (1 - rate_exp_plus)*rate_exp_plus;
+        double p_dist_minus = (1 - rate_exp_minus)*rate_exp_minus;
+
+        return expectation_function * (p_dist_plus + p_dist_minus);
+    }
+
     /**
      * compute the relative shift parameter "w"
      * @param bcd
      * @return
      */
-    private double getRelativeShift(BellCurveDistribution bcd)
+    private double getRelativeShift(BellCurveDistribution bcd, double shift, double scale)
     {
-        return (mean - bcd.getMeanValue() + shift) / (root_2 * scale * variance);
+        return (bcd.getMeanValue() - mean - shift) / (root_2 * scale * variance);
     }
 
     /**
@@ -298,481 +335,36 @@ public void addDistribution(BellCurveDistribution bcd, double weight)
      * @param bcd
      * @return
      */
-    private double getRelativeScale(BellCurveDistribution bcd)
+    private double getRelativeScale(BellCurveDistribution bcd, double shift, double scale)
     {
         double eta = scale * variance / bcd.getVariance();
         return eta * eta;
     }
 
-// Begin shift
-
     /**
-     * Compute the total residue for the shift parameter
-     * @return
-     */
-    private double netShiftResidue()
-    {
-        // contribution from parent distribution
-        double net = N * shiftResidueDistribution(parentDistribution);
-
-        // contribution from individual points
-        net += IntStream.range(0, update_points.size())
-            .mapToDouble(i -> shiftResiduePoint(update_points.get(i), points_b.get(i), point_weights.get(i)))
-            .sum();
-
-        // contribution from distributions
-        net += influincingDistributions.stream().mapToDouble(this::shiftResidueDistribution).sum();
-
-        return net;
-    }
-
-    /**
-     * Compute the net shift residue for a fixed point and a set of weighted gaussians
-     * @param x the value of the fixed point
-     * @param b whether the fixed point is reinforcing 
-     * @param weight the weight of the fixed point to the distribution
-     * @return
-     */
-    private double shiftResiduePoint(double x, boolean b, double weight)
-    {
-        double d = x - mean - shift;
-        double net = weight * d;
-        
-        if(d == 0)
-        {
-            return net;
-        }
-
-        double scaled_var2 = variance * shift;
-        scaled_var2 *= scaled_var2;
-        if(!b)
-        {
-            net *= 1 + 1/Math.expm1(-d*d/(2*scaled_var2)); 
-        }
-
-        return net;
-    }  
-
-    /**
-     * Returns the interpolated shift residue for a distribution
-     * @param bcd
-     * @return
-     */
-    private double shiftResidueDistribution(BellCurveDistribution bcd)
-    {
-        final double w = getRelativeShift(bcd);
-        final double eta = getRelativeScale(bcd);
-        return getShiftParameter(w, eta, bcd.getVariance());
-    }
-
-    /**
-     * Returns the interpolated shift parameter 
-     * @param w
-     * @param eta
-     * @param sigma_b
-     * @return
-     */
-    private double getShiftParameter(double w, double eta, double sigma_b)
-    {
-        final double coef = root_2*sigma_b*eta/root_pi;
-        return coef * shiftMap.interpolate(w, eta);
-    }
-
-// End shift
-// Start shift derivative
-
-    /**
-     * Compute the total residue for the derivative of the shift parameter
-     * @return
-     */
-    private double netShiftDerivativeResidue()
-    {
-        // contribution from parent distribution
-        double net = N * shiftDerivativeResidueDistribution(parentDistribution);
-
-        // contribution from individual points
-        net += IntStream.range(0, update_points.size())
-            .mapToDouble(i -> shiftDerivativeResiduePoint(update_points.get(i), points_b.get(i), point_weights.get(i)))
-            .sum();
-
-
-        // contribution from distributions
-        net += influincingDistributions.stream().mapToDouble(this::shiftDerivativeResidueDistribution).sum();
-
-        return net;
-    }
-
-    /**
-     * Compute the shift residue derivative for a fixed point
-     * @param x the value of the fixed point
-     * @param b whether the fixed point is reinforcing 
-     * @param weight the weight of the fixed point to the distribution
-     * @return
-     */
-    private double shiftDerivativeResiduePoint(double x, boolean b, double weight)
-    {
-        if(b)
-        {
-            return -weight;
-        }
-
-        final double d = x - mean - shift;
-        if(d == 0)
-        {
-            return 0;
-        }
-
-        double scaled_var2 = variance * shift;
-        scaled_var2 *= scaled_var2;
-
-        final double inv_expm1 = -1/Math.expm1(-d*d/(2*scaled_var2));
-        return weight * (1 - inv_expm1) * (d*d*inv_expm1/scaled_var2 - 1);
-    }  
-
-    /**
-     * Compute the shift residue derivative for a distribution
-     * @return
-     */
-    private double shiftDerivativeResidueDistribution(final BellCurveDistribution bcd)
-    {
-        final double w = getRelativeShift(bcd);
-        final double eta = getRelativeScale(bcd);
-        return getShiftParameterDerivative(w, eta);
-    }
-
-    
-    /**
-     * Returns the derivative of the interpolated shift parameter 
-     * @param w
-     * @param eta
-     * @param n
-     * @return
-     */
-    private double getShiftParameterDerivative(double w, double eta)
-    {
-        final double coef = Math.sqrt(eta)/root_pi;
-        return coef * shiftMap.interpolateDerivative(w, eta)[0];
-    }
-
-// End shift derivative
-// Begin scale
-
-
-    /**
-     * Compute the total reside for the scale parameter
-     */
-    private double netScaleResidue()
-    {
-        // contribution from parent distribution
-        double net = N * scaleResidueDistribution(parentDistribution, 1);
-
-        // contribution from individual points
-        net += IntStream.range(0, update_points.size())
-            .mapToDouble(i -> scaleResiduePoint(update_points.get(i), points_b.get(i), point_weights.get(i)))
-            .sum();
-
-
-        // contribution from distributions
-        net += IntStream.range(0, influincingDistributions.size())
-            .mapToDouble(i -> scaleResidueDistribution(influincingDistributions.get(i), distribution_weights.get(i)))
-            .sum();
-            
-        return net;
-    }  
-
-    /**
-     * Compute the scale residue for a fixed point
-     * @param x the value of the fixed point
-     * @param b whether the fixed point is reinforcing 
-     * @param weight the weight of the fixed point to the distribution
-     * @return
-     */
-    private double scaleResiduePoint(double x, boolean b, double weight)
-    {
-        double d2 = x - mean - shift;
-        d2 *= d2;
-        double net = weight * d2;
-
-        if(d2 == 0)
-        {
-            return net;
-        }
-
-        double scaled_var2 = variance * shift;
-        scaled_var2 *= scaled_var2;
-        if(!b)
-        {
-            net *= (1 + 1/Math.expm1(-d2/(2*scaled_var2))); 
-        }
-
-        return net;
-    }  
-
-    /**
-     * Compute the scale residue for a distribution
-     * @param bcd
-     * @param B
-     * @return
-     */
-    private double scaleResidueDistribution(final BellCurveDistribution bcd, final double B)
-    {
-        final double w = getRelativeShift(bcd);
-        final double eta = getRelativeScale(bcd);
-        return getScaleParameter(w, eta, bcd.getVariance(), B);
-    }
-    
-    /**
-     * Returns the interpolated scale parameter 
-     * @param w
-     * @param eta
-     * @param sigma_b
-     * @param B The amplitude coeficient to the weight approximation 
-     * @return
-     */
-    private double getScaleParameter(double w, double eta, double sigma_b, double B)
-    {
-        final double root_eta = Math.sqrt(eta);
-        final double coef = sigma_b*sigma_b*root_eta*root_eta*root_eta; // eta^(3/2)
-        return coef * (2/root_pi * scaleMap.interpolate(w, eta) - zeta_3halfs/B);
-    }
-
-// End scale
-// Begin scale derivative
-
-    /**
-     * Compute the total reside for the scale parameter
-     */
-    private double netScaleDerivativeResidue()
-    {
-        // contribution from parent distribution
-        double net = N * scaleDerivativeResidueDistribution(parentDistribution, 1);
-
-        // contribution from individual points
-        net += IntStream.range(0, update_points.size())
-            .mapToDouble(i -> scaleDerivativeResiduePoint(update_points.get(i), points_b.get(i), point_weights.get(i)))
-            .sum();
-
-        // contribution from distributions
-        net += IntStream.range(0, influincingDistributions.size())
-            .mapToDouble(i -> scaleDerivativeResidueDistribution(influincingDistributions.get(i), distribution_weights.get(i)))
-            .sum();
-            
-        return net;
-    }  
-
-    /**
-     * Compute the scale residue derivative for a fixed point 
-     * @param x the value of the fixed point
-     * @param b whether the fixed point is reinforcing 
-     * @param weight the weight of the fixed point to the distribution
-     * @return
-     */
-    private double scaleDerivativeResiduePoint(double x, boolean b, double weight)
-    {
-        if(b)
-        {
-            return -2*weight*x;
-        }
-
-        final double d = x - mean - shift;
-        double scaled_var2 = variance * shift;
-        scaled_var2 *= scaled_var2;
-
-        final double inv_expm1 = -1/Math.expm1(-d*d/(2*scaled_var2));
-        return weight*d*(1 - inv_expm1) * (d*d*inv_expm1/scaled_var2 - 2);
-    }  
-
-    /**
-     * See other netScaleResidueDerivative
-     * @param mu_arr
-     * @param sigma_arr
-     * @return
-     */
-    private double scaleDerivativeResidueDistribution(final BellCurveDistribution bcd, final double B)
-    {
-        final double w = getRelativeShift(bcd);
-        final double eta = getRelativeScale(bcd);
-        return getScaleParameterDerivative(w, eta, bcd.getVariance(), B);
-    }
-
-    
-    /**
-     * Returns the derivative of the interpolated scale parameter 
-     * @param w
-     * @param eta
-     * @param sigma_b
-     * @param B The amplitude coeficient to the weight approximation 
-     * @param n
-     * @return
-     */
-    private double getScaleParameterDerivative(double w, double eta, double sigma_b, double B)
-    {
-        double[] w_eta_derivatives = scaleMap.interpolateDerivative(w, eta);
-
-        // incrementally build the derivative with respect to the scale parameter
-        // non-derivative part
-        double deriv = 3*(scaleMap.interpolate(w, eta) - root_pi*zeta_3halfs/(2*B));
-        // derivative part for w
-        deriv -= w * w_eta_derivatives[0];
-
-        // derivative part for eta
-        deriv += eta * w_eta_derivatives[1];
-
-        // all multiplied by a coefficient
-        return 2*variance*sigma_b*eta*deriv/root_pi;
-    }
-
-// End scale derivative
-// Begin static pre-computation helpers
-
-    public static double hurwitz_zeta(double s, double a)
-    {
-        double sum = 0;
-        int k = 0;
-        double delta;
-        do{
-            delta = Math.pow(a + k++, -s);
-            sum += delta;
-        }while(delta/sum > 1E-8);
-        return sum;
-    }
-
-    public static double riemann_zeta(double s)
-    {
-        return hurwitz_zeta(s, 1);
-    }
-
-    /**
-     * Compute the value of the shift integrand at a given point
-     * @param x The x-value to evaluate. x indicates the variable to be integrated over from 0 to infinity
-     * @param w The shift parameter
-     * @param eta The scale parameter 
-     * @return The integrand value
-     */
-    private static double ShiftIntegrand(double x, double w, double eta)
-    {
-        // special case
-        if(w == 0)
-        {
-            return 0;
-        }
-
-        // Use series expansion around x=0 to avoid infinities from expm1 
-        if(x <= 0.1)
-        {
-            double temp = -4 - 2/3*(4*eta*eta*w*w - 6*eta + 3) * x*x;
-            return temp * w * eta * Math.exp(-eta*w*w);
-        }
-
-        double w_abs = Math.abs(w);
-
-        // As x becomes large, the shift integrand approaches 0
-        if(x >= w_abs + Math.sqrt(Math.log(w_abs/TOLLERANCE)/eta))
-        {
-            return 0;
-        }
-        
-        final double wminx = w-x;
-        final double wplusx = w+x;
-
-
-        double value = Math.exp(-eta * wplusx * wplusx) - Math.exp(-eta * wminx * wminx);
-        value *= x;
-        return - value / Math.expm1(-x*x);
-
-        /* 
-        if(x >= Math.sqrt(Math.log(1/TOLLERANCE)))
-        {
-            return value; 
-        }
-        else
-        {
-            return - value / Math.expm1(-x*x);
-        }
-        */
-    }
-
-    /**
-     * Compute the value of the scale integrand at a given point
-     * @param x The x-value to evaluate. x indicates the variable to be integrated over from 0 to infinity
-     * @param w The shift parameter
-     * @param eta The scale parameter 
-     * @return The integrand value
-     */
-    private static double ScaleIntegrand(double x, double w, double eta)
-    {
-        // Use series expansion around x=0 to avoid infinities from expm1 
-        if(x <= 0.1)
-        {
-            double temp = 2 +(4*eta*eta*w*w - 2*eta + 1) * x*x;
-            return temp * Math.exp(-eta*w*w);
-        }
-
-        
-        double w_abs = Math.abs(w);
-
-        // As x becomes large, the scale integrand approaches 0
-        if(w_abs == 0)
-        {
-            if(x >= Math.sqrt(Math.log(2/TOLLERANCE)/eta))
-            {
-                return 0;
-            }
-        }
-        else
-        {
-            if(x >= w_abs + Math.sqrt(Math.log(w_abs*w_abs/TOLLERANCE)/eta))
-            {
-                return 0;
-            }
-        }
-
-        final double wminx = w-x;
-        final double wplusx = w+x;
-        double value = Math.exp(-eta * wplusx * wplusx) + Math.exp(-eta * wminx * wminx);
-        value *= x*x;
-        value /= -Math.expm1(-x*x);
-        if(!Double.isFinite(value)) 
-        {
-            System.err.println();
-        }
-        return value;
-
-        /*
-        if(x > 3)
-        {
-            return value; 
-        }
-        else
-        {
-            return - value / Math.expm1(-x*x);
-        }
-         */
-    }
-
-    /**
-     * Use the transformation x = e^(t/(1-t)) - 1 to convert an integral from the bounds [0, Infinity) to [0, 1]
-     * @param func the function being integrated over. MUST converge EXPONENTIALLY to 0 as x -> infinity
+     * Use the transformation x = (1/t - 1)^(3/2) to convert an integral from the bounds [0, Infinity) to [0, 1]
+     * @param func the function being integrated over. 
      * @param t the evaluation point on the bounds [0, 1]
      * @return the transformed value at the given point
      */
     public static double infiniteToFiniteIntegralTransform(DoubleUnaryOperator func, double t)
     {
-        final double temp = 1d/(1-t);
-        final double x = Math.expm1(t*temp); 
-        // if x is effectively infinite, then the provided function is assumed to have a value of 0 due to convergence requirement
-        if(Double.isInfinite(x))
+        final double temp = 1/t - 1;
+
+        // if x is effectively infinite, then the provided function is assumed to have a value of 0 due to implicit convergence requirement
+        if(Double.isInfinite(temp) || temp == 0)
         {
             return 0;
         }
-        final double transformedIntegral = func.applyAsDouble(x) * (x + 1) * temp*temp;
+        
+        final double transformedIntegral = func.applyAsDouble(Math.pow(temp, 3d/2)) * Math.sqrt(temp) / (t * t);
         
         if(!Double.isFinite(transformedIntegral))
         {
-            System.err.println(); // just need a place to stop
+            System.out.println();
         }
         assert Double.isFinite(transformedIntegral);
-        return transformedIntegral;
+        return 3*transformedIntegral/2;
     }
 
     /**
@@ -799,85 +391,6 @@ public void addDistribution(BellCurveDistribution bcd, double weight)
         double intVal = integrate((double t) -> infiniteToFiniteIntegralTransform(func, t), 0, 1);
         assert Double.isFinite(intVal);
         return intVal;
-    }
-
-    /**
-     * Solve the equation a*x^3 + b*x^2 + c = 0 assuming the equation only has one real root
-     * @param a
-     * @param b
-     * @param c
-     * @return the singular x-solution
-     */
-    public static double solveSimpleCubic(double a, double b, double c)
-    {
-        // normalize constants to avoid rounding errors
-        b /= a;
-        c /= a;
-
-        double b3 = b*b*b;
-
-        // this assertion technically allows for cubics with 2 real roots: one root of order one and another of order 2
-        // In this case of two roots, this function returns the root of order one.  
-        assert c >= - 4/27 * b3: "Cubic has multiple real solutions";
-
-
-        double radical = 3*Math.sqrt(3*(27*c*c + 4*b3*c));
-        radical -= 27*c + 2*b3;
-        radical = Math.cbrt(radical/2); 
-
-        return (radical + b*b/radical - b)/3;
-    }
-
-    public static double shiftFunctionNoTransform(double w, double eta)
-    {
-        if(w == 0) return 0;
-        double upper_bound = Math.abs(w) + Math.sqrt(Math.log(Math.abs(w)/TOLLERANCE)/eta);
-        return integrate((double x) -> ShiftIntegrand(x, w, eta), 0, upper_bound);
-    } 
-
-    public static double scaleFunctionNoTransform(double w, double eta)
-    {
-        double upper_bound;
-        if(w == 0)
-        {
-            upper_bound = Math.sqrt(Math.log(2/TOLLERANCE)/eta);
-        }
-        else
-        {
-            upper_bound = Math.abs(w) + Math.sqrt(Math.log(w*w/TOLLERANCE)/eta);
-        }
-
-        return integrate((double x) -> ScaleIntegrand(x, w, eta), 0, upper_bound);
-    } 
-
-    public static double shiftFunction(double w, double eta)
-    {
-        return infiniteIntegral((double x) -> ShiftIntegrand(x, w, eta));
-    } 
-
-    public static double scaleFunction(double w, double eta)
-    {
-        return infiniteIntegral((double x) -> ScaleIntegrand(x, w, eta));
-    } 
-
-    public static double getShiftIntegralValue(double w, double eta)
-    {
-        return shiftMap.interpolate(w, eta);
-    }
-    
-    public static double getShiftIntegralDerivativeValue(double w, double eta)
-    {
-        return shiftMap.interpolateDerivative(w, eta)[0];
-    }
-
-    public static double getScaleIntegralValue(double w, double eta)
-    {
-        return scaleMap.interpolate(w, eta);
-    }
-    
-    public static double getScaleIntegralDerivativeValue(double w, double eta)
-    {
-        return scaleMap.interpolateDerivative(w, eta)[1];
     }
 
 }
