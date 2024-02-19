@@ -5,7 +5,7 @@ import com.lucasbrown.GraphNetwork.Local.Node;
 import com.lucasbrown.GraphNetwork.Local.OutputNode;
 
 public class FeedForward {
-    
+
     private static boolean alternating = false;
     private static InputNode in;
     private static OutputNode out;
@@ -27,15 +27,13 @@ public class FeedForward {
         net.setInputOperation(FeedForward::inputOperation);
         net.setOutputOperation(FeedForward::outputOperation);
 
-
         for (int i = 0; i < 100000; i++) {
 
             // Transfer all signals
             net.trainingStep();
 
-            if((i % 1000) == 0 || (i % 1000) == 1)
+            if ((i % 1000) == 0 || (i % 1000) == 1)
                 System.out.println(net.allActiveNodesString());
-
 
         }
 
@@ -43,14 +41,11 @@ public class FeedForward {
 
     }
 
-    
-    public static void inputOperation()
-    {
+    public static void inputOperation() {
         in.recieveInputSignal((alternating = !alternating) ? 0 : 1);
     }
 
-    public static void outputOperation()
-    {
+    public static void outputOperation() {
         out.correctOutputValue(!alternating ? 0.1 : 0.9);
     }
 }

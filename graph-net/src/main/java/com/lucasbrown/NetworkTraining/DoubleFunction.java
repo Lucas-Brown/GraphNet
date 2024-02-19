@@ -9,11 +9,10 @@ import jsat.math.Function;
  * Workaround class to make a functional interface out of a regular class
  */
 public class DoubleFunction implements Function {
-    
+
     private ToDoubleFunction<double[]> dFunc;
 
-    public DoubleFunction(ToDoubleFunction<double[]> dFunc)
-    {
+    public DoubleFunction(ToDoubleFunction<double[]> dFunc) {
         this.dFunc = dFunc;
     }
 

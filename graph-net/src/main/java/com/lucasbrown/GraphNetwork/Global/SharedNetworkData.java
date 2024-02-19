@@ -3,11 +3,12 @@ package com.lucasbrown.GraphNetwork.Global;
 import com.lucasbrown.NetworkTraining.ErrorFunction;
 
 /**
- * A collection of data which modifies the training and firing rates of each node.
- * All nodes are given access to this data to use but modification should be strictly controlled by {@code GraphNetwork}
+ * A collection of data which modifies the training and firing rates of each
+ * node.
+ * All nodes are given access to this data to use but modification should be
+ * strictly controlled by {@code GraphNetwork}
  */
-public class SharedNetworkData
-{
+public class SharedNetworkData {
 
     public final ErrorFunction errorFunc;
 
@@ -16,9 +17,7 @@ public class SharedNetworkData
      */
     private double epsilon;
 
-
-    SharedNetworkData(ErrorFunction errorFunc, double epsilon)
-    {
+    SharedNetworkData(ErrorFunction errorFunc, double epsilon) {
         this.errorFunc = errorFunc;
         this.epsilon = epsilon;
     }

@@ -1,5 +1,4 @@
 
-
 import java.util.Random;
 
 import com.lucasbrown.GraphNetwork.Global.GraphNetwork;
@@ -10,14 +9,13 @@ import com.lucasbrown.GraphNetwork.Local.Node;
 import com.lucasbrown.GraphNetwork.Local.OutputNode;
 
 /**
- * Test for a graph network alternating between 0 and 1 
+ * Test for a graph network alternating between 0 and 1
  */
-public class Alternating
-{
+public class Alternating {
     private static GraphNetwork net;
     private static InputNode n1;
     private static OutputNode n2;
-    
+
     private static boolean waitingFor0 = true;
     private static final double tollerance = 0.01;
     private static int count = 0;
@@ -46,20 +44,18 @@ public class Alternating
         net.setInputOperation(Alternating::inputOperation);
         net.setOutputOperation(Alternating::outputOperation);
 
-
         for (int i = 0; i < 1000000; i++) {
 
             // Transfer all signals
             net.trainingStep();
 
-            //System.out.println(net.allActiveNodesString());
-
+            // System.out.println(net.allActiveNodesString());
 
         }
 
         System.out.println("\nTRAINING STOP\n");
 
-        //net.setOutputOperation(Alternating::scoringOperation);
+        // net.setOutputOperation(Alternating::scoringOperation);
         net.setOutputOperation(null);
 
         for (int i = 0; i < 10000; i++) {
@@ -72,41 +68,38 @@ public class Alternating
 
     }
 
-    public static void inputOperation()
-    {
-        if(net.isNetworkDead())
-        {
+    public static void inputOperation() {
+        if (net.isNetworkDead()) {
             n1.recieveInputSignal(0);
         }
     }
 
-    public static void outputOperation()
-    {
-        if(n2.isActive())
-        {
+    public static void outputOperation() {
+        if (n2.isActive()) {
             n2.correctOutputValue((waitingFor0 = !waitingFor0) ? 0.0 : 1.0);
         }
-        
+
     }
 
-    /* 
-    public static void scoringOperation()
-    {
-        if(alternating)
-        {
-            if(n2.isActive() && Math.abs(n2.getValue() - 1) < tollerance)
-            {
-                count++;
-            }
-        }
-        else
-        {
-            if(!n2.isActive())
-            {
-                count++;
-            }
-        }
-            
-    }*/
+    /*
+     * public static void scoringOperation()
+     * {
+     * if(alternating)
+     * {
+     * if(n2.isActive() && Math.abs(n2.getValue() - 1) < tollerance)
+     * {
+     * count++;
+     * }
+     * }
+     * else
+     * {
+     * if(!n2.isActive())
+     * {
+     * count++;
+     * }
+     * }
+     * 
+     * }
+     */
 
 }

@@ -4,60 +4,58 @@ import com.lucasbrown.GraphNetwork.Global.GraphNetwork;
 import com.lucasbrown.GraphNetwork.Global.SharedNetworkData;
 
 /**
- * A node which exposes it's value to the user and can be sent a correction signal 
+ * A node which exposes it's value to the user and can be sent a correction
+ * signal
  */
 public class OutputNode extends Node {
 
-    public OutputNode(final GraphNetwork network, final SharedNetworkData networkData, final ActivationFunction activationFunction) {
+    public OutputNode(final GraphNetwork network, final SharedNetworkData networkData,
+            final ActivationFunction activationFunction) {
         super(network, networkData, activationFunction);
     }
 
     /**
      * Get the value of this node
-     * The caller should first verify if this node is active using {@code isActive} or get the value using {@code getValueOrNull}
+     * The caller should first verify if this node is active using {@code isActive}
+     * or get the value using {@code getValueOrNull}
+     * 
      * @return
      */
-    public double getValue()
-    {
+    public double getValue() {
         return outputStrength;
     }
 
     /**
-     * @return Checks if this node is active and returns the value if it is, otherwise returns null
+     * @return Checks if this node is active and returns the value if it is,
+     *         otherwise returns null
      */
-    public Double getValueOrNull()
-    {
+    public Double getValueOrNull() {
         return isActive() ? outputStrength : null;
     }
 
     /**
      * Correct the value of this node
-     * Pass a null-value to indicate that this node should NOT have a value currently 
-     * @param value the value this node should have 
+     * Pass a null-value to indicate that this node should NOT have a value
+     * currently
+     * 
+     * @param value the value this node should have
      */
-    public void correctOutputValue(Double target)
-    {
-        if(isActive() && history != null)
-        {
-            if(target == null)
-            {
+    public void correctOutputValue(Double target) {
+        if (isActive() && history != null) {
+            if (target == null) {
                 NodeErrorHandling.computeNullErrorOfHistory(history, this);
                 NodeErrorHandling.diminishFiringChances(history, this);
-            }
-            else
-            {
+            } else {
                 NodeErrorHandling.computeErrorSignalsOfHistory(history, this, target);
                 NodeErrorHandling.reinforceFiringChances(history, this);
             }
             history.decimateTimeline(this); // remove this timeline
-        }
-        else
-        {
-            //NodeErrorHandling.sendErrorSignal();
+        } else {
+            // NodeErrorHandling.sendErrorSignal();
         }
 
-        //outputStrength = target; // TODO: either enforce no outgoing connections from output nodes or set strength BEFORE signals get sent
+        // outputStrength = target; // TODO: either enforce no outgoing connections from
+        // output nodes or set strength BEFORE signals get sent
     }
 
-    
 }

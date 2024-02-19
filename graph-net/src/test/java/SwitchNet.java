@@ -34,15 +34,13 @@ public class SwitchNet {
         net.setInputOperation(SwitchNet::inputOperation);
         net.setOutputOperation(SwitchNet::outputOperation);
 
-
         for (int i = 0; i < 100; i++) {
 
             // Transfer all signals
             net.trainingStep();
 
-            //if((i % 1000) == 0 || (i % 1000) == 1)
-                System.out.println(net.allActiveNodesString());
-
+            // if((i % 1000) == 0 || (i % 1000) == 1)
+            System.out.println(net.allActiveNodesString());
 
         }
 
@@ -60,33 +58,25 @@ public class SwitchNet {
 
     }
 
-    public static void inputOperation()
-    {
+    public static void inputOperation() {
         in.recieveInputSignal((alternating = !alternating) ? 0 : 1);
     }
 
-    public static void outputOperation()
-    {
+    public static void outputOperation() {
         out.correctOutputValue(alternating ? 0.1 : 0.9);
     }
 
-    public static void scoringOperation()
-    {
-        if(alternating)
-        {
-            if(!out.isActive())
-            {
+    public static void scoringOperation() {
+        if (alternating) {
+            if (!out.isActive()) {
+                count++;
+            }
+        } else {
+            if (out.isActive() && Math.abs(out.getValue() + 1) < tollerance) {
                 count++;
             }
         }
-        else
-        {
-            if(out.isActive() && Math.abs(out.getValue() + 1) < tollerance)
-            {
-                count++;
-            }
-        }
-            
+
     }
 
 }
