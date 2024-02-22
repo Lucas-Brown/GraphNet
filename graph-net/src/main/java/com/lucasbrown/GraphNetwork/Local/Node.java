@@ -7,7 +7,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Objects;
 import java.util.Random;
-import java.util.stream.Collector;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -116,9 +115,12 @@ public class Node implements Comparable<Node> {
     private double error;
 
     /**
-     * The binary string representation of the incoming arcs being sent a backwards signal
+     * The binary string representation of the incoming arcs being sent a backwards
+     * signal
      */
     private int backwardsBinStr;
+
+    private boolean hasValidForwardSignal;
 
     public Node(final GraphNetwork network, final SharedNetworkData networkData,
             final ActivationFunction activationFunction) {
@@ -221,6 +223,15 @@ public class Node implements Comparable<Node> {
     }
 
     /**
+     * Get whether the current forward signal is set and valid
+     * 
+     * @return
+     */
+    public boolean hasValidForwardSignal() {
+        return hasValidForwardSignal;
+    }
+
+    /**
      * Adds another layer of depth to the weights and biases hyper array
      */
     private void appendWeightsAndBiases() {
@@ -302,16 +313,14 @@ public class Node implements Comparable<Node> {
 
     /**
      * Create an arraylist of arcs from a binary string representation
+     * 
      * @param binStr
      * @return
      */
-    public ArrayList<Arc> binStrToArcList(int binStr)
-    {
+    public ArrayList<Arc> binStrToArcList(int binStr) {
         ArrayList<Arc> arcs = new ArrayList<Arc>(incoming.size());
-        for(int i = 0; i < incoming.size(); i++)
-        {
-            if((binStr & 0b1) == 1)
-            {
+        for (int i = 0; i < incoming.size(); i++) {
+            if ((binStr & 0b1) == 1) {
                 arcs.add(incoming.get(i));
             }
             binStr = binStr >> 1;
@@ -383,6 +392,9 @@ public class Node implements Comparable<Node> {
      * @param incomingSignals
      */
     private void acceptIncomingForwardSignals(ArrayList<Signal> incomingSignals) {
+        if (incomingSignals.size() == 0)
+            return;
+        hasValidForwardSignal = true;
 
         // Compute the binary string of the incoming signals
         binary_string = nodeSetToBinStr(incomingSignals.stream().map(Signal::getSendingNode).toList());
@@ -398,30 +410,31 @@ public class Node implements Comparable<Node> {
     /**
      * Attempt to send inference signals to all outgoing connections
      */
-    public void inferenceStep() {
+    public void sendInferenceSignals() {
         for (Arc connection : outgoing) {
             // roll and send a signal if successful
             if (connection.rollFilter(mergedForwardStrength)) {
                 connection.sendInferenceSignal(mergedForwardStrength, outputStrength);
             }
         }
+        hasValidForwardSignal = false;
     }
 
     /**
      * Attempt to send forward and backward signals
      */
-    public void trainingStep() {
+    public void sendTrainingSignals() {
 
         // Send the forward signals and record the cumulative error
         this.error = sendForwardSignals();
-        
-        // Select the backward signal combination  
+
+        // Select the backward signal combination
         Convolution[] convolutions = getReverseOutcomes();
         double[] densityWeights = evaluateConvolutions(convolutions);
         backwardsBinStr = selectReverseOutcome(densityWeights);
 
         // Sample signal strengths from the selected distribution
-        double[] sample = convolutions[backwardsBinStr].sample(mergedBackwardStrength); 
+        double[] sample = convolutions[backwardsBinStr].sample(mergedBackwardStrength);
 
         // Send the backward signals
         ArrayList<Arc> arcs = binStrToArcList(backwardsBinStr);
@@ -432,15 +445,14 @@ public class Node implements Comparable<Node> {
             arc_i.probDist.prepareReinforcement(sample_i); // prepare to reinforce the distribution
         }
 
-
+        hasValidForwardSignal = false;
     }
 
     /**
      * Apply all changes. Must proceed a call to trainingStep
      */
-    public void applyTrainingChanges()
-    {
-        // reinforce forward signals 
+    public void applyTrainingChanges() {
+        // reinforce forward signals
         updateWeightsAndBias(error);
 
         // reinforce backward signals
@@ -474,43 +486,40 @@ public class Node implements Comparable<Node> {
         return error / count;
     }
 
-    public Convolution[] getReverseOutcomes()
-    {
-        // Loop over all possible incoming signal combinations and record the value of their convolution
+    public Convolution[] getReverseOutcomes() {
+        // Loop over all possible incoming signal combinations and record the value of
+        // their convolution
         int n_choices = 0b1 << incoming.size();
         Convolution[] convolutions = new Convolution[n_choices - 1];
-        for(int binStr = 1; binStr < n_choices; binStr++)
-        {
+        for (int binStr = 1; binStr < n_choices; binStr++) {
             // get the arcs corresponding to this bit string
             ArrayList<Arc> arcs = binStrToArcList(binStr);
 
             // Seperate the arcs into their distributions and activation functions
             ArrayList<ActivationProbabilityDistribution> distributions = arcs.stream()
-                .map(arc -> arc.probDist)
-                .collect(Collectors.toCollection(ArrayList<ActivationProbabilityDistribution>::new));
-                
+                    .map(arc -> arc.probDist)
+                    .collect(Collectors.toCollection(ArrayList<ActivationProbabilityDistribution>::new));
+
             ArrayList<ActivationFunction> activators = arcs.stream()
-                .map(arc -> arc.sending.activationFunction)
-                .collect(Collectors.toCollection(ArrayList<ActivationFunction>::new));
-            
+                    .map(arc -> arc.sending.activationFunction)
+                    .collect(Collectors.toCollection(ArrayList<ActivationFunction>::new));
+
             // Get the weights of the corresponding arcs
             double[] weights = getWeights(binStr);
 
-            // Get the probability density 
-            convolutions[binStr-1] = new Convolution(distributions, activators, weights);
+            // Get the probability density
+            convolutions[binStr - 1] = new Convolution(distributions, activators, weights);
         }
 
         return convolutions;
     }
 
-    public double[] evaluateConvolutions(Convolution[] convolutions)
-    {
+    public double[] evaluateConvolutions(Convolution[] convolutions) {
         double[] densityWeights = new double[convolutions.length];
-        for(int binStr = 1; binStr <= convolutions.length; binStr++)
-        {
+        for (int binStr = 1; binStr <= convolutions.length; binStr++) {
             // Shift the signal strength by the bias
             double shiftedStrength = mergedBackwardStrength - biases[binStr];
-            
+
             densityWeights[binStr - 1] = convolutions[binStr - 1].convolve(shiftedStrength);
         }
         return densityWeights;
@@ -518,27 +527,25 @@ public class Node implements Comparable<Node> {
 
     /**
      * Select an outcome each with a given weight
+     * 
      * @param densityWeights
      * @return
      */
-    public int selectReverseOutcome(double[] densityWeights)
-    {
+    public int selectReverseOutcome(double[] densityWeights) {
         // get the sum of all weights
         double total = 0;
-        for(double d : densityWeights){
+        for (double d : densityWeights) {
             total += d;
         }
 
         // Roll a number between 0 and the total
-        double roll = rng.nextDouble()*total;
+        double roll = rng.nextDouble() * total;
 
         // Select the first index whose partial sum is over the roll
         double sum = 0;
-        for(int i = 0; i < densityWeights.length; i++)
-        {
+        for (int i = 0; i < densityWeights.length; i++) {
             sum += densityWeights[i];
-            if(sum >= roll)
-            {
+            if (sum >= roll) {
                 return i;
             }
         }

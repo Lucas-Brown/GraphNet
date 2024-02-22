@@ -1,10 +1,8 @@
 package com.lucasbrown.GraphNetwork.Global;
 
+import java.security.InvalidAlgorithmParameterException;
 import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.TreeSet;
 
 import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
@@ -20,7 +18,7 @@ import com.lucasbrown.NetworkTraining.ErrorFunction;
  * Training currently a work in progress
  * 
  * Current representation allows for both positive and negative reinforcement.
- * Only postive reinforcement is implemented currently.   
+ * Only postive reinforcement is implemented currently.
  */
 public class GraphNetwork {
 
@@ -119,10 +117,10 @@ public class GraphNetwork {
 
     /**
      * notify the network that a node has been activated.
+     * 
      * @param activatedNode
      */
-    public void notifyNodeActivation(Node activatedNode)
-    {
+    public void notifyNodeActivation(Node activatedNode) {
         activeNextNodes.add(activatedNode);
     }
 
@@ -130,12 +128,11 @@ public class GraphNetwork {
      * Step the entire network forward one itteration
      * Does not train the network
      */
-    public void step() {
+    public void inferenceStep() {
         inputOperation.run();
         recieveSignals();
+        sendInferenceSignals();
         outputOperation.run();
-        transmitSignals();
-        deactivateNodes();
     }
 
     /**
@@ -145,10 +142,7 @@ public class GraphNetwork {
         inputOperation.run();
         outputOperation.run();
         recieveSignals();
-
-        transmitSignals();
-
-        deactivateNodes();
+        sendTrainingSignals();
     }
 
     public boolean isNetworkDead() {
@@ -158,23 +152,29 @@ public class GraphNetwork {
     /**
      * Tell all active nodes to accept all incoming signals
      */
-    public void recieveSignals() {
+    private void recieveSignals() {
         activeNodes = activeNextNodes;
         activeNextNodes = new HashSet<>();
-        activeNodes.forEach(Node::activate);
-        activeNodes.forEach(Node::acceptSignals);
+        activeNodes.forEach(t -> {
+            try {
+                t.acceptSignals();
+            } catch (InvalidAlgorithmParameterException e) {
+                e.printStackTrace();
+            }
+        });
+    }
+
+    private void sendInferenceSignals() {
+        activeNodes.forEach(Node::sendInferenceSignals);
     }
 
     /**
      * Tell each node to compute next phase of signals
      */
-    public void transmitSignals() {
+    private void sendTrainingSignals() {
         // Will automatically collect generated signals in {@code activeNextNodes}
-        activeNodes.stream().forEach(Node::attemptSendOutgoingSignals);
-    }
-
-    public void deactivateNodes() {
-        activeNodes.stream().forEach(Node::deactivate);
+        activeNodes.stream().forEach(Node::sendTrainingSignals);
+        activeNodes.stream().forEach(Node::applyTrainingChanges);
     }
 
     public String allActiveNodesString() {

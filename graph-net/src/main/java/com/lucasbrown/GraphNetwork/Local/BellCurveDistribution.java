@@ -1,11 +1,5 @@
 package com.lucasbrown.GraphNetwork.Local;
 
-import java.util.Random;
-import java.util.function.DoubleUnaryOperator;
-import java.util.function.ToDoubleBiFunction;
-import java.util.function.ToDoubleFunction;
-import java.util.stream.IntStream;
-
 import com.lucasbrown.NetworkTraining.BellCurveDistributionAdjuster;
 
 /**

@@ -4,7 +4,7 @@ import com.lucasbrown.GraphNetwork.Global.GraphNetwork;
 import com.lucasbrown.GraphNetwork.Global.SharedNetworkData;
 
 /**
- * A node which can be given a value to propagate as a signal
+ * A node which exposes the functionality of recieving signals.
  * InputNodes cannot have any incoming connections
  */
 public class InputNode extends Node {
@@ -14,19 +14,14 @@ public class InputNode extends Node {
         super(network, networkData, activationFunction);
     }
 
-    /**
-     * Send a signal to this node with a
-     * 
-     * @param value
-     */
-    public void recieveInputSignal(double value) {
-        // recieving a signal from null indicates a user-input
-        network.createSignal(null, this, value);
-        outputStrength = value;
+    @Override
+    public void recieveForwardSignal(Signal signal) {
+        super.recieveForwardSignal(signal);
     }
 
     @Override
-    public void acceptIncomingSignals() {
+    void recieveInferenceSignal(Signal signal) {
+        super.recieveInferenceSignal(signal);
     }
 
     @Override

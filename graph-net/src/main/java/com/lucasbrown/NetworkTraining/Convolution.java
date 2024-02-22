@@ -16,8 +16,6 @@ import jsat.linear.DenseMatrix;
 import jsat.linear.DenseVector;
 import jsat.linear.LUPDecomposition;
 import jsat.linear.Matrix;
-import jsat.linear.Vec;
-import jsat.linear.vectorcollection.VectorArray;
 
 public class Convolution {
 
@@ -56,9 +54,6 @@ public class Convolution {
      * This is an INCREDIBLY slow computation that scales poorly with the number of
      * distributions. May need to consider using fourier transforms for N > 3?
      * 
-     * @param activationDistributions
-     * @param activator
-     * @param weights
      * @param z
      * @return
      */
@@ -78,32 +73,32 @@ public class Convolution {
         // Assume that each distribution is approximately normal
 
         double[] means = IntStream.range(0, activationDistributions.size())
-                .mapToDouble(i -> activationDistributions.get(i).getMeanOfAppliedActivation(activators.get(i)))
+                .mapToDouble(
+                        i -> activationDistributions.get(i).getMeanOfAppliedActivation(activators.get(i), weights[i]))
                 .toArray();
         double[] vars = IntStream.range(0, activationDistributions.size())
                 .mapToDouble(
-                        i -> activationDistributions.get(i).getVarianceOfAppliedActivation(activators.get(i), means[i]))
+                        i -> activationDistributions.get(i).getVarianceOfAppliedActivation(activators.get(i),
+                                weights[i], means[i]))
                 .toArray();
-        
-        // initialize the covariance matrix by setting the values of it's inverse 
-        // this is an odd processes that mimics the idea of setting a variable to 
-        // a constant by removing its corresponding row and collumn while maintaining 
-        // its interference on the other variables 
-        Matrix covarianceMatrix = new DenseMatrix(vars.length-1, vars.length-1);
-        double var2_N = vars[vars.length-1] * vars[vars.length-1];
-        for(int i = 0; i < vars.length-1; i++)
-        {
-            covarianceMatrix.set(i, i, 1/(vars[i] * vars[i]) + 1/var2_N);
-            for(int j = 0; j < i; j++)
-            {
-                covarianceMatrix.set(i, j, 1/var2_N);
-                covarianceMatrix.set(j, i, 1/var2_N);
+
+        // initialize the covariance matrix by setting the values of it's inverse
+        // this is an odd processes that mimics the idea of setting a variable to
+        // a constant by removing its corresponding row and collumn while maintaining
+        // its interference on the other variables
+        Matrix covarianceMatrix = new DenseMatrix(vars.length - 1, vars.length - 1);
+        double var2_N = vars[vars.length - 1] * vars[vars.length - 1];
+        for (int i = 0; i < vars.length - 1; i++) {
+            covarianceMatrix.set(i, i, 1 / (vars[i] * vars[i]) + 1 / var2_N);
+            for (int j = 0; j < i; j++) {
+                covarianceMatrix.set(i, j, 1 / var2_N);
+                covarianceMatrix.set(j, i, 1 / var2_N);
             }
         }
 
         // Use the LUP decomposition to invert the covariance matrix
         Matrix[] LUP = covarianceMatrix.lup();
-        LUPDecomposition decomp = new LUPDecomposition(LUP[0],LUP[1],LUP[2]);
+        LUPDecomposition decomp = new LUPDecomposition(LUP[0], LUP[1], LUP[2]);
         covarianceMatrix = decomp.solve(Matrix.eye(vars.length)); // inverse
 
         // create the multivariate normal distribution
@@ -112,10 +107,10 @@ public class Convolution {
 
         // get a single sample
         double[] sample = norm.sample(1, rng).get(0).arrayCopy();
-        
+
         // add the final conditional sample
         System.arraycopy(new double[sample.length + 1], 0, sample, 0, sample.length);
-        sample[sample.length-1] = z - DoubleStream.of(sample).sum();
+        sample[sample.length - 1] = z - DoubleStream.of(sample).sum();
 
         return sample;
     }

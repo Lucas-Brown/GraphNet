@@ -4,7 +4,7 @@ import com.lucasbrown.GraphNetwork.Global.GraphNetwork;
 import com.lucasbrown.GraphNetwork.Global.SharedNetworkData;
 
 /**
- * A node which exposes it's value to the user and can be sent a correction
+ * A node which exposes it's value and can be sent a corrective (backward)
  * signal
  */
 public class OutputNode extends Node {
@@ -30,32 +30,12 @@ public class OutputNode extends Node {
      *         otherwise returns null
      */
     public Double getValueOrNull() {
-        return isActive() ? outputStrength : null;
+        return hasValidForwardSignal() ? outputStrength : null;
     }
 
-    /**
-     * Correct the value of this node
-     * Pass a null-value to indicate that this node should NOT have a value
-     * currently
-     * 
-     * @param value the value this node should have
-     */
-    public void correctOutputValue(Double target) {
-        if (isActive() && history != null) {
-            if (target == null) {
-                NodeErrorHandling.computeNullErrorOfHistory(history, this);
-                NodeErrorHandling.diminishFiringChances(history, this);
-            } else {
-                NodeErrorHandling.computeErrorSignalsOfHistory(history, this, target);
-                NodeErrorHandling.reinforceFiringChances(history, this);
-            }
-            history.decimateTimeline(this); // remove this timeline
-        } else {
-            // NodeErrorHandling.sendErrorSignal();
-        }
-
-        // outputStrength = target; // TODO: either enforce no outgoing connections from
-        // output nodes or set strength BEFORE signals get sent
+    @Override
+    void recieveBackwardSignal(Signal signal) {
+        super.recieveBackwardSignal(signal);
     }
 
 }

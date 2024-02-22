@@ -58,11 +58,12 @@ public abstract class ActivationProbabilityDistribution {
      * transformation of the activator
      * 
      * @param activator
+     * @param w 
      * @return
      */
-    public double getMeanOfAppliedActivation(ActivationFunction activator) {
+    public double getMeanOfAppliedActivation(ActivationFunction activator, double w) {
         DoubleUnaryOperator integrand = t -> IntegralTransformations
-                .hyperbolicTangentTransform(x -> activator.activator(x) * this.getProbabilityDensity(x), t);
+                .hyperbolicTangentTransform(x -> w*activator.activator(x) * this.getProbabilityDensity(x), t);
         return Romberg.romb(new DoubleFunction(integrand), -1, 1);
     }
 
@@ -73,9 +74,9 @@ public abstract class ActivationProbabilityDistribution {
      * @param activator
      * @return
      */
-    public double getVarianceOfAppliedActivation(ActivationFunction activator, double mean) {
+    public double getVarianceOfAppliedActivation(ActivationFunction activator, double w, double mean) {
         DoubleUnaryOperator integrand = t -> IntegralTransformations
-                .hyperbolicTangentTransform(x -> Math.pow(activator.activator(x) - mean, 2) * this.getProbabilityDensity(x), t);
+                .hyperbolicTangentTransform(x -> Math.pow(w*activator.activator(x) - mean, 2) * this.getProbabilityDensity(x), t);
         return Math.sqrt(Romberg.romb(new DoubleFunction(integrand), -1, 1));
     }
 
@@ -86,7 +87,7 @@ public abstract class ActivationProbabilityDistribution {
      * @param activator
      * @return
      */
-    public double getVarianceOfAppliedActivation(ActivationFunction activator) {
-        return getVarianceOfAppliedActivation(activator, getMeanOfAppliedActivation(activator));
+    public double getVarianceOfAppliedActivation(ActivationFunction activator, double w) {
+        return getVarianceOfAppliedActivation(activator, w, getMeanOfAppliedActivation(activator, w));
     }
 }

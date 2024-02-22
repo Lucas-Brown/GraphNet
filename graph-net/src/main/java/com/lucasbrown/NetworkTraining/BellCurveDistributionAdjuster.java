@@ -15,7 +15,6 @@ import jsat.math.optimization.NelderMead;
 public class BellCurveDistributionAdjuster implements Function {
 
     private static final double TOLLERANCE = 1E-6; // tollerance for optimization
-    private static final double DIGITS_OF_PRECISION = 10;
     private static final int integrationDivisions = 10000;
     private static final int NM_ITTERATION_LIMIT = 10000;
 
@@ -345,7 +344,7 @@ public class BellCurveDistributionAdjuster implements Function {
     }
 
     /**
-     * Integrates the given function on the bounds [0, infinity) 
+     * Integrates the given function on the bounds [0, infinity)
      * 
      * @return
      */
