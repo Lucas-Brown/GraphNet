@@ -1,10 +1,18 @@
 package com.lucasbrown.GraphNetwork.Local;
 
 import java.util.Random;
+import java.util.function.DoubleUnaryOperator;
+
+import com.lucasbrown.NetworkTraining.DoubleFunction;
+import com.lucasbrown.NetworkTraining.IntegralTransformations;
+
+import jsat.math.integration.Romberg;
 
 /**
  * Contains the probability distribution information for likelyhood of a signal
- * being sent from one node to another
+ * being sent from one node to another.
+ * 
+ * TODO: alter methods to include negative reinforcement as well
  */
 public abstract class ActivationProbabilityDistribution {
 
@@ -14,12 +22,71 @@ public abstract class ActivationProbabilityDistribution {
      */
     protected Random rand = new Random();
 
+    /**
+     * Returns the probability density at a point x
+     * 
+     * @param x
+     * @return
+     */
+    public abstract double getProbabilityDensity(double x);
+
     public abstract boolean shouldSend(double inputSignal);
 
-    public abstract void reinforceDistribution(double valueToReinforce);
+    public abstract void prepareReinforcement(double valueToReinforce);
 
-    public abstract void diminishDistribution(double valueToDiminish);
+    public abstract void prepareDiminishment(double valueToDiminish);
 
-    public abstract double getMeanValue();
+    public abstract double getMean();
 
+    public abstract double getVariance();
+
+    /**
+     * Apply adjustments from reinforcing/diminishing the distribution
+     */
+    public abstract void applyAdjustments();
+
+    /**
+     * Difference between the most likely outcome and the given outcome x
+     * 
+     * @param x
+     * @return
+     */
+    public abstract double differenceOfExpectation(double x);
+
+    /**
+     * Get the mean value of a distribution whose underlying data has undergone the
+     * transformation of the activator
+     * 
+     * @param activator
+     * @return
+     */
+    public double getMeanOfAppliedActivation(ActivationFunction activator) {
+        DoubleUnaryOperator integrand = t -> IntegralTransformations
+                .hyperbolicTangentTransform(x -> activator.activator(x) * this.getProbabilityDensity(x), t);
+        return Romberg.romb(new DoubleFunction(integrand), -1, 1);
+    }
+
+    /**
+     * Get the variance of a distribution whose underlying data has undergone the
+     * transformation of the activator using the transformed mean
+     * 
+     * @param activator
+     * @return
+     */
+    public double getVarianceOfAppliedActivation(ActivationFunction activator, double mean) {
+        DoubleUnaryOperator integrand = t -> IntegralTransformations
+                .hyperbolicTangentTransform(x -> Math.pow(activator.activator(x) - mean, 2) * this.getProbabilityDensity(x), t);
+        return Math.sqrt(Romberg.romb(new DoubleFunction(integrand), -1, 1));
+    }
+
+    /**
+     * Get the variance of a distribution whose underlying data has undergone the
+     * transformation of the activator
+     * 
+     * @param activator
+     * @return
+     */
+    public double getVarianceOfAppliedActivation(ActivationFunction activator) {
+        return getVarianceOfAppliedActivation(activator, getMeanOfAppliedActivation(activator));
+    }
 }

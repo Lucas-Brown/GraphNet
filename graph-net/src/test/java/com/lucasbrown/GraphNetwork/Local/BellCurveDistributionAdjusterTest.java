@@ -4,6 +4,8 @@ import static org.junit.Assert.assertEquals;
 
 import org.junit.Test;
 
+import com.lucasbrown.NetworkTraining.BellCurveDistributionAdjuster;
+
 public class BellCurveDistributionAdjusterTest {
 
     private static final double TOLLERANCE = 1E-4;

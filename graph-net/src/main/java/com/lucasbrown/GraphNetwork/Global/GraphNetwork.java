@@ -19,27 +19,10 @@ import com.lucasbrown.NetworkTraining.ErrorFunction;
  * A neural network using a probabalistic directed graph representation.
  * Training currently a work in progress
  * 
- * Current idea for training:
- * 1) record every node (and respective signal strength) that a chain of signals
- * take
- * 2) if that chain reaches an output node, there's 2 possible scenarios:
- * 2a) the output node is supposed to have a value at that time, thus correcting
- * the node is simply the process of backpropagation and reinforce firing
- * probabilities
- * 2b) the output node was not supposed to have a value at that time, thus all
- * firing probabilities need to be diminished
- * 3) if the chain doesn't reach the end, then the output node needs to send a
- * signal back through the network to make a connection and create an error
- * signal
- * 
- * In some scenarios, it might not matter the exact timing of when the signal
- * reaches an output.
- * In such cases, training may involve uniformly increasing the likelyhood of
- * firing until any signal reaches an output.
+ * Current representation allows for both positive and negative reinforcement.
+ * Only postive reinforcement is implemented currently.   
  */
 public class GraphNetwork {
-
-    private boolean isTraining;
 
     /**
      * An object to encapsulate all network hyperparameters
@@ -62,12 +45,6 @@ public class GraphNetwork {
     private HashSet<Node> activeNextNodes;
 
     /**
-     * A hash set containing every node that recieved an error propogation signal
-     * this step
-     */
-    private final HashSet<Node> errorNodes;
-
-    /**
      * An operation which is to be defined by the user to set the values of input
      * nodes
      */
@@ -86,7 +63,6 @@ public class GraphNetwork {
         nodes = new ArrayList<>();
         activeNodes = new HashSet<>();
         activeNextNodes = new HashSet<>();
-        errorNodes = new HashSet<>();
         inputOperation = () -> {
         };
         outputOperation = () -> {
@@ -142,18 +118,12 @@ public class GraphNetwork {
     }
 
     /**
-     * Creates a new signal and automattically alerts the network that the recieving
-     * node has been activated
-     * 
-     * @param sendingNode   the node sending the signal
-     * @param recievingNode the node recieving the signal
-     * @param strength      the value associated with the signal
-     * @return a signal object containing the sending node, recieving node, and
-     *         signal strength
+     * notify the network that a node has been activated.
+     * @param activatedNode
      */
-    public Signal createSignal(final Node sendingNode, final Node recievingNode, final double strength) {
-        activeNextNodes.add(recievingNode); // every time a signal is created, the network is notified of the reciever
-        return new Signal(sendingNode, recievingNode, strength);
+    public void notifyNodeActivation(Node activatedNode)
+    {
+        activeNextNodes.add(activatedNode);
     }
 
     /**

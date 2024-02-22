@@ -6,37 +6,10 @@ import java.util.function.ToDoubleBiFunction;
 import java.util.function.ToDoubleFunction;
 import java.util.stream.IntStream;
 
+import com.lucasbrown.NetworkTraining.BellCurveDistributionAdjuster;
+
 /**
- * A distribution which is parameterized similarly to a bell curve but
- * functionally distinct.
- * This distribution weighs reinforcment data points higher than diminishment
- * points.
- * 
- * Every point on the real line needs to be characterized by a bernoulli
- * distribution to represent the reinforcment or diminishment of a datum
- * This creates an infinite-dimensional parameter space which must be
- * approximated.
- * This distribution makes the assumption that the success probability follows
- * an un-normalized bell curve.
- * i.e: p(x) = exp(-(x-mean)^2 /(2 variance^2))
- *
- * In order to update the distribution based on new data, it is necessary to use
- * a method which does not rely on past data.
- * Here, I approximate the data set as a sufficient model for the data, thus
- * allowing for finite sums to be approximated as integrals.
- * The resulting integrals are related to the Hurwitz-zeta function and require
- * additional approximations to work with.
- * The shift (change in the mean) and the scale (factor for the variance) need
- * to be solved for itteratively using Newton's method.
- * Since newton's method is rather expensive in context, the equations for both
- * the shift and scale have been factored into a residual and dynamic component.
- * The residual components are expensive but can be pre-computed without knowing
- * the mean or variance that's being solved for.
- * The dynamic component is less expensive but cannot be pre-computed.
- * In all, the resulting approximations tend to underestimate the shift slightly
- * and scale moderately.
- * 
- * If you're reading this, good luck lol
+ * A Bernoulli distribution with p = p(x) = Normal(mean, variance)
  */
 public class BellCurveDistribution extends ActivationProbabilityDistribution {
 
@@ -49,6 +22,11 @@ public class BellCurveDistribution extends ActivationProbabilityDistribution {
      * The number of "data points" that this distribution represents
      */
     private double N;
+
+    /**
+     * An object to apply adjustments to this distribution given new data
+     */
+    private BellCurveDistributionAdjuster adjuster;
 
     /**
      * @param mean     mean value of the normal distribution
@@ -67,6 +45,7 @@ public class BellCurveDistribution extends ActivationProbabilityDistribution {
         this.mean = mean;
         this.variance = variance;
         this.N = N;
+        this.adjuster = new BellCurveDistributionAdjuster(this);
     }
 
     /**
@@ -86,18 +65,8 @@ public class BellCurveDistribution extends ActivationProbabilityDistribution {
      * @param valueToReinforce The new data to add to the distribution data set
      */
     @Override
-    public void reinforceDistribution(double valueToReinforce) {
-        newtonUpdateMeanAndVariance(valueToReinforce, true);
-    }
-
-    /**
-     * reinforces the distribution directly, not accounting for its role within the
-     * larger network
-     * 
-     * @param valueToReinforce
-     */
-    public void reinforceDistributionNoFilter(double valueToReinforce) {
-        newtonUpdateMeanAndVariance(valueToReinforce, true, 1);
+    public void prepareReinforcement(double valueToReinforce) {
+        adjuster.addPoint(valueToReinforce, true, 1/getProbabilityDensity(valueToReinforce));
     }
 
     /**
@@ -106,18 +75,8 @@ public class BellCurveDistribution extends ActivationProbabilityDistribution {
      * @param valueToDiminish The data point to diminish the likelihood
      */
     @Override
-    public void diminishDistribution(double valueToDiminish) {
-        newtonUpdateMeanAndVariance(valueToDiminish, false);
-    }
-
-    /**
-     * diminishes the distribution directly, not accounting for its role within the
-     * larger network
-     * 
-     * @param valueToDiminish
-     */
-    public void diminishDistributionNoFilter(double valueToDiminish) {
-        newtonUpdateMeanAndVariance(valueToDiminish, false, 1);
+    public void prepareDiminishment(double valueToDiminish) {
+        adjuster.addPoint(valueToDiminish, false, 1/(1-getProbabilityDensity(valueToDiminish)));
     }
 
     @Override
@@ -127,34 +86,40 @@ public class BellCurveDistribution extends ActivationProbabilityDistribution {
     }
 
     @Override
-    public double getMeanValue() {
+    public double getProbabilityDensity(double x) {
+        return computeNormalizedDist(x)/(Math.sqrt(Math.PI) * variance);
+    }
+
+    @Override
+    public double differenceOfExpectation(double x) {
+        return 1 - computeNormalizedDist(x);
+    }
+
+    @Override
+    public double getMean(){
         return mean;
     }
 
+    @Override
     public double getVariance() {
         return variance;
     }
 
-    protected double getN() {
+    public double getN() {
         return N;
     }
 
-    public void setParamsFromAdjuster(BellCurveDistributionAdjuster bcda) {
-        mean = bcda.getMean();
-        variance = bcda.getVariance();
-        N = bcda.getN();
+    @Override
+    public void applyAdjustments() {
+        adjuster.applyAdjustments();
+        mean = adjuster.getMean();
+        variance = adjuster.getVariance();
+        N = adjuster.getN();
     }
 
     private static double NormalizedDist(double x, double mean, double variance) {
-        final double d = x - mean;
-        return Math.exp(-d * d / variance / 2);
-    }
-
-    private void newtonUpdateMeanAndVariance(double x, boolean b) {
-        // if no weight is specified, assume the weight should be 1/P(x, b)
-        double weight = computeNormalizedDist(x);
-        weight = b ? 1 / weight : 1 / (1 - weight);
-        newtonUpdateMeanAndVariance(x, b, weight);
+        final double d = (x - mean)/variance;
+        return Math.exp(-d * d / 2);
     }
 
 }

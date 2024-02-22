@@ -1,14 +1,11 @@
-package com.lucasbrown.GraphNetwork.Local;
+package com.lucasbrown.NetworkTraining;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.DoubleUnaryOperator;
 import java.util.stream.IntStream;
 
-import com.lucasbrown.NetworkTraining.LinearInterpolation2D;
-import com.lucasbrown.NetworkTraining.LinearRange;
-import com.lucasbrown.NetworkTraining.MultiplicitiveRange;
-import com.lucasbrown.NetworkTraining.Range;
+import com.lucasbrown.GraphNetwork.Local.BellCurveDistribution;
 
 import jsat.linear.DenseVector;
 import jsat.linear.Vec;
@@ -82,7 +79,7 @@ public class BellCurveDistributionAdjuster implements Function {
     public BellCurveDistributionAdjuster(BellCurveDistribution parentDistribution, boolean use_map) {
         this.parentDistribution = parentDistribution;
         is_using_map = use_map;
-        mean = parentDistribution.getMeanValue();
+        mean = parentDistribution.getMean();
         variance = parentDistribution.getVariance();
         N = parentDistribution.getN();
 
@@ -205,8 +202,8 @@ public class BellCurveDistributionAdjuster implements Function {
      * @return
      */
     public double logLikelihoodOfPoints(double shift, double scale) {
-        final double mean = parentDistribution.getMeanValue() + shift;
-        final double variance = parentDistribution.getVariance() * scale;
+        final double mean = this.mean + shift;
+        final double variance = this.variance * scale;
         return IntStream.range(0, update_points.size())
                 .mapToDouble(i -> point_weights.get(i)
                         * logLikelihood(update_points.get(i), points_b.get(i), mean, variance))
@@ -318,7 +315,7 @@ public class BellCurveDistributionAdjuster implements Function {
      * @return
      */
     private double getRelativeShift(BellCurveDistribution bcd, double shift, double scale) {
-        return (bcd.getMeanValue() - mean - shift) / (root_2 * scale * variance);
+        return (bcd.getMean() - mean - shift) / (root_2 * scale * variance);
     }
 
     /**
@@ -330,32 +327,6 @@ public class BellCurveDistributionAdjuster implements Function {
     private double getRelativeScale(BellCurveDistribution bcd, double shift, double scale) {
         double eta = scale * variance / bcd.getVariance();
         return eta * eta;
-    }
-
-    /**
-     * Use the transformation x = (1/t - 1)^(3/2) to convert an integral from the
-     * bounds [0, Infinity) to [0, 1]
-     * 
-     * @param func the function being integrated over.
-     * @param t    the evaluation point on the bounds [0, 1]
-     * @return the transformed value at the given point
-     */
-    public static double infiniteToFiniteIntegralTransform(DoubleUnaryOperator func, double t) {
-        final double temp = 1 / t - 1;
-
-        // if x is effectively infinite, then the provided function is assumed to have a
-        // value of 0 due to implicit convergence requirement
-        if (Double.isInfinite(temp) || temp == 0) {
-            return 0;
-        }
-
-        final double transformedIntegral = func.applyAsDouble(Math.pow(temp, 3d / 2)) * Math.sqrt(temp) / (t * t);
-
-        if (!Double.isFinite(transformedIntegral)) {
-            System.out.println();
-        }
-        assert Double.isFinite(transformedIntegral);
-        return 3 * transformedIntegral / 2;
     }
 
     /**
@@ -374,12 +345,12 @@ public class BellCurveDistributionAdjuster implements Function {
     }
 
     /**
-     * Integrates the given function on the bounds [0, infinity)
+     * Integrates the given function on the bounds [0, infinity) 
      * 
      * @return
      */
     public static double infiniteIntegral(DoubleUnaryOperator func) {
-        double intVal = integrate((double t) -> infiniteToFiniteIntegralTransform(func, t), 0, 1);
+        double intVal = integrate((double t) -> IntegralTransformations.hurwitzThreeHalfsTransform(func, t), 0, 1);
         assert Double.isFinite(intVal);
         return intVal;
     }

@@ -7,8 +7,8 @@ package com.lucasbrown.GraphNetwork.Local;
  * infinite series which can occur in graphs.
  * Using an activation function may still allow for better results in less time
  * due to their nonlinearity.
- * Activation functions must also be invertible for the backwards-null signal to
- * propagate.
+ * Activation functions must also be invertible and differentiable for the
+ * backwards signal to propagate.
  */
 public interface ActivationFunction {
 
@@ -18,11 +18,10 @@ public interface ActivationFunction {
 
     public abstract double inverse(double x);
 
+    public abstract double inverseDerivative(double x);
+
     public static final Linear LINEAR = new Linear();
-    public static final Sigmoid SIGMOID = new Sigmoid();
-    public static final TanH TANH = new TanH();
-    public static final ArcTan ARCTAN = new ArcTan();
-    public static final SoftSign SOFTSIGN = new SoftSign();
+    public static final SignedQuadratic SIGNED_QUADRATIC = new SignedQuadratic();
 
     static class Linear implements ActivationFunction {
 
@@ -41,82 +40,33 @@ public interface ActivationFunction {
             return x;
         }
 
-    }
-
-    static class Sigmoid implements ActivationFunction { // (0, 1)
-
         @Override
-        public double activator(double x) {
-            return 1.0 / (1.0 + Math.exp(-x));
-        }
-
-        @Override
-        public double derivative(double x) {
-            double i = this.activator(x);
-            return (i) * (1.0 - i);
-        }
-
-        @Override
-        public double inverse(double x) {
-            return Math.log(x / (1 - x));
+        public double inverseDerivative(double x) {
+            return 1;
         }
 
     }
 
-    static class TanH implements ActivationFunction { // (-1, 1)
+    static class SignedQuadratic implements ActivationFunction {
 
         @Override
         public double activator(double x) {
-            return Math.tanh(x);
+            return Math.signum(x) * x * x/2 + x;
         }
 
         @Override
         public double derivative(double x) {
-            double i = this.activator(x);
-            return 1 - i * i;
+            return Math.abs(x) + 1;
         }
 
         @Override
         public double inverse(double x) {
-            return Math.log((1 + x) / (1 - x)) / 2;
-        }
-
-    }
-
-    static class ArcTan implements ActivationFunction { // ( -pi/2, pi/2)
-
-        @Override
-        public double activator(double x) {
-            return Math.atan(x);
+            return Math.signum(x) * (Math.sqrt(2*Math.abs(x) + 1) - 1);
         }
 
         @Override
-        public double derivative(double x) {
-            return 1.0 / (x * x + 1.0);
-        }
-
-        @Override
-        public double inverse(double x) {
-            return Math.tan(x);
-        }
-
-    }
-
-    static class SoftSign implements ActivationFunction { // (-1, 1)
-
-        @Override
-        public double activator(double x) {
-            return x / (1 + Math.abs(x));
-        }
-
-        @Override
-        public double derivative(double x) {
-            return 1.0 / Math.pow(1 + Math.abs(x), 2);
-        }
-
-        @Override
-        public double inverse(double x) {
-            return x / (1 - Math.abs(x));
+        public double inverseDerivative(double x) {
+            return 1 / Math.sqrt(2*Math.abs(x) + 1);
         }
 
     }

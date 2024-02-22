@@ -1,5 +1,6 @@
 package com.lucasbrown.NetworkTraining;
 
+import java.util.function.DoubleUnaryOperator;
 import java.util.function.ToDoubleFunction;
 
 import jsat.linear.Vec;
@@ -14,6 +15,10 @@ public class DoubleFunction implements Function {
 
     public DoubleFunction(ToDoubleFunction<double[]> dFunc) {
         this.dFunc = dFunc;
+    }
+
+    public DoubleFunction(DoubleUnaryOperator dFunc) {
+        this.dFunc = (double[] x_arr) -> dFunc.applyAsDouble(x_arr[0]);
     }
 
     @Override

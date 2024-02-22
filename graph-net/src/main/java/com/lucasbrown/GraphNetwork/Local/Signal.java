@@ -1,13 +1,11 @@
-package com.lucasbrown.GraphNetwork.Global;
-
-import com.lucasbrown.GraphNetwork.Local.Node;
+package com.lucasbrown.GraphNetwork.Local;
 
 public class Signal {
     public final Node sendingNode;
     public final Node recievingNode;
     public final double strength;
 
-    Signal(final Node sendingNode, final Node recievingNode, final double strength) {
+    public Signal(final Node sendingNode, final Node recievingNode, final double strength) {
         this.sendingNode = sendingNode;
         this.recievingNode = recievingNode;
         this.strength = strength;
