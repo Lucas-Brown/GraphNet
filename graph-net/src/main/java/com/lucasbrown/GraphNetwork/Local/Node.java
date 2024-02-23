@@ -120,7 +120,7 @@ public class Node implements Comparable<Node> {
      */
     private int backwardsBinStr;
 
-    private boolean hasValidForwardSignal;
+    protected boolean hasValidForwardSignal;
 
     public Node(final GraphNetwork network, final SharedNetworkData networkData,
             final ActivationFunction activationFunction) {
@@ -202,6 +202,7 @@ public class Node implements Comparable<Node> {
      */
     void recieveForwardSignal(Signal signal) {
         forwardNext.add(signal);
+        network.notifyNodeActivation(this);
     }
 
     /**
@@ -211,6 +212,7 @@ public class Node implements Comparable<Node> {
      */
     void recieveBackwardSignal(Signal signal) {
         backwardNext.add(signal);
+        network.notifyNodeActivation(this);
     }
 
     /**
@@ -220,6 +222,7 @@ public class Node implements Comparable<Node> {
      */
     void recieveInferenceSignal(Signal signal) {
         inferenceNext.add(signal);
+        network.notifyNodeActivation(this);
     }
 
     /**
@@ -260,6 +263,7 @@ public class Node implements Comparable<Node> {
 
         // compute delta to update the weights and bias
         double delta = -networkData.getEpsilon() * error_derivative;
+        assert Double.isFinite(delta);
         biases[binary_string] += delta;
 
         for (int weight_idx = 0; weight_idx < weights[binary_string].length; weight_idx++) {
@@ -336,12 +340,12 @@ public class Node implements Comparable<Node> {
      * @throws InvalidAlgorithmParameterException
      */
     public void acceptSignals() throws InvalidAlgorithmParameterException {
-        if (!forwardNext.isEmpty() || !backwardNext.isEmpty() || !inferenceNext.isEmpty()) {
+        if (forwardNext.isEmpty() & backwardNext.isEmpty() & inferenceNext.isEmpty()) {
             throw new InvalidAlgorithmParameterException(
                     "handleIncomingSignals should never be called if no signals have been recieved.");
         }
 
-        if ((forwardNext.isEmpty() || backwardNext.isEmpty()) && inferenceNext.isEmpty()) {
+        if ((!forwardNext.isEmpty() || !backwardNext.isEmpty()) && !inferenceNext.isEmpty()) {
             throw new InvalidAlgorithmParameterException(
                     "Inference and training signals should not be run simultaneously.");
         }
@@ -352,12 +356,16 @@ public class Node implements Comparable<Node> {
             inferenceNext = new ArrayList<Signal>();
             acceptIncomingForwardSignals(inference);
         } else {
-            forward = forwardNext;
-            backward = backwardNext;
-            forwardNext = new ArrayList<Signal>();
-            backwardNext = new ArrayList<Signal>();
-            acceptIncomingForwardSignals(forward);
-            mergedBackwardStrength = getMergedBackwardStrength();
+            if (!forwardNext.isEmpty()) {
+                forward = forwardNext;
+                forwardNext = new ArrayList<Signal>();
+                acceptIncomingForwardSignals(forward);
+            }
+            if (!backwardNext.isEmpty()) {
+                backward = backwardNext;
+                backwardNext = new ArrayList<Signal>();
+                mergedBackwardStrength = getMergedBackwardStrength();
+            }
         }
 
     }
@@ -372,7 +380,7 @@ public class Node implements Comparable<Node> {
      * @param incomingSignals
      * @return
      */
-    private double computeMergedSignalStrength(List<Signal> incomingSignals) {
+    protected double computeMergedSignalStrength(List<Signal> incomingSignals) {
 
         double[] input_weights = weights[binary_string];
 
@@ -391,7 +399,7 @@ public class Node implements Comparable<Node> {
      * 
      * @param incomingSignals
      */
-    private void acceptIncomingForwardSignals(ArrayList<Signal> incomingSignals) {
+    protected void acceptIncomingForwardSignals(ArrayList<Signal> incomingSignals) {
         if (incomingSignals.size() == 0)
             return;
         hasValidForwardSignal = true;
@@ -425,16 +433,22 @@ public class Node implements Comparable<Node> {
      */
     public void sendTrainingSignals() {
 
-        // Send the forward signals and record the cumulative error
-        this.error = sendForwardSignals();
+        if (!outgoing.isEmpty()) {
+            // Send the forward signals and record the cumulative error
+            sendForwardSignals();
+        }
+
+        if (incoming.isEmpty()) {
+            return;
+        }
 
         // Select the backward signal combination
         Convolution[] convolutions = getReverseOutcomes();
         double[] densityWeights = evaluateConvolutions(convolutions);
-        backwardsBinStr = selectReverseOutcome(densityWeights);
+        backwardsBinStr = selectReverseOutcome(densityWeights) + 1;
 
         // Sample signal strengths from the selected distribution
-        double[] sample = convolutions[backwardsBinStr].sample(mergedBackwardStrength);
+        double[] sample = convolutions[backwardsBinStr - 1].sample(mergedBackwardStrength);
 
         // Send the backward signals
         ArrayList<Arc> arcs = binStrToArcList(backwardsBinStr);
@@ -452,12 +466,17 @@ public class Node implements Comparable<Node> {
      * Apply all changes. Must proceed a call to trainingStep
      */
     public void applyTrainingChanges() {
-        // reinforce forward signals
-        updateWeightsAndBias(error);
+
+        // update weights and biases to reinforce forward signals
+        // if the error == NAN then this node failed to send a signal to the next 
+        if (!forward.isEmpty() && !Double.isNaN(error))
+            updateWeightsAndBias(error);
 
         // reinforce backward signals
-        ArrayList<Arc> arcs = binStrToArcList(backwardsBinStr);
-        arcs.forEach(arc -> arc.probDist.applyAdjustments());
+        if (!backward.isEmpty()) {
+            ArrayList<Arc> arcs = binStrToArcList(backwardsBinStr);
+            arcs.forEach(arc -> arc.probDist.applyAdjustments());
+        }
     }
 
     /**
@@ -465,7 +484,7 @@ public class Node implements Comparable<Node> {
      * 
      * @param
      */
-    public double sendForwardSignals() {
+    public void sendForwardSignals() {
         int count = 0;
         double[] expectedValues = new double[outgoing.size()];
         for (Arc connection : outgoing) {
@@ -475,7 +494,7 @@ public class Node implements Comparable<Node> {
             }
         }
 
-        return errorDerivativeOfOutput(expectedValues, count);
+        error = errorDerivativeOfOutput(expectedValues, count);
     }
 
     private double errorDerivativeOfOutput(double[] expectedValues, int count) {
@@ -521,6 +540,7 @@ public class Node implements Comparable<Node> {
             double shiftedStrength = mergedBackwardStrength - biases[binStr];
 
             densityWeights[binStr - 1] = convolutions[binStr - 1].convolve(shiftedStrength);
+            assert Double.isFinite(densityWeights[binStr - 1]);
         }
         return densityWeights;
     }
@@ -552,9 +572,15 @@ public class Node implements Comparable<Node> {
         return -1; // This should never happen
     }
 
+    public void clearSignals() {
+        inference.clear();
+        forward.clear();
+        backward.clear();
+    }
+
     @Override
     public String toString() {
-        return name + ": " + Double.toString(outputStrength);
+        return name + ": " + Double.toString(mergedForwardStrength);
     }
 
     @Override

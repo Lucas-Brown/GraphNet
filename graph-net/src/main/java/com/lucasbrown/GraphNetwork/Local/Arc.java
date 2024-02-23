@@ -1,19 +1,10 @@
 package com.lucasbrown.GraphNetwork.Local;
 
-import java.util.Objects;
-
-import com.lucasbrown.GraphNetwork.Global.GraphNetwork;
-
 /**
  * A one-way connection between a sending node and a recieving node.
  * Holds the probability distribution for determining activation likelyhood
  */
 public class Arc {
-
-    /**
-     * The network this arc belongs to
-     */
-    private final GraphNetwork network;
 
     /**
      * Sending and recieving node
@@ -26,9 +17,8 @@ public class Arc {
      */
     public final ActivationProbabilityDistribution probDist;
 
-    public Arc(final GraphNetwork network, final Node sending, final Node recieving,
+    public Arc(final Node sending, final Node recieving,
             final ActivationProbabilityDistribution transferFunc) {
-        this.network = Objects.requireNonNull(network);
         this.sending = sending;
         this.recieving = recieving;
         this.probDist = transferFunc;
@@ -47,7 +37,6 @@ public class Arc {
     Signal sendInferenceSignal(double signalStrength, double outputStrength) {
         Signal signal = new Signal(sending, recieving, outputStrength);
         recieving.recieveInferenceSignal(signal);
-        network.notifyNodeActivation(recieving);
         return signal;
     }
 
@@ -61,7 +50,6 @@ public class Arc {
     Signal sendForwardSignal(double signalStrength, double outputStrength) {
         Signal signal = new Signal(sending, recieving, outputStrength);
         recieving.recieveForwardSignal(signal);
-        network.notifyNodeActivation(recieving);
         return signal;
     }
 
@@ -74,7 +62,6 @@ public class Arc {
     Signal sendBackwardSignal(double signalStrength, double outputStrength) {
         Signal signal = new Signal(recieving, sending, outputStrength);
         recieving.recieveBackwardSignal(signal);
-        network.notifyNodeActivation(recieving);
         return signal;
     }
 

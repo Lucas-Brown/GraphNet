@@ -22,7 +22,7 @@ public class OutputNode extends Node {
      * @return
      */
     public double getValue() {
-        return outputStrength;
+        return mergedForwardStrength;
     }
 
     /**
@@ -34,7 +34,7 @@ public class OutputNode extends Node {
     }
 
     @Override
-    void recieveBackwardSignal(Signal signal) {
+    public void recieveBackwardSignal(Signal signal) {
         super.recieveBackwardSignal(signal);
     }
 

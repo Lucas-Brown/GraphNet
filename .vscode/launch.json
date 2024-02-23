@@ -6,10 +6,19 @@
     "configurations": [
         {
             "type": "java",
+            "name": "FeedForward",
+            "request": "launch",
+            "mainClass": "FeedForward",
+            "projectName": "graph-net",
+            "vmArgs": "-enableassertions"
+        },
+        {
+            "type": "java",
             "name": "FixedChanceProofOfConcept",
             "request": "launch",
             "mainClass": "src.Tests.FixedChanceProofOfConcept",
-            "projectName": "GraphNet_6831250"
+            "projectName": "GraphNet_6831250",
+            "vmArgs": "-enableassertions"
         },
         {
             "type": "java",

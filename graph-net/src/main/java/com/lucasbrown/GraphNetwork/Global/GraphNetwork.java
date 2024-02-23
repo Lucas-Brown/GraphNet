@@ -108,7 +108,7 @@ public class GraphNetwork {
         // transmittingNode.DoesContainConnection(recievingNode);
         // if(!doesConnectionExist)
         // {
-        Arc connection = new Arc(this, transmittingNode, recievingNode, transferFunction);
+        Arc connection = new Arc(transmittingNode, recievingNode, transferFunction);
         transmittingNode.addOutgoingConnection(connection);
         recievingNode.addIncomingConnection(connection);
         // }
@@ -185,6 +185,14 @@ public class GraphNetwork {
             sb.append('\t');
         });
         return sb.toString();
+    }
+
+    public void deactivateAll()
+    {
+        activeNodes.forEach(Node::clearSignals);
+        activeNextNodes.forEach(Node::clearSignals);
+        activeNodes = new HashSet<>();
+        activeNextNodes = new HashSet<>();
     }
 
     public static <T> boolean hasIntersection(HashSet<T> s1, HashSet<T> s2) {

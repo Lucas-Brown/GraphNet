@@ -1,51 +1,60 @@
 import com.lucasbrown.GraphNetwork.Global.GraphNetwork;
 import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
+import com.lucasbrown.GraphNetwork.Local.BellCurveDistribution;
 import com.lucasbrown.GraphNetwork.Local.InputNode;
 import com.lucasbrown.GraphNetwork.Local.Node;
 import com.lucasbrown.GraphNetwork.Local.OutputNode;
+import com.lucasbrown.GraphNetwork.Local.Signal;
 
 public class FeedForward {
 
-    private static boolean alternating = false;
     private static InputNode in;
     private static OutputNode out;
 
     public static void main(String[] args) {
         GraphNetwork net = new GraphNetwork();
 
-        in = net.createInputNode(ActivationFunction.SIGMOID);
-        out = net.createOutputNode(ActivationFunction.SIGMOID);
-        Node hidden = net.createHiddenNode(ActivationFunction.SIGMOID);
+        in = net.createInputNode(ActivationFunction.LINEAR);
+        out = net.createOutputNode(ActivationFunction.LINEAR);
+        Node hidden = net.createHiddenNode(ActivationFunction.LINEAR);
 
         in.setName("Input");
         out.setName("Output");
         hidden.setName("Hidden");
 
-        net.addNewConnection(in, hidden, new StaticUniformDistribution());
-        net.addNewConnection(hidden, out, new StaticUniformDistribution());
+        net.addNewConnection(in, hidden, new BellCurveDistribution(0, 1));
+        net.addNewConnection(hidden, out, new BellCurveDistribution(0, 1));
 
         net.setInputOperation(FeedForward::inputOperation);
-        net.setOutputOperation(FeedForward::outputOperation);
+        net.setOutputOperation(FeedForward::trainOutputOperation);
 
-        for (int i = 0; i < 100000; i++) {
+        for (int i = 0; i < 100; i++) {
 
             // Transfer all signals
             net.trainingStep();
-
-            if ((i % 1000) == 0 || (i % 1000) == 1)
-                System.out.println(net.allActiveNodesString());
-
+            System.out.println(net.allActiveNodesString());
         }
 
         System.out.println("\nTRAINING STOP\n");
 
+        net.deactivateAll();
+        net.setOutputOperation(FeedForward::readOutputOperation);
+
+        for (int i = 0; i < 10; i++) {
+            net.inferenceStep();
+        }
+
     }
 
     public static void inputOperation() {
-        in.recieveInputSignal((alternating = !alternating) ? 0 : 1);
+        in.recieveForwardSignal(new Signal(null, in, 0));
     }
 
-    public static void outputOperation() {
-        out.correctOutputValue(!alternating ? 0.1 : 0.9);
+    public static void trainOutputOperation() {
+        out.recieveBackwardSignal(new Signal(out, null, 1));
+    }
+
+    public static void readOutputOperation() {
+        System.out.println(out.getValueOrNull());
     }
 }

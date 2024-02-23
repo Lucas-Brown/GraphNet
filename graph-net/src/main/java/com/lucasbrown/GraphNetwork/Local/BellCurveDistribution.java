@@ -60,7 +60,7 @@ public class BellCurveDistribution extends ActivationProbabilityDistribution {
      */
     @Override
     public void prepareReinforcement(double valueToReinforce) {
-        adjuster.addPoint(valueToReinforce, true, 1/getProbabilityDensity(valueToReinforce));
+        adjuster.addPoint(valueToReinforce, true, 1);//1/getProbabilityDensity(valueToReinforce)
     }
 
     /**
@@ -70,7 +70,7 @@ public class BellCurveDistribution extends ActivationProbabilityDistribution {
      */
     @Override
     public void prepareDiminishment(double valueToDiminish) {
-        adjuster.addPoint(valueToDiminish, false, 1/(1-getProbabilityDensity(valueToDiminish)));
+        adjuster.addPoint(valueToDiminish, false, 1); // 1/(1-getProbabilityDensity(valueToDiminish))
     }
 
     @Override
@@ -113,7 +113,7 @@ public class BellCurveDistribution extends ActivationProbabilityDistribution {
 
     private static double NormalizedDist(double x, double mean, double variance) {
         final double d = (x - mean)/variance;
-        return Math.exp(-d * d / 2);
+        return Math.exp(-d * d); // no divide by 2
     }
 
 }

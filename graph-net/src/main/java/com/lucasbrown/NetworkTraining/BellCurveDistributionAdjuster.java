@@ -24,17 +24,17 @@ public class BellCurveDistributionAdjuster implements Function {
 
     // range of values to pre-compute for the relative shift from [-w_domain,
     // w_domain]
-    private static final double w_domain = 10;
+    private static final double w_domain = 1;
 
     // number of pre-computed relative shift values
-    private static final int w_divisions = 500;
+    private static final int w_divisions = 3;
 
     // range of values to pre-compute for the relative scale from [1/eta_domain,
     // eta_domain]
-    private static final double eta_domain = 10;
+    private static final double eta_domain = 2;
 
     // number of pre-computed relative scale values
-    private static final int eta_divisions = 500;
+    private static final int eta_divisions = 3;
 
     /**
      * Expected likelihood value map dimensions are computed as [w][eta]

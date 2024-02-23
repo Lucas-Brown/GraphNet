@@ -6,6 +6,7 @@ public class Signal {
     public final double strength;
 
     public Signal(final Node sendingNode, final Node recievingNode, final double strength) {
+        assert Double.isFinite(strength);
         this.sendingNode = sendingNode;
         this.recievingNode = recievingNode;
         this.strength = strength;

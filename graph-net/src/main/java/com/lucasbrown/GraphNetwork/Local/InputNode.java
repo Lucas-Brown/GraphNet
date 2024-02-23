@@ -1,5 +1,7 @@
 package com.lucasbrown.GraphNetwork.Local;
 
+import java.util.ArrayList;
+
 import com.lucasbrown.GraphNetwork.Global.GraphNetwork;
 import com.lucasbrown.GraphNetwork.Global.SharedNetworkData;
 
@@ -22,6 +24,16 @@ public class InputNode extends Node {
     @Override
     void recieveInferenceSignal(Signal signal) {
         super.recieveInferenceSignal(signal);
+    }
+
+    @Override
+    protected void acceptIncomingForwardSignals(ArrayList<Signal> incomingSignals) {
+        if (incomingSignals.size() == 0)
+            return;
+        super.hasValidForwardSignal = true;
+
+        mergedForwardStrength = super.computeMergedSignalStrength(incomingSignals);
+        outputStrength = activationFunction.activator(mergedForwardStrength);
     }
 
     @Override

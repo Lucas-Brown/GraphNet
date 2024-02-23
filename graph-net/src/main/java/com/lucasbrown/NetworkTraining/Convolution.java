@@ -69,9 +69,14 @@ public class Convolution {
      * @return
      */
     public double[] sample(double z) {
+        // if there's only 1 distribution, then there's zero degrees of freedom
+        // return the input value
+        if (activationDistributions.size() <= 1) {
+            return new double[]{z};
+        }
+
         // Getting a true sample is far too difficult and probably not worth it
         // Assume that each distribution is approximately normal
-
         double[] means = IntStream.range(0, activationDistributions.size())
                 .mapToDouble(
                         i -> activationDistributions.get(i).getMeanOfAppliedActivation(activators.get(i), weights[i]))
