@@ -28,7 +28,7 @@ public class FeedForward {
         net.setInputOperation(FeedForward::inputOperation);
         net.setOutputOperation(FeedForward::trainOutputOperation);
 
-        for (int i = 0; i < 100; i++) {
+        for (int i = 0; i < 1000; i++) {
 
             // Transfer all signals
             net.trainingStep();

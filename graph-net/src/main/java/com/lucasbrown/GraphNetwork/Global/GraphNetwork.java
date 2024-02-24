@@ -131,8 +131,8 @@ public class GraphNetwork {
     public void inferenceStep() {
         inputOperation.run();
         recieveSignals();
-        sendInferenceSignals();
         outputOperation.run();
+        sendInferenceSignals();
     }
 
     /**

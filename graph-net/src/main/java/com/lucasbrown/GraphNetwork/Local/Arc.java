@@ -60,8 +60,9 @@ public class Arc {
      * @return the signal or null if no signal was sent
      */
     Signal sendBackwardSignal(double signalStrength, double outputStrength) {
+        // sending and recieving have reversed meanings here
         Signal signal = new Signal(recieving, sending, outputStrength);
-        recieving.recieveBackwardSignal(signal);
+        sending.recieveBackwardSignal(signal);
         return signal;
     }
 

@@ -412,6 +412,7 @@ public class Node implements Comparable<Node> {
         incomingSignals.sort((s1, s2) -> Integer.compare(s1.recievingNode.id, s2.recievingNode.id));
 
         mergedForwardStrength = computeMergedSignalStrength(incomingSignals);
+        assert Double.isFinite(mergedForwardStrength);
         outputStrength = activationFunction.activator(mergedForwardStrength);
     }
 
@@ -576,6 +577,9 @@ public class Node implements Comparable<Node> {
         inference.clear();
         forward.clear();
         backward.clear();
+        inferenceNext.clear();
+        forwardNext.clear();
+        backwardNext.clear();
     }
 
     @Override
