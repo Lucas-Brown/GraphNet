@@ -18,16 +18,20 @@ public class LinearData {
     public static void main(String[] args) {
         GraphNetwork net = new GraphNetwork();
 
-        in = net.createInputNode(ActivationFunction.SIGNED_QUADRATIC);
-        out = net.createOutputNode(ActivationFunction.SIGNED_QUADRATIC);
-        Node hidden = net.createHiddenNode(ActivationFunction.SIGNED_QUADRATIC);
+        in = net.createInputNode(ActivationFunction.LINEAR);
+        out = net.createOutputNode(ActivationFunction.LINEAR);
+        Node hidden1 = net.createHiddenNode(ActivationFunction.LINEAR);
+        Node hidden2 = net.createHiddenNode(ActivationFunction.LINEAR);
 
         in.setName("Input");
         out.setName("Output");
-        hidden.setName("Hidden");
+        hidden1.setName("Hidden1");
+        hidden2.setName("Hidden2");
 
-        net.addNewConnection(in, hidden, new BellCurveDistribution(0, 1));
-        net.addNewConnection(hidden, out, new BellCurveDistribution(0, 1));
+        net.addNewConnection(in, hidden1, new BellCurveDistribution(0, 1));
+        net.addNewConnection(in, hidden2, new BellCurveDistribution(0, 1));
+        net.addNewConnection(hidden1, out, new BellCurveDistribution(0, 1));
+        net.addNewConnection(hidden2, out, new BellCurveDistribution(0, 1));
 
         net.setInputOperation(LinearData::inputOperation);
         net.setOutputOperation(LinearData::trainOutputOperation);

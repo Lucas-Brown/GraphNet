@@ -16,6 +16,7 @@ public class IntegralTransformations {
      * @return
      */
     public static double hyperbolicTangentTransform(DoubleUnaryOperator dFunc, double t) {
+        if(t == -1 || t == 1) return 0; // integrand value must be 0 at +/- infinity 
         double x = Math.log((1 + t) / (1 - t)) / 2;
         return dFunc.applyAsDouble(x) / (1 - t * t);
     }

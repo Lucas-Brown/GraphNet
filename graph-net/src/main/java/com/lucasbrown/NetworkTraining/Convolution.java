@@ -1,6 +1,7 @@
 package com.lucasbrown.NetworkTraining;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 import java.util.function.DoubleUnaryOperator;
@@ -77,6 +78,8 @@ public class Convolution {
 
         // Getting a true sample is far too difficult and probably not worth it
         // Assume that each distribution is approximately normal
+
+        // Get the mean and variance of each distribution
         double[] means = IntStream.range(0, activationDistributions.size())
                 .mapToDouble(
                         i -> activationDistributions.get(i).getMeanOfAppliedActivation(activators.get(i), weights[i]))
@@ -87,33 +90,45 @@ public class Convolution {
                                 weights[i], means[i]))
                 .toArray();
 
-        // initialize the covariance matrix by setting the values of it's inverse
-        // this is an odd processes that mimics the idea of setting a variable to
-        // a constant by removing its corresponding row and collumn while maintaining
-        // its interference on the other variables
-        Matrix covarianceMatrix = new DenseMatrix(vars.length - 1, vars.length - 1);
-        double var2_N = vars[vars.length - 1] * vars[vars.length - 1];
-        for (int i = 0; i < vars.length - 1; i++) {
-            covarianceMatrix.set(i, i, 1 / (vars[i] * vars[i]) + 1 / var2_N);
+        double[] vars2 = DoubleStream.of(vars).map(s -> s*s).toArray();
+
+        // The rest of this procedure follows this stack exchange post 
+        // https://stats.stackexchange.com/questions/617653/how-can-i-sample-a-multivariate-normal-vector-that-satisfies-a-linear-equality-c
+
+        double mean_sum = DoubleStream.of(means).sum();
+        double var2_sum = DoubleStream.of(vars2).sum();
+
+        double z_shifted = z - mean_sum;
+
+        // construct the conditional mean vector
+        double[] mean_conditional = new double[means.length - 1];
+        for (int i = 0; i < mean_conditional.length; i++) {
+            mean_conditional[i] = means[i] + vars2[i]*z_shifted/var2_sum;
+        }
+
+        // construct the conditional variance matrix
+        Matrix variance_conditional = new DenseMatrix(vars.length - 1, vars.length - 1);
+
+        for (int i = 0; i < variance_conditional.cols(); i++) {
+            // diagonal components
+            variance_conditional.set(i, i, vars2[i] * (1 - vars2[i]/var2_sum));
+            
+            // off-diagonal components
             for (int j = 0; j < i; j++) {
-                covarianceMatrix.set(i, j, 1 / var2_N);
-                covarianceMatrix.set(j, i, 1 / var2_N);
+                double covariance = vars2[i]*vars2[j]/var2_sum;
+                variance_conditional.set(i, j, covariance);
+                variance_conditional.set(j, i, covariance);
             }
         }
 
-        // Use the LUP decomposition to invert the covariance matrix
-        Matrix[] LUP = covarianceMatrix.lup();
-        LUPDecomposition decomp = new LUPDecomposition(LUP[0], LUP[1], LUP[2]);
-        covarianceMatrix = decomp.solve(Matrix.eye(vars.length)); // inverse
-
         // create the multivariate normal distribution
         NormalM norm = new NormalM();
-        norm.setMeanCovariance(new DenseVector(means), covarianceMatrix);
+        norm.setMeanCovariance(new DenseVector(Arrays.copyOfRange(means, 0, means.length-1)), variance_conditional);
 
         // get a single sample
         double[] sample = norm.sample(1, rng).get(0).arrayCopy();
 
-        // add the final conditional sample
+        // use the sample to generate the remaining component
         System.arraycopy(new double[sample.length + 1], 0, sample, 0, sample.length);
         sample[sample.length - 1] = z - DoubleStream.of(sample).sum();
 
@@ -127,16 +142,16 @@ public class Convolution {
      * @param f2
      * @return
      */
-    private static DoubleUnaryOperator convolution(DoubleUnaryOperator f1, DoubleUnaryOperator f2) {
+    public static DoubleUnaryOperator convolution(DoubleUnaryOperator f1, DoubleUnaryOperator f2) {
         return z -> Romberg.romb(new DoubleFunction(convolutionIntegrand(f1, f2, z)), -1, 1);
     }
 
-    private static DoubleUnaryOperator convolutionIntegrand(DoubleUnaryOperator f1, DoubleUnaryOperator f2, double z) {
+    public static DoubleUnaryOperator convolutionIntegrand(DoubleUnaryOperator f1, DoubleUnaryOperator f2, double z) {
         return t -> IntegralTransformations
                 .hyperbolicTangentTransform(x -> f1.applyAsDouble(x) * f2.applyAsDouble(z - x), t);
     }
 
-    private static DoubleUnaryOperator applyActivationToDistribution(
+    public static DoubleUnaryOperator applyActivationToDistribution(
             ActivationProbabilityDistribution activationDistribution, ActivationFunction activator, double weight) {
         return x -> activationDistribution.getProbabilityDensity(activator.inverse(x) / weight)
                 * Math.abs(activator.inverseDerivative(x) / weight);
