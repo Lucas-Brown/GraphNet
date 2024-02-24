@@ -30,7 +30,7 @@ public class OutputNode extends Node {
      *         otherwise returns null
      */
     public Double getValueOrNull() {
-        return hasValidForwardSignal() ? outputStrength : null;
+        return hasValidForwardSignal() ? mergedForwardStrength : null;
     }
 
     @Override

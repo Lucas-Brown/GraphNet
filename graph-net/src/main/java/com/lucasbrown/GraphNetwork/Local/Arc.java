@@ -31,11 +31,11 @@ public class Arc {
     /**
      * Send an inference signal from the sending node to the recieving node
      * 
-     * @param outputStrength The strength of the signal to send
+     * @param strength The strength of the signal to send
      * @return the signal or null if no signal was sent
      */
-    Signal sendInferenceSignal(double signalStrength, double outputStrength) {
-        Signal signal = new Signal(sending, recieving, outputStrength);
+    Signal sendInferenceSignal(double strength) {
+        Signal signal = new Signal(sending, recieving, strength);
         recieving.recieveInferenceSignal(signal);
         return signal;
     }
@@ -44,11 +44,11 @@ public class Arc {
     /**
      * Send an forward signal from the sending node to the recieving node
      * 
-     * @param outputStrength The strength of the signal to send
+     * @param strength The strength of the signal to send
      * @return the signal or null if no signal was sent
      */
-    Signal sendForwardSignal(double signalStrength, double outputStrength) {
-        Signal signal = new Signal(sending, recieving, outputStrength);
+    Signal sendForwardSignal(double strength) {
+        Signal signal = new Signal(sending, recieving, strength);
         recieving.recieveForwardSignal(signal);
         return signal;
     }
@@ -56,12 +56,12 @@ public class Arc {
     /**
      * Send an backward signal from the recieving node to the sending node
      * 
-     * @param outputStrength The strength of the signal to send
+     * @param strength The strength of the signal to send
      * @return the signal or null if no signal was sent
      */
-    Signal sendBackwardSignal(double signalStrength, double outputStrength) {
+    Signal sendBackwardSignal(double strength) {
         // sending and recieving have reversed meanings here
-        Signal signal = new Signal(recieving, sending, outputStrength);
+        Signal signal = new Signal(recieving, sending, strength);
         sending.recieveBackwardSignal(signal);
         return signal;
     }

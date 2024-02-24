@@ -139,7 +139,7 @@ public class Convolution {
     private static DoubleUnaryOperator applyActivationToDistribution(
             ActivationProbabilityDistribution activationDistribution, ActivationFunction activator, double weight) {
         return x -> activationDistribution.getProbabilityDensity(activator.inverse(x) / weight)
-                * activator.inverseDerivative(x) / weight;
+                * Math.abs(activator.inverseDerivative(x) / weight);
     }
 
 }

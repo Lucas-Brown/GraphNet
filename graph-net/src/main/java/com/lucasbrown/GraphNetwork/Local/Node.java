@@ -259,7 +259,7 @@ public class Node implements Comparable<Node> {
         }
     }
 
-    private void updateWeightsAndBias(double error_derivative) {
+    protected void updateWeightsAndBias(double error_derivative) {
 
         // compute delta to update the weights and bias
         double delta = -networkData.getEpsilon() * error_derivative;
@@ -423,7 +423,7 @@ public class Node implements Comparable<Node> {
         for (Arc connection : outgoing) {
             // roll and send a signal if successful
             if (connection.rollFilter(mergedForwardStrength)) {
-                connection.sendInferenceSignal(mergedForwardStrength, outputStrength);
+                connection.sendInferenceSignal(outputStrength);
             }
         }
         hasValidForwardSignal = false;
@@ -473,7 +473,7 @@ public class Node implements Comparable<Node> {
         double[] expectedValues = new double[outgoing.size()];
         for (Arc connection : outgoing) {
             if (connection.rollFilter(mergedForwardStrength)) {
-                connection.sendForwardSignal(mergedForwardStrength, outputStrength);
+                connection.sendForwardSignal(outputStrength);
                 expectedValues[count++] = connection.probDist.getMean();
             }
         }
@@ -508,8 +508,9 @@ public class Node implements Comparable<Node> {
         for (int i = 0; i < sample.length; i++) {
             Arc arc_i = arcs.get(i);
             double sample_i = sample[i];
-            arc_i.sendBackwardSignal(sample_i, sample_i); // send signal backwards
-            arc_i.probDist.prepareReinforcement(sample_i); // prepare to reinforce the distribution
+            double sample_inverse = arc_i.recieving.activationFunction.inverse(sample_i);
+            arc_i.sendBackwardSignal(sample_inverse); // send signal backwards
+            arc_i.probDist.prepareReinforcement(sample_inverse); // prepare to reinforce the distribution
         }
     }
 
@@ -549,6 +550,7 @@ public class Node implements Comparable<Node> {
 
             densityWeights[binStr - 1] = convolutions[binStr - 1].convolve(shiftedStrength);
             assert Double.isFinite(densityWeights[binStr - 1]);
+            assert densityWeights[binStr - 1] >= 0;
         }
         return densityWeights;
     }

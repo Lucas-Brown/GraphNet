@@ -6,6 +6,13 @@
     "configurations": [
         {
             "type": "java",
+            "name": "LinearData",
+            "request": "launch",
+            "mainClass": "LinearData",
+            "projectName": "graph-net"
+        },
+        {
+            "type": "java",
             "name": "FeedForward",
             "request": "launch",
             "mainClass": "FeedForward",

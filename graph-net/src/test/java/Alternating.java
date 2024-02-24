@@ -24,7 +24,7 @@ public class Alternating {
         Random rand = new Random();
         net = new GraphNetwork();
 
-        n1 = net.createInputNode(ActivationFunction.SIGMOID);
+        n1 = net.createInputNode(ActivationFunction.LINEAR);
         n2 = net.createOutputNode(ActivationFunction.SIGMOID);
         Node h1 = net.createHiddenNode(ActivationFunction.SIGMOID);
         Node h2 = net.createHiddenNode(ActivationFunction.SIGMOID);

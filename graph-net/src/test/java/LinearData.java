@@ -6,7 +6,11 @@ import com.lucasbrown.GraphNetwork.Local.Node;
 import com.lucasbrown.GraphNetwork.Local.OutputNode;
 import com.lucasbrown.GraphNetwork.Local.Signal;
 
-public class FeedForward {
+public class LinearData {
+
+    private static int index = 0;
+    private static double[] inputData = new double[]{0,1,2,3,4,5};
+    private static double[] outputData = new double[]{5,4,3,2,1,0};
 
     private static InputNode in;
     private static OutputNode out;
@@ -25,8 +29,8 @@ public class FeedForward {
         net.addNewConnection(in, hidden, new BellCurveDistribution(0, 1));
         net.addNewConnection(hidden, out, new BellCurveDistribution(0, 1));
 
-        net.setInputOperation(FeedForward::inputOperation);
-        net.setOutputOperation(FeedForward::trainOutputOperation);
+        net.setInputOperation(LinearData::inputOperation);
+        net.setOutputOperation(LinearData::trainOutputOperation);
 
         for (int i = 0; i < 1000; i++) {
 
@@ -38,7 +42,7 @@ public class FeedForward {
         System.out.println("\nTRAINING STOP\n");
 
         net.deactivateAll();
-        net.setOutputOperation(FeedForward::readOutputOperation);
+        net.setOutputOperation(LinearData::readOutputOperation);
 
         for (int i = 0; i < 10; i++) {
             net.inferenceStep();
@@ -47,11 +51,12 @@ public class FeedForward {
     }
 
     public static void inputOperation() {
-        in.recieveForwardSignal(new Signal(null, in, 0));
+        index = (index + 1) % inputData.length;
+        in.recieveForwardSignal(new Signal(null, in, inputData[index]));
     }
 
     public static void trainOutputOperation() {
-        out.recieveBackwardSignal(new Signal(out, null, 5));
+        out.recieveBackwardSignal(new Signal(out, null, outputData[index]));
     }
 
     public static void readOutputOperation() {

@@ -1,5 +1,6 @@
 package com.lucasbrown.GraphNetwork.Local;
 
+import java.security.InvalidAlgorithmParameterException;
 import java.util.ArrayList;
 
 import com.lucasbrown.GraphNetwork.Global.GraphNetwork;
@@ -30,10 +31,18 @@ public class InputNode extends Node {
     protected void acceptIncomingForwardSignals(ArrayList<Signal> incomingSignals) {
         if (incomingSignals.size() == 0)
             return;
+
+        assert incomingSignals.size() == 1;
+
         super.hasValidForwardSignal = true;
 
-        mergedForwardStrength = super.computeMergedSignalStrength(incomingSignals);
+        mergedForwardStrength = incomingSignals.get(0).strength;
         outputStrength = activationFunction.activator(mergedForwardStrength);
+    }
+    
+    @Override
+    protected void updateWeightsAndBias(double error_derivative){
+        return; // do not update, no matter what *HE* whispers
     }
 
     @Override
