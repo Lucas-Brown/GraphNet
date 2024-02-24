@@ -86,7 +86,7 @@ public class BellCurveDistribution extends ActivationProbabilityDistribution {
 
     @Override
     public double differenceOfExpectation(double x) {
-        return 1 - computeNormalizedDist(x);
+        return mean - x; //1 - computeNormalizedDist(x);
     }
 
     @Override

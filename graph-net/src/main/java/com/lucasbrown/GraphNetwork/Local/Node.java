@@ -86,8 +86,8 @@ public class Node implements Comparable<Node> {
      * both grow exponentially, which is bad, but every node should have relatively
      * few connections
      */
-    private double[][] weights;
-    private double[] biases;
+    protected double[][] weights;
+    protected double[] biases;
 
     /**
      * Average of all incoming signals
@@ -437,30 +437,13 @@ public class Node implements Comparable<Node> {
         if (!outgoing.isEmpty()) {
             // Send the forward signals and record the cumulative error
             sendForwardSignals();
+            hasValidForwardSignal = false;
         }
 
-        if (incoming.isEmpty()) {
-            return;
+        if (!incoming.isEmpty()) {
+            sendBackwardsSignals();
         }
 
-        // Select the backward signal combination
-        Convolution[] convolutions = getReverseOutcomes();
-        double[] densityWeights = evaluateConvolutions(convolutions);
-        backwardsBinStr = selectReverseOutcome(densityWeights) + 1;
-
-        // Sample signal strengths from the selected distribution
-        double[] sample = convolutions[backwardsBinStr - 1].sample(mergedBackwardStrength);
-
-        // Send the backward signals
-        ArrayList<Arc> arcs = binStrToArcList(backwardsBinStr);
-        for (int i = 0; i < sample.length; i++) {
-            Arc arc_i = arcs.get(i);
-            double sample_i = sample[i];
-            arc_i.sendBackwardSignal(sample_i, sample_i); // send signal backwards
-            arc_i.probDist.prepareReinforcement(sample_i); // prepare to reinforce the distribution
-        }
-
-        hasValidForwardSignal = false;
     }
 
     /**
@@ -491,7 +474,7 @@ public class Node implements Comparable<Node> {
         for (Arc connection : outgoing) {
             if (connection.rollFilter(mergedForwardStrength)) {
                 connection.sendForwardSignal(mergedForwardStrength, outputStrength);
-                expectedValues[count++] = connection.probDist.differenceOfExpectation(mergedForwardStrength);
+                expectedValues[count++] = connection.probDist.getMean();
             }
         }
 
@@ -504,6 +487,30 @@ public class Node implements Comparable<Node> {
             error += networkData.errorFunc.error_derivative(mergedForwardStrength, expectedValues[i]);
         }
         return error / count;
+    }
+
+    /**
+     * Send backwards signals and record differences of expectation for training
+     * 
+     * @param
+     */
+    private void sendBackwardsSignals() {
+        // Select the backward signal combination
+        Convolution[] convolutions = getReverseOutcomes();
+        double[] densityWeights = evaluateConvolutions(convolutions);
+        backwardsBinStr = selectReverseOutcome(densityWeights) + 1;
+
+        // Sample signal strengths from the selected distribution
+        double[] sample = convolutions[backwardsBinStr - 1].sample(mergedBackwardStrength);
+
+        // Send the backward signals
+        ArrayList<Arc> arcs = binStrToArcList(backwardsBinStr);
+        for (int i = 0; i < sample.length; i++) {
+            Arc arc_i = arcs.get(i);
+            double sample_i = sample[i];
+            arc_i.sendBackwardSignal(sample_i, sample_i); // send signal backwards
+            arc_i.probDist.prepareReinforcement(sample_i); // prepare to reinforce the distribution
+        }
     }
 
     public Convolution[] getReverseOutcomes() {

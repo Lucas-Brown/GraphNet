@@ -38,4 +38,23 @@ public class OutputNode extends Node {
         super.recieveBackwardSignal(signal);
     }
 
+    @Override
+    public boolean addIncomingConnection(Arc connection)
+    {
+        boolean b = super.addIncomingConnection(connection);
+        
+        // set all weights to 1 and all biases to 0
+        for (int i = 0; i < weights.length; i++) {
+            for (int j = 0; j < weights[i].length; j++) {
+                weights[i][j] = 1;
+            }
+        }
+
+        for (int i = 0; i < biases.length; i++) {
+            biases[i] = 0;
+        }
+
+        return b;
+    }
+
 }
