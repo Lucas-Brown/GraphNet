@@ -21,6 +21,22 @@ public class IntegralTransformations {
         return dFunc.applyAsDouble(x) / (1 - t * t);
     }
 
+    /**
+     * Truncates an integral with bounds (-inf, inf) to [-1, 1] using the
+     * transformation x = 1/(1-t) - 1/(1+t)
+     * 
+     * @param dFunc
+     * @param t
+     * @return
+     */
+    public static double asymptoticTransform(DoubleUnaryOperator dFunc, double t) {
+        if(t == -1 || t == 1) return 0; // integrand value must be 0 at +/- infinity 
+        double t_min = 1/(1-t);
+        double t_plus = 1/(1+t);
+        double x = t_min - t_plus;
+        return dFunc.applyAsDouble(x) * (t_min*t_min + t_plus*t_plus);
+    }
+
     
     /**
      * Use the transformation x = (1/t - 1)^(3/2) to convert an integral from the

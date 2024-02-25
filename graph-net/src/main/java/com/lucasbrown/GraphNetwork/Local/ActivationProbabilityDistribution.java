@@ -7,6 +7,7 @@ import com.lucasbrown.NetworkTraining.DoubleFunction;
 import com.lucasbrown.NetworkTraining.IntegralTransformations;
 
 import jsat.math.integration.Romberg;
+import jsat.math.integration.Trapezoidal;
 
 /**
  * Contains the probability distribution information for likelyhood of a signal
@@ -15,6 +16,8 @@ import jsat.math.integration.Romberg;
  * TODO: alter methods to include negative reinforcement as well
  */
 public abstract class ActivationProbabilityDistribution {
+    
+    private static final int TRAP_COUNT = 100;
 
     /**
      * Random number generator for probabalistically choosing whether to send a
@@ -63,8 +66,8 @@ public abstract class ActivationProbabilityDistribution {
      */
     public double getMeanOfAppliedActivation(ActivationFunction activator, double w) {
         DoubleUnaryOperator integrand = t -> IntegralTransformations
-                .hyperbolicTangentTransform(x -> w*activator.activator(x) * this.getProbabilityDensity(x), t);
-        return Romberg.romb(new DoubleFunction(integrand), -1, 1);
+                .asymptoticTransform(x -> w*activator.activator(x) * this.getProbabilityDensity(x), t);
+        return Trapezoidal.trapz(new DoubleFunction(integrand), -1, 1, TRAP_COUNT);
     }
 
     /**
@@ -76,8 +79,8 @@ public abstract class ActivationProbabilityDistribution {
      */
     public double getVarianceOfAppliedActivation(ActivationFunction activator, double w, double mean) {
         DoubleUnaryOperator integrand = t -> IntegralTransformations
-                .hyperbolicTangentTransform(x -> Math.pow(w*activator.activator(x) - mean, 2) * this.getProbabilityDensity(x), t);
-        return Math.sqrt(Romberg.romb(new DoubleFunction(integrand), -1, 1));
+                .asymptoticTransform(x -> Math.pow(w*activator.activator(x) - mean, 2) * this.getProbabilityDensity(x), t);
+        return Math.sqrt(Trapezoidal.trapz(new DoubleFunction(integrand), -1, 1, TRAP_COUNT));
     }
 
     /**

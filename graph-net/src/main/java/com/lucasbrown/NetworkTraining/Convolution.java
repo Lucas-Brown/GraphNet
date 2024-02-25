@@ -17,6 +17,7 @@ import jsat.linear.DenseMatrix;
 import jsat.linear.DenseVector;
 import jsat.linear.LUPDecomposition;
 import jsat.linear.Matrix;
+import jsat.linear.Vec;
 
 public class Convolution {
 
@@ -64,16 +65,30 @@ public class Convolution {
     }
 
     /**
-     * Sample the convolution for a value such that x1 + x2 ... = z
-     * 
+     * Get a single sample of the convolution such that x1 + x2 ... = z
      * @param z
      * @return
      */
     public double[] sample(double z) {
+        return sample(z, 1)[0];
+    }
+
+    /**
+     * Sample the convolution for a value such that x1 + x2 ... = z
+     * 
+     * @param z
+     * @param n the number of samples
+     * @return
+     */
+    public double[][] sample(double z, int n) {
         // if there's only 1 distribution, then there's zero degrees of freedom
         // return the input value
         if (activationDistributions.size() <= 1) {
-            return new double[]{z};
+            double[][] sample = new double[n][1];
+            for (int i = 0; i < sample.length; i++) {
+                sample[i][0] = z;
+            }
+            return sample;
         }
 
         // Getting a true sample is far too difficult and probably not worth it
@@ -115,24 +130,27 @@ public class Convolution {
             
             // off-diagonal components
             for (int j = 0; j < i; j++) {
-                double covariance = vars2[i]*vars2[j]/var2_sum;
+                double covariance = -vars2[i]*vars2[j]/var2_sum;
                 variance_conditional.set(i, j, covariance);
                 variance_conditional.set(j, i, covariance);
             }
         }
 
         // create the multivariate normal distribution
-        NormalM norm = new NormalM();
-        norm.setMeanCovariance(new DenseVector(Arrays.copyOfRange(means, 0, means.length-1)), variance_conditional);
+        NormalM norm = new NormalM(new DenseVector(mean_conditional), variance_conditional);
 
-        // get a single sample
-        double[] sample = norm.sample(1, rng).get(0).arrayCopy();
+        // get samples
+        List<Vec> samples_conditional = norm.sample(n, rng);
 
         // use the sample to generate the remaining component
-        System.arraycopy(new double[sample.length + 1], 0, sample, 0, sample.length);
-        sample[sample.length - 1] = z - DoubleStream.of(sample).sum();
+        double[][] samples = new double[n][means.length];
+        for (int i = 0; i < samples.length; i++) {
+            double[] sample_i = samples_conditional.get(i).arrayCopy();
+            System.arraycopy(sample_i, 0, samples[i], 0, sample_i.length);
+            samples[i][samples[i].length-1] = z - DoubleStream.of(sample_i).sum();
+        }
 
-        return sample;
+        return samples;
     }
 
     /**
@@ -148,7 +166,7 @@ public class Convolution {
 
     public static DoubleUnaryOperator convolutionIntegrand(DoubleUnaryOperator f1, DoubleUnaryOperator f2, double z) {
         return t -> IntegralTransformations
-                .hyperbolicTangentTransform(x -> f1.applyAsDouble(x) * f2.applyAsDouble(z - x), t);
+                .asymptoticTransform(x -> f1.applyAsDouble(x) * f2.applyAsDouble(z - x), t);
     }
 
     public static DoubleUnaryOperator applyActivationToDistribution(

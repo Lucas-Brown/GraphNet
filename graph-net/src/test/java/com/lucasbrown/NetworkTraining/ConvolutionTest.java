@@ -10,11 +10,12 @@ import org.junit.Test;
 
 import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
 import com.lucasbrown.GraphNetwork.Local.BellCurveDistribution;
+import com.lucasbrown.GraphNetwork.Local.NormalDistribution;
 
 
 public class ConvolutionTest {
 
-    private static final double TOLLERANCE = 1E-4;
+    private static final double TOLLERANCE = 1E-8;
 
     @Test
     public void testConvolution() {
@@ -60,6 +61,56 @@ public class ConvolutionTest {
 
     @Test
     public void testSample() {
+        double sample_tollerance = 1E-3;
+
+        // can only verify a very simple case 
+        double u1 = -0.6;
+        double u2 = 1;
+        double s1 = 0.5;
+        double s2 = 0.85;
+        double z = 2.75;
+
+        double s12 = s1*s1;
+        double s22 = s2*s2;
+
+        double expected_mean1 = (s22*u1 + s12*(z - u2))/(s12+s22);
+        double expected_mean2 = (s12*u2 + s22*(z - u1))/(s12+s22);
+        double expected_variance = Math.sqrt(1/(1/s12 + 1/s22));
+
+        // factor of root 2 because it's not a true bell curve
+        NormalDistribution d1 = new NormalDistribution(u1, s1);
+        NormalDistribution d2 = new NormalDistribution(u2, s2);
+
+        ActivationFunction a1 = ActivationFunction.LINEAR;
+        ActivationFunction a2 = ActivationFunction.LINEAR;
+
+        Convolution convolution = new Convolution(new ArrayList(List.of(d1, d2)), new ArrayList(List.of(a1, a2)), new double[]{1,1});
+        double[][] samples = convolution.sample(z, (int) (10/sample_tollerance/sample_tollerance));
+
+        double mean_1 = 0;
+        double mean_2 = 0;
+        for (int i = 0; i < samples.length; i++) {
+            mean_1 += samples[i][0];
+            mean_2 += samples[i][1];
+        }
+
+        mean_1/= samples.length;
+        mean_2/= samples.length;
+        
+        double variance_1 = 0;
+        double variance_2 = 0;
+        for (int i = 0; i < samples.length; i++) {
+            variance_1 += (mean_1 - samples[i][0])*(mean_1 - samples[i][0]);
+            variance_2 += (mean_2 - samples[i][1])*(mean_2 - samples[i][1]);
+        }
+
+        variance_1 = Math.sqrt(variance_1/samples.length);
+        variance_2 = Math.sqrt(variance_2/samples.length);
+
+        assertEquals(expected_mean1, mean_1, sample_tollerance);
+        assertEquals(expected_mean2, mean_2, sample_tollerance);
+        assertEquals(variance_1, variance_2, 1E-8);
+        assertEquals(expected_variance, variance_1, sample_tollerance);
 
     }
 }
