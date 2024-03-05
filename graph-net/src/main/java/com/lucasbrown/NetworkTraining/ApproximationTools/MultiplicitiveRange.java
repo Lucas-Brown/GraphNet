@@ -1,4 +1,4 @@
-package com.lucasbrown.NetworkTraining;
+package com.lucasbrown.NetworkTraining.ApproximationTools;
 
 /**
  * Creates a range of values between the lower and upper bound such that

@@ -5,9 +5,9 @@ import java.util.function.ToDoubleBiFunction;
 
 import org.junit.Test;
 
-import com.lucasbrown.NetworkTraining.LinearInterpolation2D;
-import com.lucasbrown.NetworkTraining.LinearRange;
-import com.lucasbrown.NetworkTraining.Range;
+import com.lucasbrown.NetworkTraining.ApproximationTools.LinearInterpolation2D;
+import com.lucasbrown.NetworkTraining.ApproximationTools.LinearRange;
+import com.lucasbrown.NetworkTraining.ApproximationTools.Range;
 
 public class InterpolationTest {
 

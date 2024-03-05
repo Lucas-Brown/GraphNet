@@ -1,4 +1,4 @@
-package com.lucasbrown.NetworkTraining;
+package com.lucasbrown.NetworkTraining.ApproximationTools;
 
 import java.util.Arrays;
 import java.util.stream.DoubleStream;

@@ -4,8 +4,8 @@ import java.util.Random;
 import java.util.function.DoubleUnaryOperator;
 import java.util.stream.DoubleStream;
 
-import com.lucasbrown.NetworkTraining.DoubleFunction;
-import com.lucasbrown.NetworkTraining.IntegralTransformations;
+import com.lucasbrown.NetworkTraining.ApproximationTools.DoubleFunction;
+import com.lucasbrown.NetworkTraining.ApproximationTools.IntegralTransformations;
 
 import jsat.math.integration.Romberg;
 import jsat.math.integration.Trapezoidal;

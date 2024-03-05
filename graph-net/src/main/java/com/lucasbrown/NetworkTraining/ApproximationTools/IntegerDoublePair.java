@@ -1,4 +1,4 @@
-package com.lucasbrown.NetworkTraining;
+package com.lucasbrown.NetworkTraining.ApproximationTools;
 
 /**
  * Basically a struct containing an int and double

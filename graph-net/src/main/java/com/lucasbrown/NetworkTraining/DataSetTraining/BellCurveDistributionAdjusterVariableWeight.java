@@ -1,4 +1,4 @@
-package com.lucasbrown.NetworkTraining;
+package com.lucasbrown.NetworkTraining.DataSetTraining;
 
 import com.lucasbrown.GraphNetwork.Local.BellCurveDistribution;
 

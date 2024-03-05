@@ -1,4 +1,4 @@
-package com.lucasbrown.NetworkTraining;
+package com.lucasbrown.NetworkTraining.ApproximationTools;
 
 /**
  * An abstraction for all classes which interpolate data 

@@ -1,4 +1,4 @@
-package com.lucasbrown.NetworkTraining;
+package com.lucasbrown.NetworkTraining.ApproximationTools;
 
 /**
  * A range of values that are all linearly spaced.

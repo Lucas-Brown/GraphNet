@@ -11,7 +11,7 @@ import com.lucasbrown.GraphNetwork.Local.Arc;
 import com.lucasbrown.GraphNetwork.Local.InputNode;
 import com.lucasbrown.GraphNetwork.Local.Node;
 import com.lucasbrown.GraphNetwork.Local.OutputNode;
-import com.lucasbrown.NetworkTraining.ErrorFunction;
+import com.lucasbrown.NetworkTraining.ApproximationTools.ErrorFunction;
 
 /**
  * A neural network using a probabalistic directed graph representation.

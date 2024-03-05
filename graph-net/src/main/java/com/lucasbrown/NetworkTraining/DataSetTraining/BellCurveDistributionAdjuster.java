@@ -1,4 +1,4 @@
-package com.lucasbrown.NetworkTraining;
+package com.lucasbrown.NetworkTraining.DataSetTraining;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -6,6 +6,11 @@ import java.util.function.DoubleUnaryOperator;
 import java.util.stream.IntStream;
 
 import com.lucasbrown.GraphNetwork.Local.BellCurveDistribution;
+import com.lucasbrown.NetworkTraining.ApproximationTools.IntegralTransformations;
+import com.lucasbrown.NetworkTraining.ApproximationTools.LinearInterpolation2D;
+import com.lucasbrown.NetworkTraining.ApproximationTools.LinearRange;
+import com.lucasbrown.NetworkTraining.ApproximationTools.MultiplicitiveRange;
+import com.lucasbrown.NetworkTraining.ApproximationTools.Range;
 
 import jsat.linear.DenseVector;
 import jsat.linear.Vec;

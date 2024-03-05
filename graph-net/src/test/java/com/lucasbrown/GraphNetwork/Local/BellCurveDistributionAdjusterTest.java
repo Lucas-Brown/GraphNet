@@ -4,7 +4,7 @@ import static org.junit.Assert.assertEquals;
 
 import org.junit.Test;
 
-import com.lucasbrown.NetworkTraining.BellCurveDistributionAdjuster;
+import com.lucasbrown.NetworkTraining.DataSetTraining.BellCurveDistributionAdjuster;
 
 public class BellCurveDistributionAdjusterTest {
 

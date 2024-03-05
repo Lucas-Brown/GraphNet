@@ -1,6 +1,6 @@
 package com.lucasbrown.GraphNetwork.Global;
 
-import com.lucasbrown.NetworkTraining.ErrorFunction;
+import com.lucasbrown.NetworkTraining.ApproximationTools.ErrorFunction;
 
 /**
  * A collection of data which modifies the training and firing rates of each

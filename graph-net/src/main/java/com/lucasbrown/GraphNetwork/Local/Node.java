@@ -12,7 +12,7 @@ import java.util.stream.IntStream;
 
 import com.lucasbrown.GraphNetwork.Global.GraphNetwork;
 import com.lucasbrown.GraphNetwork.Global.SharedNetworkData;
-import com.lucasbrown.NetworkTraining.Convolution;
+import com.lucasbrown.NetworkTraining.ApproximationTools.Convolution;
 
 /**
  * A node within a graph neural network.
