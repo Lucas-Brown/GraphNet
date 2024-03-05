@@ -6,10 +6,18 @@
     "configurations": [
         {
             "type": "java",
+            "name": "DistributionConvergence",
+            "request": "launch",
+            "mainClass": "DistributionConvergence",
+            "projectName": "graph-net"
+        },
+        {
+            "type": "java",
             "name": "LinearData",
             "request": "launch",
             "mainClass": "LinearData",
-            "projectName": "graph-net"
+            "projectName": "graph-net",
+            "vmArgs": "-enableassertions"
         },
         {
             "type": "java",

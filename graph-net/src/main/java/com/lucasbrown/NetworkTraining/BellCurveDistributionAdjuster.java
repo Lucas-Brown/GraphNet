@@ -15,7 +15,7 @@ import jsat.math.optimization.NelderMead;
 public class BellCurveDistributionAdjuster implements Function {
 
     private static final double TOLLERANCE = 1E-6; // tollerance for optimization
-    private static final int integrationDivisions = 10000;
+    private static final int integrationDivisions = 5000;
     private static final int NM_ITTERATION_LIMIT = 10000;
 
     private static final double root_pi = Math.sqrt(Math.PI);

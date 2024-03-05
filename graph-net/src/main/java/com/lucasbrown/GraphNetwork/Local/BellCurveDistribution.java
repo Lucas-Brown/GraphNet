@@ -2,6 +2,7 @@ package com.lucasbrown.GraphNetwork.Local;
 
 import com.lucasbrown.NetworkTraining.BellCurveDistributionAdjuster;
 
+
 /**
  * A Bernoulli distribution with p = p(x) = Normal(mean, variance)
  */
@@ -39,7 +40,7 @@ public class BellCurveDistribution extends ActivationProbabilityDistribution {
         this.mean = mean;
         this.variance = variance;
         this.N = N;
-        this.adjuster = new BellCurveDistributionAdjuster(this);
+        this.adjuster = new BellCurveDistributionAdjuster(this, true);
     }
 
     /**
@@ -60,7 +61,7 @@ public class BellCurveDistribution extends ActivationProbabilityDistribution {
      */
     @Override
     public void prepareReinforcement(double valueToReinforce) {
-        adjuster.addPoint(valueToReinforce, true, 1);//1/getProbabilityDensity(valueToReinforce)
+        adjuster.addPoint(valueToReinforce, true, 1+0/getProbabilityDensity(valueToReinforce));
     }
 
     /**
@@ -70,7 +71,7 @@ public class BellCurveDistribution extends ActivationProbabilityDistribution {
      */
     @Override
     public void prepareDiminishment(double valueToDiminish) {
-        adjuster.addPoint(valueToDiminish, false, 1); // 1/(1-getProbabilityDensity(valueToDiminish))
+        adjuster.addPoint(valueToDiminish, false, 1+0/(1-getProbabilityDensity(valueToDiminish))); 
     }
 
     @Override
@@ -82,6 +83,11 @@ public class BellCurveDistribution extends ActivationProbabilityDistribution {
     @Override
     public double getProbabilityDensity(double x) {
         return computeNormalizedDist(x)/(Math.sqrt(Math.PI) * variance);
+    }
+
+    @Override
+    public double sample() {
+        return rand.nextGaussian()*variance/Math.sqrt(2) + mean;
     }
 
     @Override

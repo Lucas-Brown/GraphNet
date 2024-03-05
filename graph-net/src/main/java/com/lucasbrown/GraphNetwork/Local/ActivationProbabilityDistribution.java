@@ -2,6 +2,7 @@ package com.lucasbrown.GraphNetwork.Local;
 
 import java.util.Random;
 import java.util.function.DoubleUnaryOperator;
+import java.util.stream.DoubleStream;
 
 import com.lucasbrown.NetworkTraining.DoubleFunction;
 import com.lucasbrown.NetworkTraining.IntegralTransformations;
@@ -33,6 +34,8 @@ public abstract class ActivationProbabilityDistribution {
      */
     public abstract double getProbabilityDensity(double x);
 
+    public abstract double sample();
+
     public abstract boolean shouldSend(double inputSignal);
 
     public abstract void prepareReinforcement(double valueToReinforce);
@@ -55,6 +58,13 @@ public abstract class ActivationProbabilityDistribution {
      * @return
      */
     public abstract double differenceOfExpectation(double x);
+
+    
+    public double[] sample(int count)
+    {
+        return DoubleStream.generate(this::sample).limit(count).toArray();
+    }
+
 
     /**
      * Get the mean value of a distribution whose underlying data has undergone the

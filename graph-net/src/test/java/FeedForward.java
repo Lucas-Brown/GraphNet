@@ -28,11 +28,11 @@ public class FeedForward {
         net.setInputOperation(FeedForward::inputOperation);
         net.setOutputOperation(FeedForward::trainOutputOperation);
 
-        for (int i = 0; i < 1000; i++) {
+        for (int i = 0; i < 10000; i++) {
 
             // Transfer all signals
             net.trainingStep();
-            System.out.println(net.allActiveNodesString());
+            //System.out.println(net.allActiveNodesString());
         }
 
         System.out.println("\nTRAINING STOP\n");
@@ -40,7 +40,7 @@ public class FeedForward {
         net.deactivateAll();
         net.setOutputOperation(FeedForward::readOutputOperation);
 
-        for (int i = 0; i < 10; i++) {
+        for (int i = 0; i < 100; i++) {
             net.inferenceStep();
         }
 

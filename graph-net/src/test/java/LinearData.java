@@ -8,9 +8,9 @@ import com.lucasbrown.GraphNetwork.Local.Signal;
 
 public class LinearData {
 
-    private static int index = 0;
-    private static double[] inputData = new double[]{0,1,2,3,4,5};
-    private static double[] outputData = new double[]{5,4,3,2,1,0};
+    private static int index = 1;
+    private static double[] inputData = new double[]{0,1};
+    private static double[] outputData = new double[]{0,2};
 
     private static InputNode in;
     private static OutputNode out;
@@ -20,23 +20,19 @@ public class LinearData {
 
         in = net.createInputNode(ActivationFunction.LINEAR);
         out = net.createOutputNode(ActivationFunction.LINEAR);
-        Node hidden1 = net.createHiddenNode(ActivationFunction.LINEAR);
-        Node hidden2 = net.createHiddenNode(ActivationFunction.LINEAR);
+        Node hidden = net.createHiddenNode(ActivationFunction.LINEAR);
 
         in.setName("Input");
         out.setName("Output");
-        hidden1.setName("Hidden1");
-        hidden2.setName("Hidden2");
+        hidden.setName("Hidden1");
 
-        net.addNewConnection(in, hidden1, new BellCurveDistribution(0, 1));
-        net.addNewConnection(in, hidden2, new BellCurveDistribution(0, 1));
-        net.addNewConnection(hidden1, out, new BellCurveDistribution(0, 1));
-        net.addNewConnection(hidden2, out, new BellCurveDistribution(0, 1));
+        net.addNewConnection(in, hidden, new BellCurveDistribution(0, 1));
+        net.addNewConnection(hidden, out, new BellCurveDistribution(0, 1));
 
         net.setInputOperation(LinearData::inputOperation);
         net.setOutputOperation(LinearData::trainOutputOperation);
 
-        for (int i = 0; i < 1000; i++) {
+        for (int i = 0; i < 10000; i++) {
 
             // Transfer all signals
             net.trainingStep();
@@ -48,7 +44,7 @@ public class LinearData {
         net.deactivateAll();
         net.setOutputOperation(LinearData::readOutputOperation);
 
-        for (int i = 0; i < 10; i++) {
+        for (int i = 0; i < 100; i++) {
             net.inferenceStep();
         }
 
