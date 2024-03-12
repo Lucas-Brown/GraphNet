@@ -1,21 +1,13 @@
 package com.lucasbrown.NetworkTraining.GeneticAlgorithm;
 
-import java.lang.reflect.Array;
-import java.security.InvalidParameterException;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
-import java.util.Comparator;
 import java.util.Random;
 import java.util.function.ToDoubleFunction;
-import java.util.stream.Collector;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
 import com.lucasbrown.GraphNetwork.Local.BellCurveDistribution;
 import com.lucasbrown.GraphNetwork.Local.FilterDistribution;
-import com.lucasbrown.GraphNetwork.Local.ICopyable;
 import com.lucasbrown.GraphNetwork.Local.DataStructure.DataNode;
 import com.lucasbrown.GraphNetwork.Local.DataStructure.DataNode.WeightsAndBias;
 

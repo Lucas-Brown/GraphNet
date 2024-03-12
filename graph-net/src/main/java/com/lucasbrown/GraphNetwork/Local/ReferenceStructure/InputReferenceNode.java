@@ -6,13 +6,14 @@ import com.lucasbrown.GraphNetwork.Global.ReferenceGraphNetwork;
 import com.lucasbrown.GraphNetwork.Global.SharedNetworkData;
 import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
 import com.lucasbrown.GraphNetwork.Local.Arc;
+import com.lucasbrown.GraphNetwork.Local.IInputNode;
 import com.lucasbrown.GraphNetwork.Local.Signal;
 
 /**
  * A node which exposes the functionality of recieving signals.
  * InputNodes cannot have any incoming connections
  */
-public class InputReferenceNode extends ReferenceNode {
+public class InputReferenceNode extends ReferenceNode implements IInputNode{
 
     public InputReferenceNode(final ReferenceGraphNetwork network, final SharedNetworkData networkData,
             final ActivationFunction activationFunction) {
@@ -20,13 +21,13 @@ public class InputReferenceNode extends ReferenceNode {
     }
 
     @Override
-    public void recieveForwardSignal(Signal signal) {
-        super.recieveForwardSignal(signal);
+    public void acceptUserInferenceSignal(double value) {
+        super.recieveInferenceSignal(new Signal(null, this, value));
     }
 
     @Override
-    public void recieveInferenceSignal(Signal signal) {
-        super.recieveInferenceSignal(signal);
+    public void acceptUserForwardSignal(double value) {
+        super.recieveForwardSignal(new Signal(null, this, value));
     }
 
     @Override

@@ -6,6 +6,13 @@
     "configurations": [
         {
             "type": "java",
+            "name": "dataRepresentationInferenceTest",
+            "request": "launch",
+            "mainClass": "com.lucasbrown.InferenceAndAssessment.dataRepresentationInferenceTest",
+            "projectName": "graph-net"
+        },
+        {
+            "type": "java",
             "name": "DistributionConvergence",
             "request": "launch",
             "mainClass": "DistributionConvergence",

@@ -4,13 +4,14 @@ import com.lucasbrown.GraphNetwork.Global.ReferenceGraphNetwork;
 import com.lucasbrown.GraphNetwork.Global.SharedNetworkData;
 import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
 import com.lucasbrown.GraphNetwork.Local.Arc;
+import com.lucasbrown.GraphNetwork.Local.IOutputNode;
 import com.lucasbrown.GraphNetwork.Local.Signal;
 
 /**
  * A node which exposes it's value and can be sent a corrective (backward)
  * signal
  */
-public class OutputReferenceNode extends ReferenceNode {
+public class OutputReferenceNode extends ReferenceNode implements IOutputNode{
 
     public OutputReferenceNode(final ReferenceGraphNetwork network, final SharedNetworkData networkData,
             final ActivationFunction activationFunction) {
@@ -24,6 +25,7 @@ public class OutputReferenceNode extends ReferenceNode {
      * 
      * @return
      */
+    @Override
     public double getValue() {
         return mergedForwardStrength;
     }
@@ -32,13 +34,14 @@ public class OutputReferenceNode extends ReferenceNode {
      * @return Checks if this node is active and returns the value if it is,
      *         otherwise returns null
      */
+    @Override
     public Double getValueOrNull() {
         return hasValidForwardSignal() ? mergedForwardStrength : null;
     }
 
     @Override
-    public void recieveBackwardSignal(Signal signal) {
-        super.recieveBackwardSignal(signal);
+    public void acceptUserBackwardSignal(double value) {
+        super.recieveBackwardSignal(new Signal(this, null, value));
     }
 
     @Override

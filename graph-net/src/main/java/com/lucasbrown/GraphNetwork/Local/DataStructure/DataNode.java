@@ -36,21 +36,6 @@ public class DataNode extends Node implements ICopyable<DataNode> {
     protected final HashMap<HashSet<Integer>, WeightsAndBias> nodeSetToWeightsAndBias;
 
     /**
-     * Average of all incoming signals
-     */
-    protected double mergedForwardStrength;
-
-    /**
-     * Average of all backward signals
-     */
-    protected double mergedBackwardStrength;
-
-    /**
-     * The signal strength that this node is outputting
-     */
-    protected double outputStrength;
-
-    /**
      * The error derivative at the given time step
      */
     private double error;
@@ -77,7 +62,7 @@ public class DataNode extends Node implements ICopyable<DataNode> {
         super(network, networkData, activationFunction, id);
 
         nodeSetToWeightsAndBias = new HashMap<HashSet<Integer>, WeightsAndBias>();
-        nodeSetToWeightsAndBias.put(new HashSet<Integer>(0), null);
+        nodeSetToWeightsAndBias.put(new HashSet<Integer>(0), new WeightsAndBias(0, new double[0]));
     }
 
     public DataNode(DataNode toCopy)
@@ -88,7 +73,7 @@ public class DataNode extends Node implements ICopyable<DataNode> {
 
     @Override
     public boolean addIncomingConnection(Arc connection) {
-        appendWeightsAndBiases(connection.getRecievingID());
+        appendWeightsAndBiases(connection.getSendingID());
         return super.addIncomingConnection(connection);
     }
 
@@ -304,6 +289,8 @@ public class DataNode extends Node implements ICopyable<DataNode> {
         // Convert the incoming signal list to a hashset of id's
         forwardNodeSet = incomingSignals.stream().map(signal -> signal.sendingNode.id)
                 .collect(Collectors.toCollection(HashSet<Integer>::new));
+        
+        weightsAndBias = nodeSetToWeightsAndBias.get(forwardNodeSet);
 
         // sorting by id to ensure that the weights are applied to the correct
         // node/signal

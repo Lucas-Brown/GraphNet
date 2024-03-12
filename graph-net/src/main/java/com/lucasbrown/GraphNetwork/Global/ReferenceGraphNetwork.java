@@ -19,21 +19,21 @@ import com.lucasbrown.GraphNetwork.Local.ReferenceStructure.ReferenceNode;
 public class ReferenceGraphNetwork extends GraphNetwork{
 
     @Override
-    public ReferenceNode createHiddenNode(final ActivationFunction activationFunction) {
+    public ReferenceNode getNewHiddenNode(final ActivationFunction activationFunction) {
         ReferenceNode n = new ReferenceNode(this, networkData, activationFunction);
         nodes.add(n);
         return n;
     }
 
     @Override
-    public InputReferenceNode createInputNode(final ActivationFunction activationFunction) {
+    public InputReferenceNode getNewInputNode(final ActivationFunction activationFunction) {
         InputReferenceNode n = new InputReferenceNode(this, networkData, activationFunction);
         nodes.add(n);
         return n;
     }
 
     @Override
-    public OutputReferenceNode createOutputNode(final ActivationFunction activationFunction) {
+    public OutputReferenceNode getNewOutputNode(final ActivationFunction activationFunction) {
         OutputReferenceNode n = new OutputReferenceNode(this, networkData, activationFunction);
         nodes.add(n);
         return n;

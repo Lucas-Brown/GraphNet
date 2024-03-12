@@ -1,5 +1,7 @@
 package com.lucasbrown.GraphNetwork.Global;
 
+import java.util.HashMap;
+
 import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
 import com.lucasbrown.GraphNetwork.Local.FilterDistribution;
 import com.lucasbrown.GraphNetwork.Local.Node;
@@ -36,27 +38,36 @@ public class DataGraphNetwork extends GraphNetwork implements IGeneticTrainable 
             nodes.add(dNode);
         }
         node_count = nodes.size();
+
+        // copy the input nodes
+        for (int i : toCopy.input_nodes.keySet()) {
+            input_nodes.put(i, nodes.get(i));
+            IO_node_count++;
+        }
+
+        // copy the output nodes
+        for (int i : toCopy.output_nodes.keySet()) {
+            output_nodes.put(i, nodes.get(i));
+            IO_node_count++;
+        }
     }
 
     @Override
-    public DataNode createHiddenNode(final ActivationFunction activationFunction) {
+    protected DataNode getNewHiddenNode(final ActivationFunction activationFunction) {
         DataNode n = new DataNode(this, networkData, activationFunction, node_count++);
-        nodes.add(n);
         return n;
     }
 
     @Override
-    public InputDataNode createInputNode(final ActivationFunction activationFunction) {
+    protected InputDataNode getNewInputNode(final ActivationFunction activationFunction) {
         InputDataNode n = new InputDataNode(this, networkData, activationFunction, node_count++);
-        nodes.add(n);
         IO_node_count++;
         return n;
     }
 
     @Override
-    public OutputDataNode createOutputNode(final ActivationFunction activationFunction) {
+    protected OutputDataNode getNewOutputNode(final ActivationFunction activationFunction) {
         OutputDataNode n = new OutputDataNode(this, networkData, activationFunction, node_count++);
-        nodes.add(n);
         IO_node_count++;
         return n;
     }
@@ -130,7 +141,7 @@ public class DataGraphNetwork extends GraphNetwork implements IGeneticTrainable 
 
     @Override
     public int getMinimumNumberOfNodes(){
-        return IO_node_count; // network can never have less than the number of inpu
+        return IO_node_count; // network can never have less than the number of input and outputs
     }
 
     @Override
@@ -146,6 +157,7 @@ public class DataGraphNetwork extends GraphNetwork implements IGeneticTrainable 
             nodes.get(i).removeAllReferencesTo(node_id);
         }
         nodes.remove(node_id);
+        node_count--;
     }
 
     @Override

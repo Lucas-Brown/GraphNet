@@ -2,12 +2,18 @@ package com.lucasbrown.GraphNetwork.Global;
 
 import java.security.InvalidAlgorithmParameterException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.TreeSet;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 
 import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
 import com.lucasbrown.GraphNetwork.Local.FilterDistribution;
+import com.lucasbrown.GraphNetwork.Local.IInputNode;
+import com.lucasbrown.GraphNetwork.Local.IOutputNode;
 import com.lucasbrown.GraphNetwork.Local.Node;
+import com.lucasbrown.GraphNetwork.Local.DataStructure.DataNode;
 import com.lucasbrown.NetworkTraining.ApproximationTools.ErrorFunction;
 
 /**
@@ -30,6 +36,16 @@ public abstract class GraphNetwork {
     protected final ArrayList<Node> nodes;
 
     /**
+     * Maps input node-id's to their corresponding node
+     */
+    protected final HashMap<Integer, Node> input_nodes;
+
+    /**
+     * Maps output node-id's to their corresponding node
+     */
+    protected final HashMap<Integer, Node> output_nodes;
+
+    /**
      * A hash set containing every node that recieved a signal this step
      */
     protected HashSet<Node> activeNodes;
@@ -43,47 +59,50 @@ public abstract class GraphNetwork {
      * An operation which is to be defined by the user to set the values of input
      * nodes
      */
-    private Runnable inputOperation;
+    private Consumer<HashMap<Integer, Node>> inputOperation;
 
     /**
      * An operation which is to be defined by the user to correct the values of
      * output nodes during training or get output data
      */
-    private Runnable outputOperation;
+    private Consumer<HashMap<Integer, Node>> outputOperation;
 
     public GraphNetwork() {
         // TODO: remove hardcoding
         networkData = new SharedNetworkData(new ErrorFunction.MeanSquaredError(), 0.1);
 
         nodes = new ArrayList<>();
+        input_nodes = new HashMap<>();
+        output_nodes = new HashMap<>();
         activeNodes = new HashSet<>();
         activeNextNodes = new HashSet<>();
-        inputOperation = () -> {
+        inputOperation = (_1) -> {
         };
-        outputOperation = () -> {
+        outputOperation = (_1) -> {
         };
     }
 
     /**
      * Set the input operation for the network.
-     * input operations are expected to act on input nodes and may depend on
-     * external factors such as a reference time.
+     * The input operation accepts a hashmap of id-Node pairs corresponding to input nodes.
+     * The operation is expected to act on input nodes according to the user's desires.
      * 
      * @param inputOperation
      */
-    public void setInputOperation(Runnable inputOperation) {
-        this.inputOperation = inputOperation == null ? () -> {
+    public void setInputOperation(Consumer<HashMap<Integer, Node>> inputOperation) {
+        this.inputOperation = inputOperation == null ? (_1) -> {
         } : inputOperation;
     }
 
     /**
      * Set the output operation for the network.
-     * output operations are expected to interpret the data exposed by output nodes.
+     * The output operation accepts a hashmap of id-Node pairs corresponding to output nodes.
+     * The operation is expected to interpret the results of the network.
      * 
      * @param outputOperation
      */
-    public void setOutputOperation(Runnable outputOperation) {
-        this.outputOperation = outputOperation == null ? () -> {
+    public void setOutputOperation(Consumer<HashMap<Integer, Node>> outputOperation) {
+        this.outputOperation = outputOperation == null ? (_1) -> {
         } : outputOperation;
     }
 
@@ -101,9 +120,9 @@ public abstract class GraphNetwork {
      * Does not train the network
      */
     public void inferenceStep() {
-        inputOperation.run();
+        inputOperation.accept(input_nodes);
         recieveSignals();
-        outputOperation.run();
+        outputOperation.accept(output_nodes);
         sendInferenceSignals();
     }
 
@@ -111,8 +130,8 @@ public abstract class GraphNetwork {
      * 
      */
     public void trainingStep() {
-        inputOperation.run();
-        outputOperation.run();
+        inputOperation.accept(input_nodes);
+        outputOperation.accept(output_nodes);
         recieveSignals();
         sendTrainingSignals();
     }
@@ -149,6 +168,12 @@ public abstract class GraphNetwork {
         activeNodes.stream().forEach(Node::applyTrainingChanges);
     }
 
+    @Override
+    public String toString()
+    {
+        return allActiveNodesString();
+    }
+
     public String allActiveNodesString() {
         TreeSet<Node> sSet = new TreeSet<Node>(activeNodes);
         StringBuilder sb = new StringBuilder();
@@ -172,26 +197,58 @@ public abstract class GraphNetwork {
         return intersection.size() > 0;
     }
 
+    public final Node createHiddenNode(final ActivationFunction activationFunction)
+    {
+        Node node = getNewHiddenNode(activationFunction);
+        nodes.add(node);
+        return node;
+    }
+
+    public final <T extends Node & IInputNode> T createInputNode(final ActivationFunction activationFunction)
+    {
+        T node = getNewInputNode(activationFunction);
+        nodes.add(node);
+        input_nodes.put(node.id, node);
+        return node;
+    }
+
+    public final <T extends Node & IOutputNode> T createOutputNode(final ActivationFunction activationFunction)
+    {
+        T node = getNewOutputNode(activationFunction);
+        nodes.add(node);
+        output_nodes.put(node.id, node);
+        return node;
+    }
+
+    public Node getNode(int id) {
+        return nodes.get(id);
+    }
+
+    public ArrayList<Node> getNodes()
+    {
+        return new ArrayList<Node>(nodes);
+    }
+
     /**
      * Creates a new hidden node and add it to the network
      * 
      * @return The node that was created
      */
-    public abstract Node createHiddenNode(final ActivationFunction activationFunction);
+    protected abstract Node getNewHiddenNode(final ActivationFunction activationFunction);
 
     /**
      * Creates a new input node and add it to the network
      * 
      * @return The node that was created
      */
-    public abstract Node createInputNode(final ActivationFunction activationFunction);
+    protected abstract <T extends Node & IInputNode> T getNewInputNode(final ActivationFunction activationFunction);
 
     /**
      * Creates a new output node and add it to the network
      * 
      * @return The node that was created
      */
-    public abstract Node createOutputNode(final ActivationFunction activationFunction);
+    protected abstract <T extends Node & IOutputNode> T getNewOutputNode(final ActivationFunction activationFunction);
 
     /**
      * Create a directed edge from the transmitting node to the recieving node.
