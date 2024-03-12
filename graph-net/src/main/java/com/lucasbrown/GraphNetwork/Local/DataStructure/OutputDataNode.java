@@ -1,17 +1,27 @@
-package com.lucasbrown.GraphNetwork.Local;
+package com.lucasbrown.GraphNetwork.Local.DataStructure;
 
-import com.lucasbrown.GraphNetwork.Global.GraphNetwork;
+import java.util.Arrays;
+
+import com.lucasbrown.GraphNetwork.Global.DataGraphNetwork;
 import com.lucasbrown.GraphNetwork.Global.SharedNetworkData;
+import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
+import com.lucasbrown.GraphNetwork.Local.Arc;
+import com.lucasbrown.GraphNetwork.Local.Signal;
 
 /**
  * A node which exposes it's value and can be sent a corrective (backward)
  * signal
  */
-public class OutputNode extends Node {
+public class OutputDataNode extends DataNode {
 
-    public OutputNode(final GraphNetwork network, final SharedNetworkData networkData,
-            final ActivationFunction activationFunction) {
-        super(network, networkData, activationFunction);
+    public OutputDataNode(final DataGraphNetwork network, final SharedNetworkData networkData,
+            final ActivationFunction activationFunction, int id) {
+        super(network, networkData, activationFunction, id);
+    }
+    
+    public OutputDataNode(DataNode toCopy)
+    {
+        super(toCopy);
     }
 
     /**
@@ -39,22 +49,20 @@ public class OutputNode extends Node {
     }
 
     @Override
-    public boolean addIncomingConnection(Arc connection)
-    {
+    public boolean addIncomingConnection(Arc connection) {
         boolean b = super.addIncomingConnection(connection);
-        
-        // set all weights to 1 and all biases to 0
-        for (int i = 0; i < weights.length; i++) {
-            for (int j = 0; j < weights[i].length; j++) {
-                weights[i][j] = 1;
-            }
-        }
 
-        for (int i = 0; i < biases.length; i++) {
-            biases[i] = 0;
-        }
+        // set all weights to 1 and all biases to 0
+        nodeSetToWeightsAndBias.values().forEach(wAb -> {
+            wAb.bias = 0;
+            Arrays.fill(wAb.weights, 1);
+        });
 
         return b;
     }
 
+    @Override
+    public OutputDataNode copy() {
+        return new OutputDataNode(this);
+    }
 }

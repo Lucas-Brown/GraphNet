@@ -9,7 +9,7 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
-import com.lucasbrown.GraphNetwork.Local.ActivationProbabilityDistribution;
+import com.lucasbrown.GraphNetwork.Local.FilterDistribution;
 
 import jsat.math.integration.Romberg;
 import jsat.distributions.multivariate.NormalM;
@@ -22,7 +22,7 @@ public class Convolution {
 
     private final Random rng = new Random();
 
-    private ArrayList<ActivationProbabilityDistribution> activationDistributions;
+    private ArrayList<FilterDistribution> activationDistributions;
     private ArrayList<ActivationFunction> activators;
     private double[] weights;
     private List<DoubleUnaryOperator> distributions;
@@ -31,7 +31,7 @@ public class Convolution {
     private int[] dependentIndices;
     private int[] independentIndices;
 
-    public Convolution(ArrayList<ActivationProbabilityDistribution> activationDistributions,
+    public Convolution(ArrayList<FilterDistribution> activationDistributions,
             ArrayList<ActivationFunction> activators, double[] weights) {
         this.activationDistributions = activationDistributions;
         this.activators = activators;
@@ -110,7 +110,7 @@ public class Convolution {
 
         for (int i = 0; i < independentIndices.length; i++) {
             int idx = independentIndices[i];
-            ActivationProbabilityDistribution dist = activationDistributions.get(idx);
+            FilterDistribution dist = activationDistributions.get(idx);
             ActivationFunction af = activators.get(idx);
             double w = weights[idx];
 
@@ -242,7 +242,7 @@ public class Convolution {
     }
 
     public static DoubleUnaryOperator applyActivationToDistribution(
-            ActivationProbabilityDistribution activationDistribution, ActivationFunction activator, double weight) {
+            FilterDistribution activationDistribution, ActivationFunction activator, double weight) {
         return x -> activationDistribution.getProbabilityDensity(activator.inverse(x) / weight)
                 * Math.abs(activator.inverseDerivative(x) / weight);
     }

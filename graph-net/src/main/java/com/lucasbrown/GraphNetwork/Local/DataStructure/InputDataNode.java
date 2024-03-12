@@ -1,20 +1,27 @@
-package com.lucasbrown.GraphNetwork.Local;
+package com.lucasbrown.GraphNetwork.Local.DataStructure;
 
-import java.security.InvalidAlgorithmParameterException;
 import java.util.ArrayList;
 
-import com.lucasbrown.GraphNetwork.Global.GraphNetwork;
+import com.lucasbrown.GraphNetwork.Global.DataGraphNetwork;
 import com.lucasbrown.GraphNetwork.Global.SharedNetworkData;
+import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
+import com.lucasbrown.GraphNetwork.Local.Arc;
+import com.lucasbrown.GraphNetwork.Local.Signal;
 
 /**
  * A node which exposes the functionality of recieving signals.
  * InputNodes cannot have any incoming connections
  */
-public class InputNode extends Node {
+public class InputDataNode extends DataNode{
 
-    public InputNode(final GraphNetwork network, final SharedNetworkData networkData,
-            final ActivationFunction activationFunction) {
-        super(network, networkData, activationFunction);
+    public InputDataNode(final DataGraphNetwork network, final SharedNetworkData networkData,
+            final ActivationFunction activationFunction, int id) {
+        super(network, networkData, activationFunction, id);
+    }
+
+    public InputDataNode(DataNode toCopy)
+    {
+        super(toCopy);
     }
 
     @Override
@@ -23,7 +30,7 @@ public class InputNode extends Node {
     }
 
     @Override
-    void recieveInferenceSignal(Signal signal) {
+    public void recieveInferenceSignal(Signal signal) {
         super.recieveInferenceSignal(signal);
     }
 
@@ -48,6 +55,11 @@ public class InputNode extends Node {
     @Override
     public boolean addIncomingConnection(Arc connection) {
         throw new UnsupportedOperationException("Input nodes are not allowed to have any incoming connections.");
+    }
+
+    @Override
+    public InputDataNode copy() {
+        return new InputDataNode(this);
     }
 
 }

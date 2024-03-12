@@ -6,41 +6,38 @@ import java.util.HashSet;
 import java.util.TreeSet;
 
 import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
-import com.lucasbrown.GraphNetwork.Local.ActivationProbabilityDistribution;
-import com.lucasbrown.GraphNetwork.Local.Arc;
-import com.lucasbrown.GraphNetwork.Local.InputNode;
+import com.lucasbrown.GraphNetwork.Local.FilterDistribution;
 import com.lucasbrown.GraphNetwork.Local.Node;
-import com.lucasbrown.GraphNetwork.Local.OutputNode;
 import com.lucasbrown.NetworkTraining.ApproximationTools.ErrorFunction;
 
 /**
  * A neural network using a probabalistic directed graph representation.
  * Training currently a work in progress
  * 
- * Current representation allows for both positive and negative reinforcement.
+ * Representation allows for both positive and negative reinforcement.
  * Only postive reinforcement is implemented currently.
  */
-public class GraphNetwork {
+public abstract class GraphNetwork {
 
     /**
      * An object to encapsulate all network hyperparameters
      */
-    private final SharedNetworkData networkData;
+    protected final SharedNetworkData networkData;
 
     /**
      * A list of all nodes within the graph network
      */
-    private final ArrayList<Node> nodes;
+    protected final ArrayList<Node> nodes;
 
     /**
      * A hash set containing every node that recieved a signal this step
      */
-    private HashSet<Node> activeNodes;
+    protected HashSet<Node> activeNodes;
 
     /**
      * A hash set containing every node that will recieve a signal in the next step
      */
-    private HashSet<Node> activeNextNodes;
+    protected HashSet<Node> activeNextNodes;
 
     /**
      * An operation which is to be defined by the user to set the values of input
@@ -67,52 +64,27 @@ public class GraphNetwork {
         };
     }
 
+    /**
+     * Set the input operation for the network.
+     * input operations are expected to act on input nodes and may depend on
+     * external factors such as a reference time.
+     * 
+     * @param inputOperation
+     */
     public void setInputOperation(Runnable inputOperation) {
         this.inputOperation = inputOperation == null ? () -> {
         } : inputOperation;
     }
 
+    /**
+     * Set the output operation for the network.
+     * output operations are expected to interpret the data exposed by output nodes.
+     * 
+     * @param outputOperation
+     */
     public void setOutputOperation(Runnable outputOperation) {
         this.outputOperation = outputOperation == null ? () -> {
         } : outputOperation;
-    }
-
-    /**
-     * Creates a new node and adds it to the list of nodes within the network
-     * TODO: Potentially remove external addition of nodes and connections in favor
-     * of dynamically adding nodes/edges during training
-     * 
-     * @return The node that was created
-     */
-    public Node createHiddenNode(final ActivationFunction activationFunction) {
-        Node n = new Node(this, networkData, activationFunction);
-        nodes.add(n);
-        return n;
-    }
-
-    public InputNode createInputNode(final ActivationFunction activationFunction) {
-        InputNode n = new InputNode(this, networkData, activationFunction);
-        nodes.add(n);
-        return n;
-    }
-
-    public OutputNode createOutputNode(final ActivationFunction activationFunction) {
-        OutputNode n = new OutputNode(this, networkData, activationFunction);
-        nodes.add(n);
-        return n;
-    }
-
-    public void addNewConnection(Node transmittingNode, Node recievingNode,
-            ActivationProbabilityDistribution transferFunction) {
-        // boolean doesConnectionExist =
-        // transmittingNode.DoesContainConnection(recievingNode);
-        // if(!doesConnectionExist)
-        // {
-        Arc connection = new Arc(transmittingNode, recievingNode, transferFunction);
-        transmittingNode.addOutgoingConnection(connection);
-        recievingNode.addIncomingConnection(connection);
-        // }
-        // return doesConnectionExist;
     }
 
     /**
@@ -187,8 +159,7 @@ public class GraphNetwork {
         return sb.toString();
     }
 
-    public void deactivateAll()
-    {
+    public void deactivateAll() {
         activeNodes.forEach(Node::clearSignals);
         activeNextNodes.forEach(Node::clearSignals);
         activeNodes = new HashSet<>();
@@ -200,5 +171,36 @@ public class GraphNetwork {
         intersection.retainAll(s2);
         return intersection.size() > 0;
     }
+
+    /**
+     * Creates a new hidden node and add it to the network
+     * 
+     * @return The node that was created
+     */
+    public abstract Node createHiddenNode(final ActivationFunction activationFunction);
+
+    /**
+     * Creates a new input node and add it to the network
+     * 
+     * @return The node that was created
+     */
+    public abstract Node createInputNode(final ActivationFunction activationFunction);
+
+    /**
+     * Creates a new output node and add it to the network
+     * 
+     * @return The node that was created
+     */
+    public abstract Node createOutputNode(final ActivationFunction activationFunction);
+
+    /**
+     * Create a directed edge from the transmitting node to the recieving node.
+     * 
+     * @param transmittingNode
+     * @param recievingNode
+     * @param transferFunction
+     */
+    public abstract void addNewConnection(Node transmittingNode, Node recievingNode,
+            FilterDistribution transferFunction);
 
 }

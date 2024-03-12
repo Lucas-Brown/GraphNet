@@ -1,6 +1,6 @@
 package com.lucasbrown.GraphNetwork.Local;
 
-public class NormalDistribution extends ActivationProbabilityDistribution {
+public class NormalDistribution extends FilterDistribution {
 
     private double mean;
     private double variance;
@@ -49,6 +49,17 @@ public class NormalDistribution extends ActivationProbabilityDistribution {
     @Override
     public double getVariance() {
         return variance;
+    }
+
+    @Override
+    public double[] getParameters() {
+        return new double[]{mean, variance};
+    }
+
+    @Override
+    public void setParameters(double[] params){
+        mean = params[0];
+        variance = params[1];
     }
 
     @Override

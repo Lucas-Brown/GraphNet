@@ -1,10 +1,10 @@
 import com.lucasbrown.GraphNetwork.Global.GraphNetwork;
 import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
 import com.lucasbrown.GraphNetwork.Local.BellCurveDistribution;
-import com.lucasbrown.GraphNetwork.Local.InputNode;
 import com.lucasbrown.GraphNetwork.Local.Node;
-import com.lucasbrown.GraphNetwork.Local.OutputNode;
 import com.lucasbrown.GraphNetwork.Local.Signal;
+import com.lucasbrown.GraphNetwork.Local.ReferenceStructure.InputReferenceNode;
+import com.lucasbrown.GraphNetwork.Local.ReferenceStructure.OutputReferenceNode;
 
 public class LinearData {
 
@@ -12,8 +12,8 @@ public class LinearData {
     private static double[] inputData = new double[]{0,1};
     private static double[] outputData = new double[]{0,2};
 
-    private static InputNode in;
-    private static OutputNode out;
+    private static InputReferenceNode in;
+    private static OutputReferenceNode out;
 
     public static void main(String[] args) {
         GraphNetwork net = new GraphNetwork();

@@ -4,17 +4,17 @@ import java.util.Random;
 import com.lucasbrown.GraphNetwork.Global.GraphNetwork;
 import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
 import com.lucasbrown.GraphNetwork.Local.BellCurveDistribution;
-import com.lucasbrown.GraphNetwork.Local.InputNode;
 import com.lucasbrown.GraphNetwork.Local.Node;
-import com.lucasbrown.GraphNetwork.Local.OutputNode;
+import com.lucasbrown.GraphNetwork.Local.ReferenceStructure.InputReferenceNode;
+import com.lucasbrown.GraphNetwork.Local.ReferenceStructure.OutputReferenceNode;
 
 /**
  * Test for a graph network alternating between 0 and 1
  */
 public class Alternating {
     private static GraphNetwork net;
-    private static InputNode n1;
-    private static OutputNode n2;
+    private static InputReferenceNode n1;
+    private static OutputReferenceNode n2;
 
     private static boolean waitingFor0 = true;
     private static final double tollerance = 0.01;
