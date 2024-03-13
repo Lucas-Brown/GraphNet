@@ -20,12 +20,12 @@ public class GeneticTrainer {
     public IGeneticTrainable[] population;
     public ToDoubleFunction<IGeneticTrainable> fitnessFunction;
 
-    public double new_node_chance = 0.02;
-    public double remove_node_chance = 0.01;
-    public double new_connection_chance = 0.02;
-    public double remove_connection_chance = 0.05;
+    public double new_node_chance = 0.1;
+    public double remove_node_chance = 0.2;
+    public double new_connection_chance = 0.4;
+    public double remove_connection_chance = 0.5;
     public double mutation_rate = 0.5;
-    public double maximum_mutation = 0.2;
+    public double maximum_mutation = 2.05;
 
     public GeneticTrainer(int popSize, int tournamentSize, ToDoubleFunction<IGeneticTrainable> fitnessFunction) {
         this.popSize = popSize;
@@ -48,20 +48,26 @@ public class GeneticTrainer {
 
         // create all the children to test
         IGeneticTrainable[] tournament = Arrays.copyOf(population, tournamentSize);
-        
+
         // select two random parents to create a child
         IntStream.range(popSize, tournamentSize)
-                .parallel()
-                .forEach(i -> tournament[i] = createChild(tournament[rng.nextInt(popSize)], tournament[rng.nextInt(popSize)]));
+                // .parallel()
+                .forEach(i -> tournament[i] = createChild(tournament[rng.nextInt(popSize)],
+                        tournament[rng.nextInt(popSize)]));
 
         // soullessly asses the abilities of each child
         Fitness[] fitness = computeFitness(tournament);
+
+        //System.err.println(Stream.of(fitness).mapToDouble(fit -> fit.fitness).average().getAsDouble());
+        //System.err.println(Stream.of(fitness).mapToDouble(fit -> fit.fitness).min());
 
         // keep only the survivors
         population = Stream.of(fitness)
                 .map(fit -> fit.individual)
                 .limit(popSize)
                 .toArray(IGeneticTrainable[]::new);
+
+                
     }
 
     public IGeneticTrainable createChild(IGeneticTrainable parent1, IGeneticTrainable parent2) {
@@ -79,11 +85,27 @@ public class GeneticTrainer {
     }
 
     public Fitness[] computeFitness(IGeneticTrainable[] tournament) {
-        return IntStream.range(0, tournament.length)
-                //.parallel()
-                .mapToObj(i -> new Fitness(tournament[i], fitnessFunction.applyAsDouble(tournament[i])))
+        Stream.of(tournament).forEach(IGeneticTrainable::clearAllSignals);
+        return Stream.of(tournament)
+                // .parallel()
+                .map(individual -> new Fitness(individual, fitnessFunction.applyAsDouble(individual)))
                 .sorted()
                 .toArray(Fitness[]::new);
+    }
+
+    private int getRandomIncomingConnection(IGeneticTrainable individual) {
+        int total = individual.getNumberOfNodes();
+        int n_input = individual.getNumberOfInputNodes();
+        return rng.nextInt(total - n_input) + n_input;
+    }
+
+    private int getRandomOutgoingConnection(IGeneticTrainable individual) {
+        int total = individual.getNumberOfNodes();
+        int n_input = individual.getNumberOfInputNodes();
+        int n_output = individual.getNumberOfOutputNodes();
+        int roll = rng.nextInt(total - n_output); // avoid output region
+        roll += roll < n_input ? 0 : n_output;
+        return roll;
     }
 
     public void mutate(IGeneticTrainable toMutate, double mutation_rate) {
@@ -96,12 +118,12 @@ public class GeneticTrainer {
 
                 // mutate bias
                 if (rng.nextDouble() < mutation_rate)
-                    wAb.bias *= relativeMutation();
+                    wAb.bias += absoluteMutation();
 
                 // mutate weights
                 for (int i = 0; i < wAb.weights.length; i++) {
                     if (rng.nextDouble() < mutation_rate)
-                        wAb.weights[i] *= relativeMutation();
+                        wAb.weights[i] += absoluteMutation();
                 }
 
                 // mutate transfer function parameters
@@ -109,7 +131,7 @@ public class GeneticTrainer {
                     double[] params = dist.getParameters();
                     for (int i = 0; i < params.length; i++) {
                         if (rng.nextDouble() < mutation_rate)
-                            params[i] *= relativeMutation();
+                            params[i] += absoluteMutation();
                     }
                     dist.setParameters(params);
                 }
@@ -122,8 +144,8 @@ public class GeneticTrainer {
         mutate(toMutate, this.mutation_rate);
     }
 
-    private double relativeMutation() {
-        return rng.nextDouble() * 2 * maximum_mutation - maximum_mutation + 1;
+    private double absoluteMutation() {
+        return (2*rng.nextDouble()-1) * maximum_mutation;
     }
 
     /**
@@ -268,6 +290,9 @@ public class GeneticTrainer {
         if (rng.nextDouble() < remove_node_chance) {
             int n_nodes = individual.getNumberOfNodes();
             int minimum = individual.getMinimumNumberOfNodes();
+            // cannot remove nodes if we don't have any left to remove
+            if (n_nodes <= minimum)
+                return;
             removeNode(individual, rng.nextInt(n_nodes - minimum) + minimum);
         }
     }
@@ -275,7 +300,7 @@ public class GeneticTrainer {
     private void addNewNode(IGeneticTrainable individual) {
         // TODO: remove hard-coding of activation function
         int id = individual.addNewNode(ActivationFunction.LINEAR);
- 
+
         // add a new incoming and outgoing connection to make the node relevant
         addNewConnection(individual, id, getRandomIncomingConnection(individual)); // outgoing
         addNewConnection(individual, getRandomOutgoingConnection(individual), id); // incoming
@@ -285,25 +310,11 @@ public class GeneticTrainer {
         individual.removeNode(node_idx);
     }
 
-    private int getRandomIncomingConnection(IGeneticTrainable individual){
-        int total = individual.getNumberOfNodes();
-        int n_input = individual.getNumberOfInputNodes();
-        return rng.nextInt(total-n_input)+n_input;
-    }
-
-    private int getRandomOutgoingConnection(IGeneticTrainable individual){
-        int total = individual.getNumberOfNodes();
-        int n_input = individual.getNumberOfInputNodes();
-        int n_output = individual.getNumberOfOutputNodes();
-        int roll = rng.nextInt(total - n_output); // avoid output region
-        roll += roll < n_input ? 0 : n_output + n_input -1;
-        return roll;
-    }
-
     private void attemptConnectionChange(IGeneticTrainable individual) {
 
         if (rng.nextDouble() < new_connection_chance) {
-            addNewConnection(individual, getRandomOutgoingConnection(individual), getRandomIncomingConnection(individual)); // two random nodes
+            addNewConnection(individual, getRandomOutgoingConnection(individual),
+                    getRandomIncomingConnection(individual)); // two random nodes
         }
 
         if (rng.nextDouble() < remove_connection_chance) {
@@ -313,7 +324,7 @@ public class GeneticTrainer {
             // randomly select a connection to remove
             int[] incoming_ids = node.getIncomingConnectionIDs();
             int[] outgoing_ids = node.getIncomingConnectionIDs();
-            if(incoming_ids.length + outgoing_ids.length == 0)
+            if (incoming_ids.length + outgoing_ids.length == 0)
                 return;
 
             int remove_idx = rng.nextInt(incoming_ids.length + outgoing_ids.length);

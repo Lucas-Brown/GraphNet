@@ -31,13 +31,13 @@ public class GeneticAlgorithmTest {
         out.setName("Output");
         hidden.setName("Hidden");
 
-        net.addNewConnection(in, hidden, new BellCurveDistribution(0, 1));
-        net.addNewConnection(hidden, out, new BellCurveDistribution(0, 1));
+        net.addNewConnection(in, hidden, new BellCurveDistribution(1, 1));
+        net.addNewConnection(hidden, out, new BellCurveDistribution(-3, 1));
 
-        input_id = in.id;
-        output_id = out.id;
+        input_id = in.getID();
+        output_id = out.getID();
 
-        GeneticTrainer gt = new GeneticTrainer(10, 25, GeneticAlgorithmTest::fitnessOfNetwork);
+        GeneticTrainer gt = new GeneticTrainer(10, 100, GeneticAlgorithmTest::fitnessOfNetwork);
         gt.populateRandom(net, ActivationFunction.LINEAR);
 
         for (int i = 0; i < 10000; i++) {
@@ -47,11 +47,13 @@ public class GeneticAlgorithmTest {
         DataGraphNetwork best = (DataGraphNetwork) gt.population[0];
 
         // just test inference
-        best.setInputOperation(input_nodes -> in.acceptUserForwardSignal(1));
-        best.setOutputOperation(output_nodes -> System.out.println(net.toString()));
+        best.setInputOperation(input_nodes -> input_nodes.get(input_id).acceptUserForwardSignal(1));
+        best.setOutputOperation(output_nodes -> {});
 
+        best.clearAllSignals();
         for(int i = 0; i < 25; i++){
             best.inferenceStep();
+            System.out.println(best);
         }
     }
 
@@ -81,7 +83,7 @@ public class GeneticAlgorithmTest {
                 .mapToDouble(d -> (d - target) * (d-target))
                 .sum();
 
-        score *= 1 + null_counts - 2; // 2 nulls are to be expected
+        score *= 1 + null_counts - 1; // at least 1 null is expected
         return score;
     }
 

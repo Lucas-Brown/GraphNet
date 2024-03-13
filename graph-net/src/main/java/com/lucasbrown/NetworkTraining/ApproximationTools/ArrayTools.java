@@ -3,8 +3,6 @@ package com.lucasbrown.NetworkTraining.ApproximationTools;
 import java.util.Arrays;
 import java.util.HashSet;
 
-import com.lucasbrown.GraphNetwork.Local.ICopyable;
-
 public class ArrayTools {
     
     public static final double[][] array2DCopy(double[][] toCopy){
@@ -31,5 +29,11 @@ public class ArrayTools {
         int[] concat = Arrays.copyOf(arr1, arr1.length + arr2.length);
         System.arraycopy(arr2, 0, concat, arr1.length, arr2.length);
         return concat;        
+    }
+    
+    public static <T> boolean hasIntersection(HashSet<T> s1, HashSet<T> s2) {
+        HashSet<T> intersection = new HashSet<T>(s1);
+        intersection.retainAll(s2);
+        return intersection.size() > 0;
     }
 }

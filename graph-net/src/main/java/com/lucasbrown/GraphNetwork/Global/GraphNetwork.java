@@ -187,8 +187,8 @@ public abstract class GraphNetwork<T extends Node & IInputNode, E extends Node &
     public void deactivateAll() {
         activeNodes.forEach(Node::clearSignals);
         activeNextNodes.forEach(Node::clearSignals);
-        activeNodes = new HashSet<>();
-        activeNextNodes = new HashSet<>();
+        activeNodes.clear();
+        activeNextNodes.clear();
     }
 
     public static <T> boolean hasIntersection(HashSet<T> s1, HashSet<T> s2) {
@@ -208,7 +208,7 @@ public abstract class GraphNetwork<T extends Node & IInputNode, E extends Node &
     {
         T node = getNewInputNode(activationFunction);
         nodes.add(node);
-        input_nodes.put(node.id, node);
+        input_nodes.put(node.getID(), node);
         return node;
     }
 
@@ -216,7 +216,7 @@ public abstract class GraphNetwork<T extends Node & IInputNode, E extends Node &
     {
         E node = getNewOutputNode(activationFunction);
         nodes.add(node);
-        output_nodes.put(node.id, node);
+        output_nodes.put(node.getID(), node);
         return node;
     }
 

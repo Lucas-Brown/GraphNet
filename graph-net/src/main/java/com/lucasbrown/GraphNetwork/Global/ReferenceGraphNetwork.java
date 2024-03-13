@@ -3,7 +3,6 @@ package com.lucasbrown.GraphNetwork.Global;
 import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
 import com.lucasbrown.GraphNetwork.Local.FilterDistribution;
 import com.lucasbrown.GraphNetwork.Local.Node;
-import com.lucasbrown.GraphNetwork.Local.Arc;
 import com.lucasbrown.GraphNetwork.Local.ReferenceStructure.InputReferenceNode;
 import com.lucasbrown.GraphNetwork.Local.ReferenceStructure.OutputReferenceNode;
 import com.lucasbrown.GraphNetwork.Local.ReferenceStructure.ReferenceArc;
@@ -20,23 +19,17 @@ public class ReferenceGraphNetwork extends GraphNetwork<InputReferenceNode, Outp
 
     @Override
     public ReferenceNode getNewHiddenNode(final ActivationFunction activationFunction) {
-        ReferenceNode n = new ReferenceNode(this, networkData, activationFunction);
-        nodes.add(n);
-        return n;
+        return new ReferenceNode(this, networkData, activationFunction);
     }
 
     @Override
     public InputReferenceNode getNewInputNode(final ActivationFunction activationFunction) {
-        InputReferenceNode n = new InputReferenceNode(this, networkData, activationFunction);
-        nodes.add(n);
-        return n;
+        return new InputReferenceNode(this, networkData, activationFunction);
     }
 
     @Override
     public OutputReferenceNode getNewOutputNode(final ActivationFunction activationFunction) {
-        OutputReferenceNode n = new OutputReferenceNode(this, networkData, activationFunction);
-        nodes.add(n);
-        return n;
+        return new OutputReferenceNode(this, networkData, activationFunction);
     }
 
     @Override

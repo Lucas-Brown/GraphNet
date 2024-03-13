@@ -29,7 +29,7 @@ public abstract class Node implements Comparable<Node> {
     /**
      * A unique identifying number for this node.
      */
-    public final int id;
+    protected int id;
 
     /**
      * A name for this node
@@ -100,6 +100,11 @@ public abstract class Node implements Comparable<Node> {
         forwardNext = new ArrayList<>();
         backward = new ArrayList<>();
         backwardNext = new ArrayList<>();
+    }
+
+    public int getID()
+    {
+        return id;
     }
 
     public void setName(String name) {

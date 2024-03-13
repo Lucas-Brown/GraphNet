@@ -78,6 +78,32 @@ public class DataNode extends Node implements ICopyable<DataNode> {
         total_parameters = toCopy.total_parameters;
     }
 
+    public void remapID(final HashMap<Integer, Integer> intMap)
+    {
+        id = intMap.get(id);
+        // remap the incoming and outgoing data
+        incoming.replaceAll(arc -> {
+            DataArc dArc = (DataArc) arc;
+            return new DataArc(dArc.graphNetwork, intMap.get(dArc.sending), id, dArc.probDist);
+        });
+        outgoing.replaceAll(arc -> {
+            DataArc dArc = (DataArc) arc;
+            return new DataArc(dArc.graphNetwork, id, intMap.get(dArc.recieving), dArc.probDist);
+        });
+
+        // copy the weights and bias map
+        HashMap<HashSet<Integer>, WeightsAndBias> setDup = new HashMap<>(nodeSetToWeightsAndBias.size());
+        // remap all keys
+        nodeSetToWeightsAndBias.entrySet().forEach(entry -> {
+            HashSet<Integer> id_set = entry.getKey().stream()
+                    .map(intMap::get)
+                    .collect(Collectors.toCollection(HashSet<Integer>::new));
+                    setDup.put(id_set, entry.getValue());
+        });
+        nodeSetToWeightsAndBias.clear();
+        nodeSetToWeightsAndBias.putAll(setDup);
+    }
+
     public void assignToNetwork(DataGraphNetwork dgn)
     {
         network = dgn;
@@ -94,7 +120,7 @@ public class DataNode extends Node implements ICopyable<DataNode> {
 
     public boolean removeIncomingConnection(Node sendingNode) {
         removeWeightsAndBiases(sendingNode);
-        return incoming.removeIf(arc -> arc.getSendingID() == sendingNode.id);
+        return incoming.removeIf(arc -> arc.getSendingID() == sendingNode.getID());
     }
 
     /**
@@ -116,9 +142,9 @@ public class DataNode extends Node implements ICopyable<DataNode> {
      * @return true
      */
     public boolean removeOutgoingConnection(Node recievingNode) {
-        total_parameters -= incoming.stream().filter(arc -> arc.getSendingID() == recievingNode.id)
+        total_parameters -= incoming.stream().filter(arc -> arc.getSendingID() == recievingNode.getID())
                 .mapToInt(arc -> arc.probDist.getParameters().length).count();
-        return outgoing.removeIf(arc -> arc.getRecievingID() == recievingNode.id);
+        return outgoing.removeIf(arc -> arc.getRecievingID() == recievingNode.getID());
     }
 
     /**
@@ -141,7 +167,7 @@ public class DataNode extends Node implements ICopyable<DataNode> {
      * Remove all weights and biases associated with the incoming node
      */
     private void removeWeightsAndBiases(Node sendingNode) {
-        final int node_id = sendingNode.id;
+        final int node_id = sendingNode.getID();
         int size = nodeSetToWeightsAndBias.size();
         total_parameters += weightsAndBiasesCount(size-1)-weightsAndBiasesCount(size);
         nodeSetToWeightsAndBias.keySet().removeIf(intSet -> intSet.contains(node_id));
@@ -296,20 +322,21 @@ public class DataNode extends Node implements ICopyable<DataNode> {
      * 
      * @param incomingSignals
      */
+    @Override
     protected void acceptIncomingForwardSignals(ArrayList<Signal> incomingSignals) {
         if (incomingSignals.size() == 0)
             return;
         hasValidForwardSignal = true;
 
         // Convert the incoming signal list to a hashset of id's
-        forwardNodeSet = incomingSignals.stream().map(signal -> signal.sendingNode.id)
+        forwardNodeSet = incomingSignals.stream().map(signal -> signal.sendingNode.getID())
                 .collect(Collectors.toCollection(HashSet<Integer>::new));
         
         weightsAndBias = nodeSetToWeightsAndBias.get(forwardNodeSet);
 
         // sorting by id to ensure that the weights are applied to the correct
         // node/signal
-        incomingSignals.sort((s1, s2) -> Integer.compare(s1.recievingNode.id, s2.recievingNode.id));
+        incomingSignals.sort((s1, s2) -> Integer.compare(s1.recievingNode.getID(), s2.recievingNode.getID()));
 
         mergedForwardStrength = computeMergedSignalStrength(incomingSignals);
         assert Double.isFinite(mergedForwardStrength);
@@ -392,7 +419,6 @@ public class DataNode extends Node implements ICopyable<DataNode> {
      */
     @Override
     public void sendBackwardsSignals() {
-        return;
         /*
          * // Select the backward signal combination
          * Convolution[] convolutions = getReverseOutcomes();
@@ -491,12 +517,11 @@ public class DataNode extends Node implements ICopyable<DataNode> {
 
     @Override
     public boolean equals(Object o) {
-        if (!(o instanceof ReferenceNode))
+        if (!(o instanceof DataNode))
             return false;
-        return id == ((ReferenceNode) o).id;
+        return id == ((DataNode) o).getID();
     }
 
-    
     @Override
     public DataNode copy() {
         return new DataNode(this);

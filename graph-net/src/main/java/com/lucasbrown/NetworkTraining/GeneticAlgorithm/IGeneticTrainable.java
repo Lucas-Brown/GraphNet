@@ -34,4 +34,6 @@ public interface IGeneticTrainable extends ICopyable<IGeneticTrainable> {
     public abstract void removeConnection(int from_id, int to_id);
 
     public abstract boolean isCompatibleWith(IGeneticTrainable otherParent); 
+
+    public abstract void clearAllSignals();
 }

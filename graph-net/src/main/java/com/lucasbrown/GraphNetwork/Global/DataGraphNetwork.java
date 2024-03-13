@@ -1,6 +1,7 @@
 package com.lucasbrown.GraphNetwork.Global;
 
 import java.util.Arrays;
+import java.util.HashMap;
 
 import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
 import com.lucasbrown.GraphNetwork.Local.FilterDistribution;
@@ -81,7 +82,7 @@ public class DataGraphNetwork extends GraphNetwork<InputDataNode, OutputDataNode
         // transmittingNode.DoesContainConnection(recievingNode);
         // if(!doesConnectionExist)
         // {
-        DataArc connection = new DataArc(this, transmittingNode.id, recievingNode.id, transferFunction);
+        DataArc connection = new DataArc(this, transmittingNode.getID(), recievingNode.getID(), transferFunction);
         transmittingNode.addOutgoingConnection(connection);
         recievingNode.addIncomingConnection(connection);
         // }
@@ -158,7 +159,7 @@ public class DataGraphNetwork extends GraphNetwork<InputDataNode, OutputDataNode
 
     @Override
     public int addNewNode(ActivationFunction af) {
-        return createHiddenNode(af).id;
+        return createHiddenNode(af).getID();
     }
 
     @Override
@@ -170,6 +171,29 @@ public class DataGraphNetwork extends GraphNetwork<InputDataNode, OutputDataNode
         }
         nodes.remove(node_id);
         node_count--;
+        remapID(constructRemovalRemap(node_id));
+    }
+
+    /**
+     * Assumes the provided index has already been removed from the network 
+     * @param removed_idx
+     * @return
+     */
+    private HashMap<Integer, Integer> constructRemovalRemap(int removed_idx){
+        final HashMap<Integer, Integer> remap = new HashMap<>(node_count);
+        // i < removed_idx: map i -> i
+        for (int i = 0; i < removed_idx; i++) {
+            remap.put(i, i);
+        }
+        // i > removed_idx: map i -> i-1
+        for (int i = removed_idx; i < node_count; i++) {
+            remap.put(i + 1, i);
+        }
+        return remap;
+    }
+
+    private void remapID(final HashMap<Integer, Integer> intMap){
+        nodes.forEach(node -> ((DataNode)node).remapID(intMap));
     }
 
     @Override
@@ -190,6 +214,11 @@ public class DataGraphNetwork extends GraphNetwork<InputDataNode, OutputDataNode
         }
 
         return true;
+    }
+    
+    public void clearAllSignals()
+    {
+        super.deactivateAll();
     }
 
     /**

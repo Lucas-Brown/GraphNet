@@ -272,7 +272,7 @@ public class ReferenceNode extends Node {
      */
     public int nodeSetToBinStr(List<Node> incomingNodes) {
         return incomingNodes.stream()
-                .mapToInt(node -> orderedIDMap.get(node.id))
+                .mapToInt(node -> orderedIDMap.get(node.getID()))
                 .reduce(0, (result, id_bit) -> result |= id_bit); // effectively the same as a sum in this case
     }
 
@@ -329,7 +329,7 @@ public class ReferenceNode extends Node {
 
         // sorting by id to ensure that the weights are applied to the correct
         // node/signal
-        incomingSignals.sort((s1, s2) -> Integer.compare(s1.recievingNode.id, s2.recievingNode.id));
+        incomingSignals.sort((s1, s2) -> Integer.compare(s1.recievingNode.getID(), s2.recievingNode.getID()));
 
         mergedForwardStrength = computeMergedSignalStrength(incomingSignals);
         assert Double.isFinite(mergedForwardStrength);

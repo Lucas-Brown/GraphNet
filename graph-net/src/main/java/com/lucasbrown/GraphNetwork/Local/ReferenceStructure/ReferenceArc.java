@@ -80,12 +80,12 @@ public class ReferenceArc extends Arc {
 
     @Override
     public int getSendingID() {
-        return sending.id;
+        return sending.getID();
     }
 
     @Override
     public int getRecievingID() {
-        return recieving.id;
+        return recieving.getID();
     }
 
 }
