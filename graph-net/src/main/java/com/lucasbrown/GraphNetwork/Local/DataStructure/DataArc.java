@@ -3,6 +3,7 @@ package com.lucasbrown.GraphNetwork.Local.DataStructure;
 import com.lucasbrown.GraphNetwork.Global.DataGraphNetwork;
 import com.lucasbrown.GraphNetwork.Local.Arc;
 import com.lucasbrown.GraphNetwork.Local.FilterDistribution;
+import com.lucasbrown.GraphNetwork.Local.ICopyable;
 import com.lucasbrown.GraphNetwork.Local.Node;
 import com.lucasbrown.GraphNetwork.Local.Signal;
 
@@ -10,7 +11,7 @@ import com.lucasbrown.GraphNetwork.Local.Signal;
  * A one-way connection between a sending node and a recieving node.
  * Holds the probability distribution for determining activation likelyhood
  */
-public class DataArc extends Arc{
+public class DataArc extends Arc implements ICopyable<DataArc>{
 
     public DataGraphNetwork graphNetwork;
 
@@ -26,6 +27,13 @@ public class DataArc extends Arc{
         this.graphNetwork = graphNetwork;
         this.sending = sending;
         this.recieving = recieving;
+    }
+
+    public DataArc(DataArc toCopy){
+        super(toCopy.probDist.copy());
+        graphNetwork = toCopy.graphNetwork;
+        sending = toCopy.sending;
+        recieving = toCopy.recieving;
     }
 
     /**
@@ -80,6 +88,11 @@ public class DataArc extends Arc{
     @Override
     public int getRecievingID() {
         return recieving;
+    }
+
+    @Override
+    public DataArc copy() {
+        return new DataArc(this);
     }
 
 }

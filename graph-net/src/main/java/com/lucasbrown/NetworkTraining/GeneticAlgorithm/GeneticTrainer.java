@@ -3,6 +3,7 @@ package com.lucasbrown.NetworkTraining.GeneticAlgorithm;
 import java.util.Arrays;
 import java.util.Random;
 import java.util.function.ToDoubleFunction;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
@@ -20,7 +21,7 @@ public class GeneticTrainer {
     public ToDoubleFunction<IGeneticTrainable> fitnessFunction;
 
     public double new_node_chance = 0.02;
-    public double remove_node_chance = 0.05;
+    public double remove_node_chance = 0.01;
     public double new_connection_chance = 0.02;
     public double remove_connection_chance = 0.05;
     public double mutation_rate = 0.5;
@@ -47,10 +48,11 @@ public class GeneticTrainer {
 
         // create all the children to test
         IGeneticTrainable[] tournament = Arrays.copyOf(population, tournamentSize);
-        for (int i = popSize; i < tournament.length; i++) {
-            // select two random parents to create a child
-            tournament[i] = createChild(tournament[rng.nextInt(popSize)], tournament[rng.nextInt(popSize)]);
-        }
+        
+        // select two random parents to create a child
+        IntStream.range(popSize, tournamentSize)
+                .parallel()
+                .forEach(i -> tournament[i] = createChild(tournament[rng.nextInt(popSize)], tournament[rng.nextInt(popSize)]));
 
         // soullessly asses the abilities of each child
         Fitness[] fitness = computeFitness(tournament);
@@ -77,14 +79,11 @@ public class GeneticTrainer {
     }
 
     public Fitness[] computeFitness(IGeneticTrainable[] tournament) {
-        Fitness[] fitness = new Fitness[tournament.length];
-        // do in parallel?
-        for (int i = 0; i < popSize; i++) {
-            fitness[i] = new Fitness(population[i], fitnessFunction.applyAsDouble(population[i]));
-        }
-
-        Arrays.sort(fitness);
-        return fitness;
+        return IntStream.range(0, tournament.length)
+                //.parallel()
+                .mapToObj(i -> new Fitness(tournament[i], fitnessFunction.applyAsDouble(tournament[i])))
+                .sorted()
+                .toArray(Fitness[]::new);
     }
 
     public void mutate(IGeneticTrainable toMutate, double mutation_rate) {
@@ -276,31 +275,47 @@ public class GeneticTrainer {
     private void addNewNode(IGeneticTrainable individual) {
         // TODO: remove hard-coding of activation function
         int id = individual.addNewNode(ActivationFunction.LINEAR);
-
+ 
         // add a new incoming and outgoing connection to make the node relevant
-        int bound = individual.getNumberOfNodes();
-        addNewConnection(individual, id, rng.nextInt(bound)); // outgoing
-        addNewConnection(individual, rng.nextInt(bound), id); // incoming
+        addNewConnection(individual, id, getRandomIncomingConnection(individual)); // outgoing
+        addNewConnection(individual, getRandomOutgoingConnection(individual), id); // incoming
     }
 
     private void removeNode(IGeneticTrainable individual, int node_idx) {
         individual.removeNode(node_idx);
     }
 
+    private int getRandomIncomingConnection(IGeneticTrainable individual){
+        int total = individual.getNumberOfNodes();
+        int n_input = individual.getNumberOfInputNodes();
+        return rng.nextInt(total-n_input)+n_input;
+    }
+
+    private int getRandomOutgoingConnection(IGeneticTrainable individual){
+        int total = individual.getNumberOfNodes();
+        int n_input = individual.getNumberOfInputNodes();
+        int n_output = individual.getNumberOfOutputNodes();
+        int roll = rng.nextInt(total - n_output); // avoid output region
+        roll += roll < n_input ? 0 : n_output + n_input -1;
+        return roll;
+    }
+
     private void attemptConnectionChange(IGeneticTrainable individual) {
-        int bound = individual.getNumberOfNodes();
 
         if (rng.nextDouble() < new_connection_chance) {
-            addNewConnection(individual, rng.nextInt(bound), rng.nextInt(bound)); // two random nodes
+            addNewConnection(individual, getRandomOutgoingConnection(individual), getRandomIncomingConnection(individual)); // two random nodes
         }
 
         if (rng.nextDouble() < remove_connection_chance) {
-            int node_id = rng.nextInt(bound);
+            int node_id = rng.nextInt(individual.getNumberOfNodes());
             DataNode node = individual.getNode(node_id);
 
             // randomly select a connection to remove
             int[] incoming_ids = node.getIncomingConnectionIDs();
             int[] outgoing_ids = node.getIncomingConnectionIDs();
+            if(incoming_ids.length + outgoing_ids.length == 0)
+                return;
+
             int remove_idx = rng.nextInt(incoming_ids.length + outgoing_ids.length);
             if (remove_idx < incoming_ids.length) {
                 // remove and incoming connection

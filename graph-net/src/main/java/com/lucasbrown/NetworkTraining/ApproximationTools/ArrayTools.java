@@ -3,6 +3,8 @@ package com.lucasbrown.NetworkTraining.ApproximationTools;
 import java.util.Arrays;
 import java.util.HashSet;
 
+import com.lucasbrown.GraphNetwork.Local.ICopyable;
+
 public class ArrayTools {
     
     public static final double[][] array2DCopy(double[][] toCopy){

@@ -5,6 +5,11 @@ public class NormalDistribution extends FilterDistribution {
     private double mean;
     private double variance;
 
+    public NormalDistribution(NormalDistribution toCopy)
+    {
+        this(toCopy.mean, toCopy.variance);
+    }
+
     public NormalDistribution(double mean, double variance)
     {
         this.mean = mean;
@@ -103,6 +108,11 @@ public class NormalDistribution extends FilterDistribution {
     public static double phi(double x, double mean, double variance) {
     double z = (x-mean)/(Math.sqrt(2)*variance);
     return (1 + erf(z))/2;
+    }
+
+    @Override
+    public FilterDistribution copy() {
+        return new NormalDistribution(this);
     }
 
 }

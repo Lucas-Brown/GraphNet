@@ -5,16 +5,18 @@ import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
 import com.lucasbrown.GraphNetwork.Local.BellCurveDistribution;
 import com.lucasbrown.GraphNetwork.Local.IInputNode;
 import com.lucasbrown.GraphNetwork.Local.Node;
+import com.lucasbrown.GraphNetwork.Local.DataStructure.InputDataNode;
+import com.lucasbrown.GraphNetwork.Local.DataStructure.OutputDataNode;
 
-public class dataRepresentationInferenceTest {
+public class DataRepresentationInferenceTest {
     
-    public static <T extends Node & IInputNode> void main(String[] args)
+    public static void main(String[] args)
     {
         // basic network setup
         DataGraphNetwork net = new DataGraphNetwork();
 
-        T in = net.createInputNode(ActivationFunction.LINEAR);
-        Node out = net.createOutputNode(ActivationFunction.LINEAR);
+        InputDataNode in = net.createInputNode(ActivationFunction.LINEAR);
+        OutputDataNode out = net.createOutputNode(ActivationFunction.LINEAR);
         Node hidden = net.createHiddenNode(ActivationFunction.LINEAR);
 
         in.setName("Input");

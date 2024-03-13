@@ -1,17 +1,12 @@
 package com.lucasbrown.GraphNetwork.Local.ReferenceStructure;
 
-import java.security.InvalidAlgorithmParameterException;
-import java.security.InvalidParameterException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Objects;
-import java.util.Random;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import com.lucasbrown.GraphNetwork.Global.GraphNetwork;
 import com.lucasbrown.GraphNetwork.Global.ReferenceGraphNetwork;
 import com.lucasbrown.GraphNetwork.Global.SharedNetworkData;
 import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
@@ -19,7 +14,6 @@ import com.lucasbrown.GraphNetwork.Local.Arc;
 import com.lucasbrown.GraphNetwork.Local.FilterDistribution;
 import com.lucasbrown.GraphNetwork.Local.Node;
 import com.lucasbrown.GraphNetwork.Local.Signal;
-import com.lucasbrown.NetworkTraining.ApproximationTools.ArrayTools;
 import com.lucasbrown.NetworkTraining.ApproximationTools.Convolution;
 
 /**

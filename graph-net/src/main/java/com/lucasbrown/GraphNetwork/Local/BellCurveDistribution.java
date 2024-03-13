@@ -23,6 +23,10 @@ public class BellCurveDistribution extends FilterDistribution {
      */
     private BellCurveDistributionAdjuster adjuster;
 
+    public BellCurveDistribution(BellCurveDistribution toCopy){
+        this(toCopy.mean, toCopy.variance, toCopy.N);
+    }
+
     /**
      * @param mean     mean value of the normal distribution
      * @param variance variance of the normal distribution
@@ -131,6 +135,11 @@ public class BellCurveDistribution extends FilterDistribution {
     private static double NormalizedDist(double x, double mean, double variance) {
         final double d = (x - mean)/variance;
         return Math.exp(-d * d); // no divide by 2
+    }
+
+    @Override
+    public FilterDistribution copy() {
+        return new BellCurveDistribution(this);
     }
 
 }

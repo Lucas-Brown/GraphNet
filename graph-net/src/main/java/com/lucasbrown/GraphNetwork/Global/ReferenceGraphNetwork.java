@@ -16,7 +16,7 @@ import com.lucasbrown.GraphNetwork.Local.ReferenceStructure.ReferenceNode;
  * Current representation allows for both positive and negative reinforcement.
  * Only postive reinforcement is implemented currently.
  */
-public class ReferenceGraphNetwork extends GraphNetwork{
+public class ReferenceGraphNetwork extends GraphNetwork<InputReferenceNode, OutputReferenceNode>{
 
     @Override
     public ReferenceNode getNewHiddenNode(final ActivationFunction activationFunction) {

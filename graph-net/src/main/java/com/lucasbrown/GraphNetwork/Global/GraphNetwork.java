@@ -23,7 +23,7 @@ import com.lucasbrown.NetworkTraining.ApproximationTools.ErrorFunction;
  * Representation allows for both positive and negative reinforcement.
  * Only postive reinforcement is implemented currently.
  */
-public abstract class GraphNetwork {
+public abstract class GraphNetwork<T extends Node & IInputNode, E extends Node & IOutputNode> {
 
     /**
      * An object to encapsulate all network hyperparameters
@@ -38,12 +38,12 @@ public abstract class GraphNetwork {
     /**
      * Maps input node-id's to their corresponding node
      */
-    protected final HashMap<Integer, Node> input_nodes;
+    protected final HashMap<Integer, T> input_nodes;
 
     /**
      * Maps output node-id's to their corresponding node
      */
-    protected final HashMap<Integer, Node> output_nodes;
+    protected final HashMap<Integer, E> output_nodes;
 
     /**
      * A hash set containing every node that recieved a signal this step
@@ -59,15 +59,15 @@ public abstract class GraphNetwork {
      * An operation which is to be defined by the user to set the values of input
      * nodes
      */
-    private Consumer<HashMap<Integer, Node>> inputOperation;
+    private Consumer<HashMap<Integer, T>> inputOperation;
 
     /**
      * An operation which is to be defined by the user to correct the values of
      * output nodes during training or get output data
      */
-    private Consumer<HashMap<Integer, Node>> outputOperation;
+    private Consumer<HashMap<Integer, E>> outputOperation;
 
-    public GraphNetwork() {
+    public <T extends Node> GraphNetwork(){
         // TODO: remove hardcoding
         networkData = new SharedNetworkData(new ErrorFunction.MeanSquaredError(), 0.1);
 
@@ -89,7 +89,7 @@ public abstract class GraphNetwork {
      * 
      * @param inputOperation
      */
-    public void setInputOperation(Consumer<HashMap<Integer, Node>> inputOperation) {
+    public void setInputOperation(Consumer<HashMap<Integer, T>> inputOperation) {
         this.inputOperation = inputOperation == null ? (_1) -> {
         } : inputOperation;
     }
@@ -101,7 +101,7 @@ public abstract class GraphNetwork {
      * 
      * @param outputOperation
      */
-    public void setOutputOperation(Consumer<HashMap<Integer, Node>> outputOperation) {
+    public void setOutputOperation(Consumer<HashMap<Integer, E>> outputOperation) {
         this.outputOperation = outputOperation == null ? (_1) -> {
         } : outputOperation;
     }
@@ -204,7 +204,7 @@ public abstract class GraphNetwork {
         return node;
     }
 
-    public final <T extends Node & IInputNode> T createInputNode(final ActivationFunction activationFunction)
+    public final T createInputNode(final ActivationFunction activationFunction)
     {
         T node = getNewInputNode(activationFunction);
         nodes.add(node);
@@ -212,9 +212,9 @@ public abstract class GraphNetwork {
         return node;
     }
 
-    public final <T extends Node & IOutputNode> T createOutputNode(final ActivationFunction activationFunction)
+    public final E createOutputNode(final ActivationFunction activationFunction)
     {
-        T node = getNewOutputNode(activationFunction);
+        E node = getNewOutputNode(activationFunction);
         nodes.add(node);
         output_nodes.put(node.id, node);
         return node;
@@ -241,14 +241,14 @@ public abstract class GraphNetwork {
      * 
      * @return The node that was created
      */
-    protected abstract <T extends Node & IInputNode> T getNewInputNode(final ActivationFunction activationFunction);
+    protected abstract T getNewInputNode(final ActivationFunction activationFunction);
 
     /**
      * Creates a new output node and add it to the network
      * 
      * @return The node that was created
      */
-    protected abstract <T extends Node & IOutputNode> T getNewOutputNode(final ActivationFunction activationFunction);
+    protected abstract E getNewOutputNode(final ActivationFunction activationFunction);
 
     /**
      * Create a directed edge from the transmitting node to the recieving node.

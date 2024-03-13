@@ -14,6 +14,10 @@ public interface IGeneticTrainable extends ICopyable<IGeneticTrainable> {
 
     public abstract int getMinimumNumberOfNodes();
 
+    public abstract int getNumberOfInputNodes();
+    
+    public abstract int getNumberOfOutputNodes();
+
     public abstract DataNode getNode(int node_id);
 
     /**

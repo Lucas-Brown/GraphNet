@@ -55,7 +55,7 @@ public class DataNode extends Node implements ICopyable<DataNode> {
      */
     private HashSet<Integer> backwardNodeSet;
 
-    private int total_parameters = 0;
+    private int total_parameters;
 
     public DataNode(final DataGraphNetwork network, final SharedNetworkData networkData,
             final ActivationFunction activationFunction, int id) {
@@ -63,12 +63,27 @@ public class DataNode extends Node implements ICopyable<DataNode> {
 
         nodeSetToWeightsAndBias = new HashMap<HashSet<Integer>, WeightsAndBias>();
         nodeSetToWeightsAndBias.put(new HashSet<Integer>(0), new WeightsAndBias(0, new double[0]));
+        total_parameters = 0;
     }
 
     public DataNode(DataNode toCopy)
     {
         super(toCopy.network, toCopy.networkData, toCopy.activationFunction, toCopy.id);
-        nodeSetToWeightsAndBias = new HashMap<>(toCopy.nodeSetToWeightsAndBias);
+        
+        ICopyable.<Arc, DataArc>collectionCopyUnsafe(toCopy.incoming, incoming);
+        ICopyable.<Arc, DataArc>collectionCopyUnsafe(toCopy.outgoing, outgoing);
+
+        nodeSetToWeightsAndBias = new HashMap<HashSet<Integer>, WeightsAndBias>(toCopy.nodeSetToWeightsAndBias.size());
+        toCopy.nodeSetToWeightsAndBias.forEach((key, value) -> nodeSetToWeightsAndBias.put(key, value.copy()));
+        total_parameters = toCopy.total_parameters;
+    }
+
+    public void assignToNetwork(DataGraphNetwork dgn)
+    {
+        network = dgn;
+
+        incoming.forEach(arc -> ((DataArc)arc).graphNetwork = dgn);
+        outgoing.forEach(arc -> ((DataArc)arc).graphNetwork = dgn);
     }
 
     @Override
@@ -363,7 +378,7 @@ public class DataNode extends Node implements ICopyable<DataNode> {
         HashSet<Integer> intSet = new HashSet<>();
         for (int i = 0; i < incoming.size(); i++) {
             if ((binStr & 0b1) == 1) {
-                intSet.add(i);
+                intSet.add(incoming.get(i).getSendingID());
             }
             binStr = binStr >> 1;
         }
@@ -487,9 +502,14 @@ public class DataNode extends Node implements ICopyable<DataNode> {
         return new DataNode(this);
     }
 
-    public class WeightsAndBias {
+    public class WeightsAndBias implements ICopyable<WeightsAndBias> {
         public double bias;
         public double[] weights;
+
+        public WeightsAndBias(WeightsAndBias toCopy) {
+            this.bias = toCopy.bias;
+            this.weights = toCopy.weights.clone();
+        }
 
         public WeightsAndBias(double bias, double[] weights) {
             this.bias = bias;
@@ -499,6 +519,11 @@ public class DataNode extends Node implements ICopyable<DataNode> {
         public WeightsAndBias(Random rng, int size) {
             bias = rng.nextDouble();
             weights = DoubleStream.generate(rng::nextDouble).limit(size).toArray();
+        }
+
+        @Override
+        public WeightsAndBias copy() {
+            return new WeightsAndBias(this);
         }
     }
 

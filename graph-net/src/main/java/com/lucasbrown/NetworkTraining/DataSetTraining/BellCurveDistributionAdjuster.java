@@ -99,6 +99,7 @@ public class BellCurveDistributionAdjuster implements Function {
 
             expectationMap = new LinearInterpolation2D(w_range, eta_range,
                     BellCurveDistributionAdjuster::computeNonAnalyticComponent, true);
+            is_map_initialized = true;
         }
     }
 
