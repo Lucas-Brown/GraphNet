@@ -6,6 +6,27 @@
     "configurations": [
         {
             "type": "java",
+            "name": "GeneticAlgorithmMixTest",
+            "request": "launch",
+            "mainClass": "com.lucasbrown.InferenceAndAssessment.GeneticAlgorithmMixTest",
+            "projectName": "graph-net"
+        },
+        {
+            "type": "java",
+            "name": "GeneticAlgorithmAcyclicalTest",
+            "request": "launch",
+            "mainClass": "com.lucasbrown.InferenceAndAssessment.GeneticAlgorithmAcyclicalTest",
+            "projectName": "graph-net"
+        },
+        {
+            "type": "java",
+            "name": "GeneticAlgorithmCyclicalTest",
+            "request": "launch",
+            "mainClass": "com.lucasbrown.InferenceAndAssessment.GeneticAlgorithmCyclicalTest",
+            "projectName": "graph-net"
+        },
+        {
+            "type": "java",
             "name": "GeneticAlgorithmTest",
             "request": "launch",
             "mainClass": "com.lucasbrown.InferenceAndAssessment.GeneticAlgorithmTest",

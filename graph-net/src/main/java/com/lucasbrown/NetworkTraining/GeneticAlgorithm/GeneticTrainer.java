@@ -20,12 +20,15 @@ public class GeneticTrainer {
     public IGeneticTrainable[] population;
     public ToDoubleFunction<IGeneticTrainable> fitnessFunction;
 
-    public double new_node_chance = 0.1;
-    public double remove_node_chance = 0.2;
-    public double new_connection_chance = 0.4;
-    public double remove_connection_chance = 0.5;
-    public double mutation_rate = 0.5;
-    public double maximum_mutation = 2.05;
+    public double new_node_chance = 0.05;
+    public double remove_node_chance = 0.8;
+    public double new_connection_chance = 0.09;
+    public double remove_connection_chance = 0.1;
+    public double mutation_rate = 0.1;
+    public double maximum_mutation = 0.05;
+
+    private boolean structural_changes = true;
+    private boolean parameter_changes = true;
 
     public GeneticTrainer(int popSize, int tournamentSize, ToDoubleFunction<IGeneticTrainable> fitnessFunction) {
         this.popSize = popSize;
@@ -33,6 +36,16 @@ public class GeneticTrainer {
         this.fitnessFunction = fitnessFunction;
 
         population = new IGeneticTrainable[popSize];
+    }
+
+    public void setStructuralChanges(boolean state)
+    {
+        structural_changes = state;
+    }
+
+    public void setParameterChanges(boolean state)
+    {
+        parameter_changes = state;
     }
 
     public void populateRandom(IGeneticTrainable like, ActivationFunction activationFunction) {
@@ -51,7 +64,7 @@ public class GeneticTrainer {
 
         // select two random parents to create a child
         IntStream.range(popSize, tournamentSize)
-                // .parallel()
+                //.parallel()
                 .forEach(i -> tournament[i] = createChild(tournament[rng.nextInt(popSize)],
                         tournament[rng.nextInt(popSize)]));
 
@@ -59,7 +72,7 @@ public class GeneticTrainer {
         Fitness[] fitness = computeFitness(tournament);
 
         //System.err.println(Stream.of(fitness).mapToDouble(fit -> fit.fitness).average().getAsDouble());
-        //System.err.println(Stream.of(fitness).mapToDouble(fit -> fit.fitness).min());
+        System.err.println(Stream.of(fitness).mapToDouble(fit -> fit.fitness).min());
 
         // keep only the survivors
         population = Stream.of(fitness)
@@ -73,13 +86,19 @@ public class GeneticTrainer {
     public IGeneticTrainable createChild(IGeneticTrainable parent1, IGeneticTrainable parent2) {
         // create a child and attempt to cross it with its parent
         IGeneticTrainable child = parent1.copy();
-        crossOver(child, parent2);
+        if(parameter_changes)
+        {
+            crossOver(child, parent2);
 
-        // mutate parameters
-        mutate(child); // hehe
+            // mutate parameters
+            mutate(child); // hehe
+        }
 
         // attempt structural changes
-        attemptStructureChanges(child);
+        if(structural_changes)
+        {
+            attemptStructureChanges(child);
+        }
 
         return child;
     }
@@ -87,7 +106,7 @@ public class GeneticTrainer {
     public Fitness[] computeFitness(IGeneticTrainable[] tournament) {
         Stream.of(tournament).forEach(IGeneticTrainable::clearAllSignals);
         return Stream.of(tournament)
-                // .parallel()
+                .parallel()
                 .map(individual -> new Fitness(individual, fitnessFunction.applyAsDouble(individual)))
                 .sorted()
                 .toArray(Fitness[]::new);
@@ -118,12 +137,16 @@ public class GeneticTrainer {
 
                 // mutate bias
                 if (rng.nextDouble() < mutation_rate)
+                {
                     wAb.bias += absoluteMutation();
+                }
 
                 // mutate weights
                 for (int i = 0; i < wAb.weights.length; i++) {
                     if (rng.nextDouble() < mutation_rate)
+                    {
                         wAb.weights[i] += absoluteMutation();
+                    }
                 }
 
                 // mutate transfer function parameters
@@ -131,7 +154,9 @@ public class GeneticTrainer {
                     double[] params = dist.getParameters();
                     for (int i = 0; i < params.length; i++) {
                         if (rng.nextDouble() < mutation_rate)
+                        {
                             params[i] += absoluteMutation();
+                        }
                     }
                     dist.setParameters(params);
                 }
