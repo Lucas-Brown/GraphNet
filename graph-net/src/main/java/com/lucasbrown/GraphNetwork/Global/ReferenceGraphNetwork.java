@@ -17,6 +17,11 @@ import com.lucasbrown.GraphNetwork.Local.ReferenceStructure.ReferenceNode;
  */
 public class ReferenceGraphNetwork extends GraphNetwork<InputReferenceNode, OutputReferenceNode>{
 
+    public ReferenceGraphNetwork()
+    {
+        super();
+    }
+
     @Override
     public ReferenceNode getNewHiddenNode(final ActivationFunction activationFunction) {
         return new ReferenceNode(this, networkData, activationFunction);

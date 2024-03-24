@@ -5,7 +5,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.TreeSet;
-import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
@@ -13,7 +12,6 @@ import com.lucasbrown.GraphNetwork.Local.FilterDistribution;
 import com.lucasbrown.GraphNetwork.Local.IInputNode;
 import com.lucasbrown.GraphNetwork.Local.IOutputNode;
 import com.lucasbrown.GraphNetwork.Local.Node;
-import com.lucasbrown.GraphNetwork.Local.DataStructure.DataNode;
 import com.lucasbrown.NetworkTraining.ApproximationTools.ErrorFunction;
 
 /**

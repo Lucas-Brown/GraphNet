@@ -8,7 +8,6 @@ import java.util.Random;
 
 import com.lucasbrown.GraphNetwork.Global.GraphNetwork;
 import com.lucasbrown.GraphNetwork.Global.SharedNetworkData;
-import com.lucasbrown.GraphNetwork.Local.ReferenceStructure.ReferenceArc;
 import com.lucasbrown.NetworkTraining.ApproximationTools.ArrayTools;
 
 /**
@@ -66,20 +65,22 @@ public abstract class Node implements Comparable<Node> {
      */
     protected ArrayList<Signal> inference, inferenceNext;
 
+    protected boolean hasRecentBackwardsSignal;
+
+    /**
+     * The most recent backwards signal to be compared to by forward signals
+     */
+    protected double recentBackwardsSignal;
+
     /**
      * Average of all incoming signals
      */
     protected double mergedForwardStrength;
 
     /**
-     * Average of all backward signals
-     */
-    protected double mergedBackwardStrength;
-
-    /**
      * The signal strength that this node is outputting
      */
-    protected double outputStrength;
+    protected double activatedStrength;
 
     protected boolean hasValidForwardSignal;
 
@@ -100,6 +101,7 @@ public abstract class Node implements Comparable<Node> {
         forwardNext = new ArrayList<>();
         backward = new ArrayList<>();
         backwardNext = new ArrayList<>();
+        hasRecentBackwardsSignal = false;
     }
 
     public int getID()
@@ -212,15 +214,16 @@ public abstract class Node implements Comparable<Node> {
                 acceptIncomingForwardSignals(forward);
             }
             if (!backwardNext.isEmpty()) {
+                hasRecentBackwardsSignal = true;
                 backward = backwardNext;
                 backwardNext = new ArrayList<Signal>();
-                mergedBackwardStrength = getMergedBackwardStrength();
+                recentBackwardsSignal = getRecentBackwardsSignal();
             }
         }
 
     }
 
-    private double getMergedBackwardStrength() {
+    private double getRecentBackwardsSignal() {
         return backward.stream().mapToDouble(Signal::getOutputStrength).average().getAsDouble();
     }
 
@@ -277,9 +280,9 @@ public abstract class Node implements Comparable<Node> {
      * @param node
      * @return whether this node is connected to the provided node
      */
-    public boolean doesContainConnection(Node node) {
-        return outgoing.stream().map(arc -> (ReferenceArc) arc)
-                .anyMatch(connection -> connection.doesMatchNodes(this, node));
+    public boolean doesContainOutgoingConnection(Node node) {
+        final int node_id = node.id;
+        return outgoing.stream().anyMatch(connection -> connection.getRecievingID() == node_id);
     }
 
     /**

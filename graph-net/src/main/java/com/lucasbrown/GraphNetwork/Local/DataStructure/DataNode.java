@@ -8,6 +8,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
 import java.util.Map.Entry;
+import java.util.OptionalInt;
 import java.util.stream.Collectors;
 import java.util.stream.DoubleStream;
 import java.util.stream.IntStream;
@@ -20,7 +21,6 @@ import com.lucasbrown.GraphNetwork.Local.FilterDistribution;
 import com.lucasbrown.GraphNetwork.Local.ICopyable;
 import com.lucasbrown.GraphNetwork.Local.Node;
 import com.lucasbrown.GraphNetwork.Local.Signal;
-import com.lucasbrown.GraphNetwork.Local.ReferenceStructure.ReferenceNode;
 
 /**
  * A node within a graph neural network.
@@ -63,7 +63,7 @@ public class DataNode extends Node implements ICopyable<DataNode> {
 
         nodeSetToWeightsAndBias = new HashMap<HashSet<Integer>, WeightsAndBias>();
         nodeSetToWeightsAndBias.put(new HashSet<Integer>(0), new WeightsAndBias(0, new double[0]));
-        total_parameters = 0;
+        total_parameters = 1;
     }
 
     public DataNode(DataNode toCopy)
@@ -76,6 +76,7 @@ public class DataNode extends Node implements ICopyable<DataNode> {
         nodeSetToWeightsAndBias = new HashMap<HashSet<Integer>, WeightsAndBias>(toCopy.nodeSetToWeightsAndBias.size());
         toCopy.nodeSetToWeightsAndBias.forEach((key, value) -> nodeSetToWeightsAndBias.put(key, value.copy()));
         total_parameters = toCopy.total_parameters;
+        assert total_parameters == manuallyComputeTotalParameters();
     }
 
     public void remapID(final HashMap<Integer, Integer> intMap)
@@ -102,6 +103,7 @@ public class DataNode extends Node implements ICopyable<DataNode> {
         });
         nodeSetToWeightsAndBias.clear();
         nodeSetToWeightsAndBias.putAll(setDup);
+        assert total_parameters == manuallyComputeTotalParameters();
     }
 
     public void assignToNetwork(DataGraphNetwork dgn)
@@ -123,6 +125,22 @@ public class DataNode extends Node implements ICopyable<DataNode> {
         return incoming.removeIf(arc -> arc.getSendingID() == sendingNode.getID());
     }
 
+    private long getWABCount()
+    {
+        return nodeSetToWeightsAndBias.values().stream().mapToInt(wAb -> wAb.weights.length + 1).sum();
+    }
+
+    private long getParamsCount(){
+        return outgoing.stream().mapToInt(arc -> arc.probDist.getParameters().length).sum();
+    }
+
+    private int manuallyComputeTotalParameters()
+    {
+        long WAB_count = getWABCount();
+        long params_count = getParamsCount();
+        return (int) (WAB_count + params_count);
+    }
+
     /**
      * Add an outgoing connection to the node
      * 
@@ -130,21 +148,11 @@ public class DataNode extends Node implements ICopyable<DataNode> {
      * @return true
      */
     public boolean addOutgoingConnection(Arc connection) {
+        assert !outgoing.contains(connection);
         total_parameters += connection.probDist.getParameters().length;
-        return outgoing.add(connection);
-    }
-
-    
-    /**
-     * Add an outgoing connection to the node
-     * 
-     * @param connection
-     * @return true
-     */
-    public boolean removeOutgoingConnection(Node recievingNode) {
-        total_parameters -= incoming.stream().filter(arc -> arc.getSendingID() == recievingNode.getID())
-                .mapToInt(arc -> arc.probDist.getParameters().length).count();
-        return outgoing.removeIf(arc -> arc.getRecievingID() == recievingNode.getID());
+        boolean b = outgoing.add(connection);
+        assert total_parameters == manuallyComputeTotalParameters();
+        return b;
     }
 
     /**
@@ -154,30 +162,42 @@ public class DataNode extends Node implements ICopyable<DataNode> {
         final HashMap<HashSet<Integer>, WeightsAndBias> copy_nodeSetToWeightsAndBias = new HashMap<>(
                 nodeSetToWeightsAndBias);
 
-        int size = copy_nodeSetToWeightsAndBias.size();
+        int size = incoming.size();
         total_parameters += weightsAndBiasesCount(size+1)-weightsAndBiasesCount(size);
         for (HashSet<Integer> intSet : copy_nodeSetToWeightsAndBias.keySet()) {
             HashSet<Integer> copy_intSet = new HashSet<>(intSet);
             copy_intSet.add(sendingNodeID);
             nodeSetToWeightsAndBias.put(copy_intSet, new WeightsAndBias(rng, copy_intSet.size()));
         }
+
+        assert total_parameters == manuallyComputeTotalParameters();
     }
 
     /**
      * Remove all weights and biases associated with the incoming node
      */
     private void removeWeightsAndBiases(Node sendingNode) {
-        final int node_id = sendingNode.getID();
-        int size = nodeSetToWeightsAndBias.size();
-        total_parameters += weightsAndBiasesCount(size-1)-weightsAndBiasesCount(size);
-        nodeSetToWeightsAndBias.keySet().removeIf(intSet -> intSet.contains(node_id));
+        removeWeightsAndBiases(sendingNode.getID());
+    }
+
+    /**
+     * Remove all weights and biases associated with the incoming node
+     */
+    private void removeWeightsAndBiases(int sendingId)
+    {
+        if(nodeSetToWeightsAndBias.keySet().removeIf(intSet -> intSet.contains(sendingId)))
+        {
+            int size = incoming.size();
+            total_parameters += weightsAndBiasesCount(size-1)-weightsAndBiasesCount(size);
+        }
+        assert total_parameters == manuallyComputeTotalParameters();
     }
 
     private int weightsAndBiasesCount(int n_connections)
     {
         if(n_connections == 0) 
         {
-            return 0;
+            return 1;
         }
         else
         {
@@ -340,7 +360,7 @@ public class DataNode extends Node implements ICopyable<DataNode> {
 
         mergedForwardStrength = computeMergedSignalStrength(incomingSignals);
         assert Double.isFinite(mergedForwardStrength);
-        outputStrength = activationFunction.activator(mergedForwardStrength);
+        activatedStrength = activationFunction.activator(mergedForwardStrength);
     }
 
     /**
@@ -351,7 +371,7 @@ public class DataNode extends Node implements ICopyable<DataNode> {
         for (Arc connection : outgoing) {
             // roll and send a signal if successful
             if (connection.rollFilter(mergedForwardStrength)) {
-                connection.sendInferenceSignal(outputStrength);
+                connection.sendInferenceSignal(activatedStrength);
             }
         }
         hasValidForwardSignal = false;
@@ -385,7 +405,7 @@ public class DataNode extends Node implements ICopyable<DataNode> {
         double[] expectedValues = new double[outgoing.size()];
         for (Arc connection : outgoing) {
             if (connection.rollFilter(mergedForwardStrength)) {
-                connection.sendForwardSignal(outputStrength);
+                connection.sendForwardSignal(activatedStrength);
                 expectedValues[count++] = connection.probDist.getMean();
             }
         }
@@ -588,16 +608,32 @@ public class DataNode extends Node implements ICopyable<DataNode> {
 
     @Override
     public boolean removeIncomingConnectionFrom(int node_id) {
-        incoming.removeIf(arc -> arc.getSendingID() == node_id);
-        return nodeSetToWeightsAndBias.keySet().removeIf(node_set -> node_set.contains(node_id));
+        removeWeightsAndBiases(node_id);
+        return incoming.removeIf(arc -> arc.getSendingID() == node_id);
     }
 
     @Override
     public boolean removeOutgoingConnectionTo(int node_id) {
-        return outgoing.removeIf(arc -> arc.getRecievingID() == node_id);
+        OptionalInt opt_idx = IntStream.range(0, outgoing.size()).filter(i -> outgoing.get(i).getRecievingID() == node_id).findFirst();
+        if(opt_idx.isPresent())
+        {
+            int idx = opt_idx.getAsInt();
+            Arc removed = outgoing.remove(idx);
+            total_parameters -= removed.probDist.getParameters().length;
+        }
+        assert total_parameters == manuallyComputeTotalParameters();
+        return opt_idx.isPresent();
     }
 
-
+    /**
+     * Add an outgoing connection to the node
+     * 
+     * @param connection
+     * @return true
+     */
+    public boolean removeOutgoingConnectionTo(Node recievingNode) {
+        return removeOutgoingConnectionTo(recievingNode.getID());
+    }
 
 
 }

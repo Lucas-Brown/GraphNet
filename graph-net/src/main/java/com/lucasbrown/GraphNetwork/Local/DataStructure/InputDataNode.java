@@ -45,7 +45,7 @@ public class InputDataNode extends DataNode implements IInputNode{
         super.hasValidForwardSignal = true;
 
         mergedForwardStrength = incomingSignals.get(0).strength;
-        outputStrength = activationFunction.activator(mergedForwardStrength);
+        activatedStrength = activationFunction.activator(mergedForwardStrength);
     }
     
     @Override

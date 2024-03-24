@@ -20,12 +20,12 @@ public class GeneticTrainer {
     public IGeneticTrainable[] population;
     public ToDoubleFunction<IGeneticTrainable> fitnessFunction;
 
-    public double new_node_chance = 0.05;
-    public double remove_node_chance = 0.8;
-    public double new_connection_chance = 0.09;
-    public double remove_connection_chance = 0.1;
-    public double mutation_rate = 0.1;
-    public double maximum_mutation = 0.05;
+    public double new_node_chance = 0.1;
+    public double remove_node_chance = 0.05;
+    public double new_connection_chance = 0.1;
+    public double remove_connection_chance = 0.05;
+    public double mutation_rate = 0.2;
+    public double maximum_mutation = 0.5;
 
     private boolean structural_changes = true;
     private boolean parameter_changes = true;

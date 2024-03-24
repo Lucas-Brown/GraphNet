@@ -1,4 +1,7 @@
+import java.util.HashMap;
+
 import com.lucasbrown.GraphNetwork.Global.GraphNetwork;
+import com.lucasbrown.GraphNetwork.Global.ReferenceGraphNetwork;
 import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
 import com.lucasbrown.GraphNetwork.Local.BellCurveDistribution;
 import com.lucasbrown.GraphNetwork.Local.Node;
@@ -12,11 +15,11 @@ public class FeedForward {
     private static OutputReferenceNode out;
 
     public static void main(String[] args) {
-        GraphNetwork net = new GraphNetwork();
+        ReferenceGraphNetwork net = new ReferenceGraphNetwork();
 
         in = net.createInputNode(ActivationFunction.SIGNED_QUADRATIC);
         out = net.createOutputNode(ActivationFunction.SIGNED_QUADRATIC);
-        Node hidden = net.createHiddenNode(ActivationFunction.SIGNED_QUADRATIC);
+        Node hidden = net.createHiddenNode(ActivationFunction.LINEAR);
 
         in.setName("Input");
         out.setName("Output");
@@ -25,10 +28,12 @@ public class FeedForward {
         net.addNewConnection(in, hidden, new BellCurveDistribution(0, 1));
         net.addNewConnection(hidden, out, new BellCurveDistribution(0, 1));
 
+        //net.addNewConnection(in, out, new BellCurveDistribution(0, 1));
+
         net.setInputOperation(FeedForward::inputOperation);
         net.setOutputOperation(FeedForward::trainOutputOperation);
 
-        for (int i = 0; i < 10000; i++) {
+        for (int i = 0; i < 100000; i++) {
 
             // Transfer all signals
             net.trainingStep();
@@ -42,19 +47,20 @@ public class FeedForward {
 
         for (int i = 0; i < 100; i++) {
             net.inferenceStep();
+            //System.out.println(net.allActiveNodesString());
         }
 
     }
 
-    public static void inputOperation() {
-        in.recieveForwardSignal(new Signal(null, in, 0));
+    public static void inputOperation(HashMap<Integer, InputReferenceNode> inputNodeMap) {
+        in.acceptUserForwardSignal(0);
     }
 
-    public static void trainOutputOperation() {
-        out.recieveBackwardSignal(new Signal(out, null, 5));
+    public static void trainOutputOperation(HashMap<Integer, OutputReferenceNode> outputNodeMap) {
+        out.acceptUserBackwardSignal(5);
     }
 
-    public static void readOutputOperation() {
+    public static void readOutputOperation(HashMap<Integer, OutputReferenceNode> outputNodeMap) {
         System.out.println(out.getValueOrNull());
     }
 }

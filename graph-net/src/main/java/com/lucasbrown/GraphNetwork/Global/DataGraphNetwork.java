@@ -78,15 +78,14 @@ public class DataGraphNetwork extends GraphNetwork<InputDataNode, OutputDataNode
     @Override
     public void addNewConnection(Node transmittingNode, Node recievingNode,
             FilterDistribution transferFunction) {
-        // boolean doesConnectionExist =
-        // transmittingNode.DoesContainConnection(recievingNode);
-        // if(!doesConnectionExist)
-        // {
-        DataArc connection = new DataArc(this, transmittingNode.getID(), recievingNode.getID(), transferFunction);
-        transmittingNode.addOutgoingConnection(connection);
-        recievingNode.addIncomingConnection(connection);
-        // }
-        // return doesConnectionExist;
+        boolean doesConnectionExist = transmittingNode.doesContainOutgoingConnection(recievingNode);
+        if(!doesConnectionExist)
+        {
+            DataArc connection = new DataArc(this, transmittingNode.getID(), recievingNode.getID(), transferFunction);
+            transmittingNode.addOutgoingConnection(connection);
+            recievingNode.addIncomingConnection(connection);
+        }
+        
     }
 
     @Override
@@ -125,6 +124,11 @@ public class DataGraphNetwork extends GraphNetwork<InputDataNode, OutputDataNode
         Signal s = new Signal(to, from, strength);
         to.recieveBackwardSignal(s);
         return s;
+    }
+
+    public int getTotalNumberOfParameters()
+    {
+        return nodes.stream().mapToInt(node -> ((DataNode)node).getTotalNumberOfParameters()).sum();
     }
 
     @Override

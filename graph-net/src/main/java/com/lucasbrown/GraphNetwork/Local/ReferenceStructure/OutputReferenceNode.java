@@ -44,6 +44,7 @@ public class OutputReferenceNode extends ReferenceNode implements IOutputNode{
         super.recieveBackwardSignal(new Signal(this, null, value));
     }
 
+    /*
     @Override
     public boolean addIncomingConnection(Arc connection)
     {
@@ -62,5 +63,5 @@ public class OutputReferenceNode extends ReferenceNode implements IOutputNode{
 
         return b;
     }
-
+    */
 }

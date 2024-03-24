@@ -95,4 +95,13 @@ public class DataArc extends Arc implements ICopyable<DataArc>{
         return new DataArc(this);
     }
 
+    @Override
+    public boolean equals(Object o)
+    {
+        if(!(o instanceof DataArc)) return false;
+
+        DataArc dArc = (DataArc) o;
+        return dArc.recieving == recieving && dArc.sending == sending;
+    }
+
 }

@@ -45,21 +45,6 @@ public class ReferenceNode extends Node {
     protected double[] biases;
 
     /**
-     * Average of all incoming signals
-     */
-    protected double mergedForwardStrength;
-
-    /**
-     * Average of all backward signals
-     */
-    protected double mergedBackwardStrength;
-
-    /**
-     * The signal strength that this node is outputting
-     */
-    protected double outputStrength;
-
-    /**
      * The binary representation of the currently incoming signals
      */
     private int binary_string;
@@ -193,6 +178,7 @@ public class ReferenceNode extends Node {
         double delta = -networkData.getEpsilon() * error_derivative;
         assert Double.isFinite(delta);
         biases[binary_string] += delta;
+        assert Double.isFinite(biases[binary_string]);
 
         for (int weight_idx = 0; weight_idx < weights[binary_string].length; weight_idx++) {
             weights[binary_string][weight_idx] += delta * forward.get(weight_idx).strength;
@@ -333,7 +319,7 @@ public class ReferenceNode extends Node {
 
         mergedForwardStrength = computeMergedSignalStrength(incomingSignals);
         assert Double.isFinite(mergedForwardStrength);
-        outputStrength = activationFunction.activator(mergedForwardStrength);
+        activatedStrength = activationFunction.activator(mergedForwardStrength);
     }
 
     /**
@@ -344,7 +330,7 @@ public class ReferenceNode extends Node {
         for (Arc connection : outgoing) {
             // roll and send a signal if successful
             if (connection.rollFilter(mergedForwardStrength)) {
-                connection.sendInferenceSignal(outputStrength);
+                connection.sendInferenceSignal(activatedStrength);
             }
         }
         hasValidForwardSignal = false;
@@ -358,8 +344,8 @@ public class ReferenceNode extends Node {
 
         // update weights and biases to reinforce forward signals
         // if the error == NAN then this node failed to send a signal to the next
-        if (!forward.isEmpty() && !Double.isNaN(error))
-            updateWeightsAndBias(error);
+        if (hasRecentBackwardsSignal && !forward.isEmpty())
+            updateWeightsAndBias(mergedForwardStrength - recentBackwardsSignal);
 
         // reinforce backward signals
         if (!backward.isEmpty()) {
@@ -374,16 +360,16 @@ public class ReferenceNode extends Node {
      * @param
      */
     public void sendForwardSignals() {
-        int count = 0;
-        double[] expectedValues = new double[outgoing.size()];
+        //int count = 0;
+        //double[] expectedValues = new double[outgoing.size()];
         for (Arc connection : outgoing) {
             if (connection.rollFilter(mergedForwardStrength)) {
-                connection.sendForwardSignal(outputStrength);
-                expectedValues[count++] = connection.probDist.getMean();
+                connection.sendForwardSignal(activatedStrength);
+                //expectedValues[count++] = connection.probDist.getMean();
             }
         }
 
-        error = errorDerivativeOfOutput(expectedValues, count);
+        //error = errorDerivativeOfOutput(expectedValues, count);
     }
 
     private double errorDerivativeOfOutput(double[] expectedValues, int count) {
@@ -406,7 +392,7 @@ public class ReferenceNode extends Node {
         backwardsBinStr = selectReverseOutcome(densityWeights) + 1;
 
         // Sample signal strengths from the selected distribution
-        double[] sample = convolutions[backwardsBinStr - 1].sample(mergedBackwardStrength);
+        double[] sample = convolutions[backwardsBinStr - 1].sample(recentBackwardsSignal - biases[backwardsBinStr]);
 
         // Send the backward signals
         ArrayList<Arc> arcs = binStrToArcList(backwardsBinStr);
@@ -451,7 +437,7 @@ public class ReferenceNode extends Node {
         double[] densityWeights = new double[convolutions.length];
         for (int binStr = 1; binStr <= convolutions.length; binStr++) {
             // Shift the signal strength by the bias
-            double shiftedStrength = mergedBackwardStrength - biases[binStr];
+            double shiftedStrength = recentBackwardsSignal - biases[binStr];
 
             densityWeights[binStr - 1] = convolutions[binStr - 1].convolve(shiftedStrength);
             assert Double.isFinite(densityWeights[binStr - 1]);
