@@ -4,15 +4,15 @@ import com.lucasbrown.GraphNetwork.Global.GraphNetwork;
 import com.lucasbrown.GraphNetwork.Global.ReferenceGraphNetwork;
 import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
 import com.lucasbrown.GraphNetwork.Local.BellCurveDistribution;
+import com.lucasbrown.GraphNetwork.Local.InputNode;
 import com.lucasbrown.GraphNetwork.Local.Node;
+import com.lucasbrown.GraphNetwork.Local.OutputNode;
 import com.lucasbrown.GraphNetwork.Local.Signal;
-import com.lucasbrown.GraphNetwork.Local.ReferenceStructure.InputReferenceNode;
-import com.lucasbrown.GraphNetwork.Local.ReferenceStructure.OutputReferenceNode;
 
 public class FeedForward {
 
-    private static InputReferenceNode in;
-    private static OutputReferenceNode out;
+    private static InputNode in;
+    private static OutputNode out;
 
     public static void main(String[] args) {
         ReferenceGraphNetwork net = new ReferenceGraphNetwork();

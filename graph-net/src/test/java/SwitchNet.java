@@ -1,9 +1,9 @@
 import com.lucasbrown.GraphNetwork.Global.GraphNetwork;
 import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
 import com.lucasbrown.GraphNetwork.Local.BellCurveDistribution;
+import com.lucasbrown.GraphNetwork.Local.InputNode;
 import com.lucasbrown.GraphNetwork.Local.Node;
-import com.lucasbrown.GraphNetwork.Local.ReferenceStructure.InputReferenceNode;
-import com.lucasbrown.GraphNetwork.Local.ReferenceStructure.OutputReferenceNode;
+import com.lucasbrown.GraphNetwork.Local.OutputNode;
 
 /**
  * Test for a graph network alternating between no signal and 1
@@ -11,8 +11,8 @@ import com.lucasbrown.GraphNetwork.Local.ReferenceStructure.OutputReferenceNode;
 public class SwitchNet {
 
     private static boolean alternating = false;
-    private static InputReferenceNode in;
-    private static OutputReferenceNode out;
+    private static InputNode in;
+    private static OutputNode out;
 
     private static final double tollerance = 0.01;
     private static int count = 0;

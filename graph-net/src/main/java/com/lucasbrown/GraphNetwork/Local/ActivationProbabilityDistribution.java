@@ -7,6 +7,7 @@ import java.util.stream.DoubleStream;
 import com.lucasbrown.NetworkTraining.ApproximationTools.DoubleFunction;
 import com.lucasbrown.NetworkTraining.ApproximationTools.IntegralTransformations;
 
+import jsat.math.integration.Romberg;
 import jsat.math.integration.Trapezoidal;
 
 /**
@@ -15,7 +16,7 @@ import jsat.math.integration.Trapezoidal;
  * 
  * TODO: alter methods to include negative reinforcement as well
  */
-public abstract class FilterDistribution implements ICopyable<FilterDistribution> {
+public abstract class ActivationProbabilityDistribution {
     
     private static final int TRAP_COUNT = 100;
 
@@ -44,10 +45,6 @@ public abstract class FilterDistribution implements ICopyable<FilterDistribution
     public abstract double getMean();
 
     public abstract double getVariance();
-
-    public abstract double[] getParameters();
-    
-    public abstract void setParameters(double[] params);
 
     /**
      * Apply adjustments from reinforcing/diminishing the distribution

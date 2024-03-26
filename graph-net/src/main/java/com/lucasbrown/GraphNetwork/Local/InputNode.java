@@ -1,21 +1,18 @@
-package com.lucasbrown.GraphNetwork.Local.ReferenceStructure;
+package com.lucasbrown.GraphNetwork.Local;
 
+import java.security.InvalidAlgorithmParameterException;
 import java.util.ArrayList;
 
-import com.lucasbrown.GraphNetwork.Global.ReferenceGraphNetwork;
+import com.lucasbrown.GraphNetwork.Global.GraphNetwork;
 import com.lucasbrown.GraphNetwork.Global.SharedNetworkData;
-import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
-import com.lucasbrown.GraphNetwork.Local.Arc;
-import com.lucasbrown.GraphNetwork.Local.IInputNode;
-import com.lucasbrown.GraphNetwork.Local.Signal;
 
 /**
  * A node which exposes the functionality of recieving signals.
  * InputNodes cannot have any incoming connections
  */
-public class InputReferenceNode extends ReferenceNode implements IInputNode{
+public class InputNode extends Node {
 
-    public InputReferenceNode(final ReferenceGraphNetwork network, final SharedNetworkData networkData,
+    public InputNode(final GraphNetwork network, final SharedNetworkData networkData,
             final ActivationFunction activationFunction) {
         super(network, networkData, activationFunction);
     }
@@ -26,8 +23,8 @@ public class InputReferenceNode extends ReferenceNode implements IInputNode{
     }
 
     @Override
-    public void acceptUserForwardSignal(double value) {
-        super.recieveForwardSignal(new Signal(null, this, value));
+    void recieveInferenceSignal(Signal signal) {
+        super.recieveInferenceSignal(signal);
     }
 
     @Override

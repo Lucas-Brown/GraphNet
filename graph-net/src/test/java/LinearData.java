@@ -3,6 +3,7 @@ import java.util.HashMap;
 import com.lucasbrown.GraphNetwork.Global.ReferenceGraphNetwork;
 import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
 import com.lucasbrown.GraphNetwork.Local.BellCurveDistribution;
+import com.lucasbrown.GraphNetwork.Local.InputNode;
 import com.lucasbrown.GraphNetwork.Local.Node;
 import com.lucasbrown.GraphNetwork.Local.ReferenceStructure.InputReferenceNode;
 import com.lucasbrown.GraphNetwork.Local.ReferenceStructure.OutputReferenceNode;

@@ -1,19 +1,15 @@
-package com.lucasbrown.GraphNetwork.Local.ReferenceStructure;
+package com.lucasbrown.GraphNetwork.Local;
 
-import com.lucasbrown.GraphNetwork.Global.ReferenceGraphNetwork;
+import com.lucasbrown.GraphNetwork.Global.GraphNetwork;
 import com.lucasbrown.GraphNetwork.Global.SharedNetworkData;
-import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
-import com.lucasbrown.GraphNetwork.Local.Arc;
-import com.lucasbrown.GraphNetwork.Local.IOutputNode;
-import com.lucasbrown.GraphNetwork.Local.Signal;
 
 /**
  * A node which exposes it's value and can be sent a corrective (backward)
  * signal
  */
-public class OutputReferenceNode extends ReferenceNode implements IOutputNode{
+public class OutputNode extends Node {
 
-    public OutputReferenceNode(final ReferenceGraphNetwork network, final SharedNetworkData networkData,
+    public OutputNode(final GraphNetwork network, final SharedNetworkData networkData,
             final ActivationFunction activationFunction) {
         super(network, networkData, activationFunction);
     }

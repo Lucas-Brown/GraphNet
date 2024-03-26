@@ -6,7 +6,7 @@ import com.lucasbrown.NetworkTraining.DataSetTraining.BellCurveDistributionAdjus
 /**
  * A Bernoulli distribution with p = p(x) = Normal(mean, variance)
  */
-public class BellCurveDistribution extends FilterDistribution {
+public class BellCurveDistribution extends ActivationProbabilityDistribution {
 
     /**
      * mean value and standard deviation of a normal distribution
@@ -111,17 +111,6 @@ public class BellCurveDistribution extends FilterDistribution {
 
     public double getN() {
         return N;
-    }
-
-    @Override
-    public  double[] getParameters() {
-        return new double[]{mean, variance};
-    }
-
-    @Override
-    public void setParameters(double[] params){
-        mean = params[0];
-        variance = params[1];
     }
 
     @Override

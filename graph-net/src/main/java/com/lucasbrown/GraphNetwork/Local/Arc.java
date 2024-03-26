@@ -4,16 +4,28 @@ package com.lucasbrown.GraphNetwork.Local;
  * A one-way connection between a sending node and a recieving node.
  * Holds the probability distribution for determining activation likelyhood
  */
-public abstract class Arc {
+public class Arc {
+
+    /**
+     * Sending and recieving node
+     */
+    final Node sending, recieving;
 
     /**
      * Node transfer function for determining probability and strength of signal
      * forwarding
      */
-    public final FilterDistribution probDist;
+    public final ActivationProbabilityDistribution probDist;
 
-    public Arc(final FilterDistribution transferFunc) {
+    public Arc(final Node sending, final Node recieving,
+            final ActivationProbabilityDistribution transferFunc) {
+        this.sending = sending;
+        this.recieving = recieving;
         this.probDist = transferFunc;
+    }
+
+    public boolean doesMatchNodes(Node sendingMatch, Node recievingMatch) {
+        return sending.equals(sendingMatch) && recieving.equals(recievingMatch);
     }
 
     /**
@@ -22,7 +34,11 @@ public abstract class Arc {
      * @param strength The strength of the signal to send
      * @return the signal or null if no signal was sent
      */
-    public abstract Signal sendInferenceSignal(double strength);
+    Signal sendInferenceSignal(double strength) {
+        Signal signal = new Signal(sending, recieving, strength);
+        recieving.recieveInferenceSignal(signal);
+        return signal;
+    }
 
 
     /**
@@ -31,7 +47,11 @@ public abstract class Arc {
      * @param strength The strength of the signal to send
      * @return the signal or null if no signal was sent
      */
-    public abstract Signal sendForwardSignal(double strength);
+    Signal sendForwardSignal(double strength) {
+        Signal signal = new Signal(sending, recieving, strength);
+        recieving.recieveForwardSignal(signal);
+        return signal;
+    }
 
     /**
      * Send an backward signal from the recieving node to the sending node
@@ -39,15 +59,13 @@ public abstract class Arc {
      * @param strength The strength of the signal to send
      * @return the signal or null if no signal was sent
      */
-    public abstract Signal sendBackwardSignal(double strength);
+    Signal sendBackwardSignal(double strength) {
+        // sending and recieving have reversed meanings here
+        Signal signal = new Signal(recieving, sending, strength);
+        sending.recieveBackwardSignal(signal);
+        return signal;
+    }
 
-    public abstract Node getSendingNode();
-
-    public abstract Node getRecievingNode();
-    
-    public abstract int getSendingID();
-
-    public abstract int getRecievingID();
     
     /**
      * Randomly selects whether the signalStrength passes through the filter
