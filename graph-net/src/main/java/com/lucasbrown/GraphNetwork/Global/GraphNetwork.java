@@ -2,8 +2,10 @@ package com.lucasbrown.GraphNetwork.Global;
 
 import java.security.InvalidAlgorithmParameterException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.TreeSet;
 import java.util.function.Consumer;
 
@@ -65,9 +67,9 @@ public abstract class GraphNetwork<T extends Node & IInputNode, E extends Node &
      */
     private Consumer<HashMap<Integer, E>> outputOperation;
 
-    public <T extends Node> GraphNetwork(){
+    public GraphNetwork(){
         // TODO: remove hardcoding
-        networkData = new SharedNetworkData(new ErrorFunction.MeanSquaredError(), 0.1);
+        networkData = new SharedNetworkData(new ErrorFunction.MeanSquaredError(), 0.01);
 
         nodes = new ArrayList<>();
         input_nodes = new HashMap<>();
@@ -169,11 +171,12 @@ public abstract class GraphNetwork<T extends Node & IInputNode, E extends Node &
     @Override
     public String toString()
     {
-        return allActiveNodesString();
+        //List<Node> activeForwardNodes = activeNodes.stream().filter(Node::hasValidForwardSignal).toList();
+        return nodesToString(activeNodes);
     }
 
-    public String allActiveNodesString() {
-        TreeSet<Node> sSet = new TreeSet<Node>(activeNodes);
+    public static String nodesToString(Collection<Node> nodes) {
+        TreeSet<Node> sSet = new TreeSet<Node>(nodes);
         StringBuilder sb = new StringBuilder();
         sSet.forEach(node -> {
             sb.append(node.toString());

@@ -44,7 +44,7 @@ public class BellCurveDistribution extends FilterDistribution {
         this.mean = mean;
         this.variance = variance;
         this.N = N;
-        this.adjuster = new BellCurveDistributionAdjuster(this, true);
+        this.adjuster = new BellCurveDistributionAdjuster(this, false);
     }
 
     /**

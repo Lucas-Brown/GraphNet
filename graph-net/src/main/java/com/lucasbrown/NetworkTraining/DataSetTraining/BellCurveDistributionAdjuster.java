@@ -29,17 +29,17 @@ public class BellCurveDistributionAdjuster implements Function {
 
     // range of values to pre-compute for the relative shift from [-w_domain,
     // w_domain]
-    private static final double w_domain = 2;
+    private static final double w_domain = 5;
 
     // number of pre-computed relative shift values
-    private static final int w_divisions = 100;
+    private static final int w_divisions = 1000;
 
     // range of values to pre-compute for the relative scale from [1/eta_domain,
     // eta_domain]
-    private static final double eta_domain = 2;
+    private static final double eta_domain = 5;
 
     // number of pre-computed relative scale values
-    private static final int eta_divisions = 100;
+    private static final int eta_divisions = 1000;
 
     /**
      * Expected likelihood value map dimensions are computed as [w][eta]
@@ -169,7 +169,7 @@ public class BellCurveDistributionAdjuster implements Function {
 
         double weight_sum = point_weights.stream().mapToDouble(w -> w).sum();
         weight_sum += distribution_weights.stream().mapToDouble(w -> w).sum();
-        N += weight_sum;
+        N = N + weight_sum > 1000 ? N + weight_sum : 1000;
         clear();
     }
 

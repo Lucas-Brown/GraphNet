@@ -206,11 +206,13 @@ public abstract class Node implements Comparable<Node> {
         if (!inferenceNext.isEmpty()) {
             inference = inferenceNext;
             inferenceNext = new ArrayList<Signal>();
+            hasValidForwardSignal = true;
             acceptIncomingForwardSignals(inference);
         } else {
             if (!forwardNext.isEmpty()) {
                 forward = forwardNext;
                 forwardNext = new ArrayList<Signal>();
+                hasValidForwardSignal = true;
                 acceptIncomingForwardSignals(forward);
             }
             if (!backwardNext.isEmpty()) {
@@ -245,6 +247,8 @@ public abstract class Node implements Comparable<Node> {
     }
 
     public void clearSignals() {
+        hasRecentBackwardsSignal = false;
+        hasValidForwardSignal = false;
         inference.clear();
         forward.clear();
         backward.clear();

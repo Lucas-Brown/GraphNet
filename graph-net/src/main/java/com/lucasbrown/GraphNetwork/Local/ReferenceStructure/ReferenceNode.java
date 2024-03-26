@@ -185,6 +185,16 @@ public class ReferenceNode extends Node {
         }
     }
 
+    private double getErrorDerivative()
+    {
+        double error_derivative = 0;
+        if(hasRecentBackwardsSignal)
+        {
+            error_derivative += mergedForwardStrength - recentBackwardsSignal;
+        }
+        return error_derivative;
+    }
+
     public double[] getWeights(int bitStr) {
         return weights[bitStr].clone(); // A shallow clone is okay here
     }
@@ -308,7 +318,6 @@ public class ReferenceNode extends Node {
     protected void acceptIncomingForwardSignals(ArrayList<Signal> incomingSignals) {
         if (incomingSignals.size() == 0)
             return;
-        hasValidForwardSignal = true;
 
         // Compute the binary string of the incoming signals
         binary_string = nodeSetToBinStr(incomingSignals.stream().map(Signal::getSendingNode).toList());
@@ -345,7 +354,10 @@ public class ReferenceNode extends Node {
         // update weights and biases to reinforce forward signals
         // if the error == NAN then this node failed to send a signal to the next
         if (hasRecentBackwardsSignal && !forward.isEmpty())
-            updateWeightsAndBias(mergedForwardStrength - recentBackwardsSignal);
+        {
+            hasRecentBackwardsSignal = false;
+            updateWeightsAndBias(getErrorDerivative());
+        }
 
         // reinforce backward signals
         if (!backward.isEmpty()) {
