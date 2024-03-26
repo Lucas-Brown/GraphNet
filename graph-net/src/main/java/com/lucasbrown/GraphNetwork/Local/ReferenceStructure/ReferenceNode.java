@@ -35,6 +35,8 @@ public class ReferenceNode extends Node {
      */
     protected final HashMap<Integer, Integer> orderedIDMap;
 
+    protected HashMap<Integer, ArrayList<Signal>> incomingSignalCombinations;
+
     /**
      * Each possible combinations of inputs has a corresponding unique set of
      * weights and biases
@@ -65,6 +67,7 @@ public class ReferenceNode extends Node {
         super(network, networkData, activationFunction, ID_COUNTER++);
 
         orderedIDMap = new HashMap<Integer, Integer>();
+        incomingSignalCombinations = new HashMap<Integer, ArrayList<Signal>>();
 
         weights = new double[1][1];
         biases = new double[1];
@@ -297,6 +300,9 @@ public class ReferenceNode extends Node {
      */
     @Override
     protected double computeMergedSignalStrength(List<Signal> incomingSignals) {
+
+        
+
 
         double[] input_weights = weights[binary_string];
 

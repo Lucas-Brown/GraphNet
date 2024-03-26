@@ -51,6 +51,11 @@ public abstract class Node implements Comparable<Node> {
     public ActivationFunction activationFunction;
 
     /**
+     * inference signals
+     */
+    protected ArrayList<Signal> inference, inferenceNext;
+
+    /**
      * Forward-training signals
      */
     protected ArrayList<Signal> forward, forwardNext;
@@ -59,11 +64,6 @@ public abstract class Node implements Comparable<Node> {
      * backward training signals
      */
     protected ArrayList<Signal> backward, backwardNext;
-
-    /**
-     * inference signals
-     */
-    protected ArrayList<Signal> inference, inferenceNext;
 
     protected boolean hasRecentBackwardsSignal;
 
