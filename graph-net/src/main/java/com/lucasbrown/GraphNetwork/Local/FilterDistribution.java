@@ -36,7 +36,7 @@ public abstract class FilterDistribution implements ICopyable<FilterDistribution
 
     public abstract double sample();
 
-    public abstract boolean shouldSend(double inputSignal);
+    public abstract double sendChance(double inputSignal);
 
     public abstract void prepareReinforcement(double valueToReinforce);
 
@@ -50,6 +50,11 @@ public abstract class FilterDistribution implements ICopyable<FilterDistribution
      * Apply adjustments from reinforcing/diminishing the distribution
      */
     public abstract void applyAdjustments();
+
+    public boolean shouldSend(double inputSignal) {
+        // Use the normalized normal distribution as a measure of how likely
+        return sendChance(inputSignal) >= rand.nextDouble();
+    }
 
     /**
      * Difference between the most likely outcome and the given outcome x
