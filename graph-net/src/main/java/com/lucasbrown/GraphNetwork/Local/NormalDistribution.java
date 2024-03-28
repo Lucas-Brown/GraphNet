@@ -1,6 +1,6 @@
 package com.lucasbrown.GraphNetwork.Local;
 
-public class NormalDistribution extends ActivationProbabilityDistribution {
+public class NormalDistribution extends FilterDistribution {
 
     private double mean;
     private double variance;
@@ -102,6 +102,12 @@ public class NormalDistribution extends ActivationProbabilityDistribution {
     @Override
     public FilterDistribution copy() {
         return new NormalDistribution(this);
+    }
+
+    @Override
+    public double sendChance(double inputSignal) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'sendChance'");
     }
 
 }

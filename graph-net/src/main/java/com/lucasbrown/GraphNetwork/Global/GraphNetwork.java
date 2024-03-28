@@ -11,6 +11,8 @@ import java.util.function.Consumer;
 
 import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
 import com.lucasbrown.GraphNetwork.Local.FilterDistribution;
+import com.lucasbrown.GraphNetwork.Local.IInputNode;
+import com.lucasbrown.GraphNetwork.Local.IOutputNode;
 import com.lucasbrown.GraphNetwork.Local.Arc;
 import com.lucasbrown.GraphNetwork.Local.InputNode;
 import com.lucasbrown.GraphNetwork.Local.Node;
@@ -37,6 +39,16 @@ public class GraphNetwork {
     private final ArrayList<Node> nodes;
 
     /**
+     * All input nodes
+     */
+    private HashMap<Integer, InputNode> input_nodes;
+
+    /**
+     * All output nodes
+     */
+    private HashMap<Integer, OutputNode> output_nodes;
+
+    /**
      * A hash set containing every node that recieved a signal this step
      */
     private HashSet<Node> activeNodes;
@@ -50,13 +62,13 @@ public class GraphNetwork {
      * An operation which is to be defined by the user to set the values of input
      * nodes
      */
-    private Consumer<HashMap<Integer, T>> inputOperation;
+    private Consumer<HashMap<Integer, InputNode>> inputOperation;
 
     /**
      * An operation which is to be defined by the user to correct the values of
      * output nodes during training or get output data
      */
-    private Consumer<HashMap<Integer, E>> outputOperation;
+    private Consumer<HashMap<Integer, OutputNode>> outputOperation;
 
     public GraphNetwork(){
         // TODO: remove hardcoding
@@ -73,13 +85,13 @@ public class GraphNetwork {
         };
     }
 
-    public void setInputOperation(Runnable inputOperation) {
-        this.inputOperation = inputOperation == null ? () -> {
+    public void setInputOperation(Consumer<HashMap<Integer, InputNode>> inputOperation) {
+        this.inputOperation = inputOperation == null ? (_1) -> {
         } : inputOperation;
     }
 
-    public void setOutputOperation(Runnable outputOperation) {
-        this.outputOperation = outputOperation == null ? () -> {
+    public void setOutputOperation(Consumer<HashMap<Integer, OutputNode>> outputOperation) {
+        this.outputOperation = outputOperation == null ? (_1) -> {
         } : outputOperation;
     }
 
@@ -90,6 +102,7 @@ public class GraphNetwork {
      * 
      * @return The node that was created
      */
+    /*
     public Node createHiddenNode(final ActivationFunction activationFunction) {
         Node n = new Node(this, networkData, activationFunction);
         nodes.add(n);
@@ -107,9 +120,10 @@ public class GraphNetwork {
         nodes.add(n);
         return n;
     }
+    */
 
     public void addNewConnection(Node transmittingNode, Node recievingNode,
-            ActivationProbabilityDistribution transferFunction) {
+            FilterDistribution transferFunction) {
         // boolean doesConnectionExist =
         // transmittingNode.DoesContainConnection(recievingNode);
         // if(!doesConnectionExist)
@@ -171,7 +185,7 @@ public class GraphNetwork {
     }
 
     private void sendInferenceSignals() {
-        activeNodes.forEach(Node::sendInferenceSignals);
+        //activeNodes.forEach(Node::sendInferenceSignals);
     }
 
     /**
@@ -213,25 +227,26 @@ public class GraphNetwork {
         intersection.retainAll(s2);
         return intersection.size() > 0;
     }
+    
 
     public final Node createHiddenNode(final ActivationFunction activationFunction)
     {
-        Node node = getNewHiddenNode(activationFunction);
+        Node node = new Node(this, networkData, activationFunction);
         nodes.add(node);
         return node;
     }
 
-    public final T createInputNode(final ActivationFunction activationFunction)
+    public final InputNode createInputNode(final ActivationFunction activationFunction)
     {
-        T node = getNewInputNode(activationFunction);
+        InputNode node = new InputNode(this, networkData, activationFunction);
         nodes.add(node);
         input_nodes.put(node.getID(), node);
         return node;
     }
 
-    public final E createOutputNode(final ActivationFunction activationFunction)
+    public final OutputNode createOutputNode(final ActivationFunction activationFunction)
     {
-        E node = getNewOutputNode(activationFunction);
+        OutputNode node = new OutputNode(this, networkData, activationFunction);
         nodes.add(node);
         output_nodes.put(node.getID(), node);
         return node;

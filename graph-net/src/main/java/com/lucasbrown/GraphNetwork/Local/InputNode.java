@@ -10,7 +10,9 @@ import com.lucasbrown.GraphNetwork.Global.SharedNetworkData;
  * A node which exposes the functionality of recieving signals.
  * InputNodes cannot have any incoming connections
  */
-public class InputNode extends Node {
+public class InputNode extends Node implements IInputNode {
+
+    private double inputValue;
 
     public InputNode(final GraphNetwork network, final SharedNetworkData networkData,
             final ActivationFunction activationFunction) {
@@ -18,32 +20,50 @@ public class InputNode extends Node {
     }
 
     @Override
+    public void acceptUserForwardSignal(double value) {
+        inputValue = value;
+        network.notifyNodeActivation(this);
+        hasValidForwardSignal = true;
+    }
+
+    @Override
     public void acceptUserInferenceSignal(double value) {
-        super.recieveInferenceSignal(new Signal(null, this, value));
+        inputValue = value;
+        network.notifyNodeActivation(this);
+        hasValidForwardSignal = true;
     }
 
     @Override
-    void recieveInferenceSignal(Signal signal) {
-        super.recieveInferenceSignal(signal);
+    public void acceptSignals() {
+        // do nothing!
     }
 
     @Override
-    protected void acceptIncomingForwardSignals(ArrayList<Signal> incomingSignals) {
-        if (incomingSignals.size() == 0)
-            return;
-
-        assert incomingSignals.size() == 1;
-
-        super.hasValidForwardSignal = true;
-
-        mergedForwardStrength = incomingSignals.get(0).strength;
-        activatedStrength = activationFunction.activator(mergedForwardStrength);
+    public void sendForwardSignals() {
+        for (Arc connection : outgoing) {
+            connection.sendForwardSignal(activationFunction.activator(inputValue), connection.probDist.sendChance(inputValue)); 
+        }
     }
-    
-    @Override
-    protected void updateWeightsAndBias(double error_derivative){
-        return; // do not update, no matter what *HE* whispers
-    }
+    /*
+     * @Override
+     * protected void acceptIncomingForwardSignals(ArrayList<Signal>
+     * incomingSignals) {
+     * if (incomingSignals.size() == 0)
+     * return;
+     * 
+     * assert incomingSignals.size() == 1;
+     * 
+     * super.hasValidForwardSignal = true;
+     * 
+     * mergedForwardStrength = incomingSignals.get(0).strength;
+     * activatedStrength = activationFunction.activator(mergedForwardStrength);
+     * }
+     * 
+     * @Override
+     * protected void updateWeightsAndBias(double error_derivative){
+     * return; // do not update, no matter what *HE* whispers
+     * }
+     */
 
     @Override
     public boolean addIncomingConnection(Arc connection) {

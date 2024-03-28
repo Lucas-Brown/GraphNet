@@ -15,10 +15,10 @@ public class Arc {
      * Node transfer function for determining probability and strength of signal
      * forwarding
      */
-    public final ActivationProbabilityDistribution probDist;
+    public final FilterDistribution probDist;
 
     public Arc(final Node sending, final Node recieving,
-            final ActivationProbabilityDistribution transferFunc) {
+            final FilterDistribution transferFunc) {
         this.sending = sending;
         this.recieving = recieving;
         this.probDist = transferFunc;
@@ -34,8 +34,8 @@ public class Arc {
      * @param strength The strength of the signal to send
      * @return the signal or null if no signal was sent
      */
-    Signal sendInferenceSignal(double strength) {
-        Signal signal = new Signal(sending, recieving, strength);
+    Signal sendInferenceSignal(double strength, double probability) {
+        Signal signal = new Signal(sending, recieving, strength, probability);
         recieving.recieveInferenceSignal(signal);
         return signal;
     }
@@ -47,8 +47,8 @@ public class Arc {
      * @param strength The strength of the signal to send
      * @return the signal or null if no signal was sent
      */
-    Signal sendForwardSignal(double strength) {
-        Signal signal = new Signal(sending, recieving, strength);
+    Signal sendForwardSignal(double strength, double probability) {
+        Signal signal = new Signal(sending, recieving, strength, probability);
         recieving.recieveForwardSignal(signal);
         return signal;
     }
@@ -59,9 +59,9 @@ public class Arc {
      * @param strength The strength of the signal to send
      * @return the signal or null if no signal was sent
      */
-    Signal sendBackwardSignal(double strength) {
+    Signal sendBackwardSignal(double strength, double probability) {
         // sending and recieving have reversed meanings here
-        Signal signal = new Signal(recieving, sending, strength);
+        Signal signal = new Signal(recieving, sending, strength, probability);
         sending.recieveBackwardSignal(signal);
         return signal;
     }

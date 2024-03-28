@@ -6,7 +6,7 @@ import com.lucasbrown.NetworkTraining.DataSetTraining.BellCurveDistributionAdjus
 /**
  * A Bernoulli distribution with p = p(x) = Normal(mean, variance)
  */
-public class BellCurveDistribution extends ActivationProbabilityDistribution {
+public class BellCurveDistribution extends FilterDistribution {
 
     /**
      * mean value and standard deviation of a normal distribution
@@ -78,10 +78,10 @@ public class BellCurveDistribution extends ActivationProbabilityDistribution {
         adjuster.addPoint(valueToDiminish, false, 1+0/(1-getProbabilityDensity(valueToDiminish))); 
     }
 
-    @Override
-    public boolean shouldSend(double inputSignal) {
-        // Use the normalized normal distribution as a measure of how likely
-        return computeNormalizedDist(inputSignal) >= rand.nextDouble();
+    @Override 
+    public double sendChance(double inputSignal)
+    {
+        return computeNormalizedDist(inputSignal);
     }
 
     @Override

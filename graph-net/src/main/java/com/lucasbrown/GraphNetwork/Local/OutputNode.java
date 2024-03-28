@@ -7,7 +7,7 @@ import com.lucasbrown.GraphNetwork.Global.SharedNetworkData;
  * A node which exposes it's value and can be sent a corrective (backward)
  * signal
  */
-public class OutputNode extends Node {
+public class OutputNode extends Node implements IOutputNode{
 
     public OutputNode(final GraphNetwork network, final SharedNetworkData networkData,
             final ActivationFunction activationFunction) {
@@ -23,7 +23,7 @@ public class OutputNode extends Node {
      */
     @Override
     public double getValue() {
-        return mergedForwardStrength;
+        return 0; // TODO: fix this
     }
 
     /**
@@ -32,12 +32,12 @@ public class OutputNode extends Node {
      */
     @Override
     public Double getValueOrNull() {
-        return hasValidForwardSignal() ? mergedForwardStrength : null;
+        return hasValidForwardSignal() ? 0d : null;
     }
 
     @Override
     public void acceptUserBackwardSignal(double value) {
-        super.recieveBackwardSignal(new Signal(this, null, value));
+        super.recieveBackwardSignal(new Signal(this, null, value, 1));
     }
 
     /*
