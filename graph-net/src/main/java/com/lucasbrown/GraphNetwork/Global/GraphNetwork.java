@@ -7,16 +7,18 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.TreeSet;
+import java.util.Map.Entry;
 import java.util.function.Consumer;
+import java.util.stream.Collector;
+import java.util.stream.Collectors;
 
+import com.lucasbrown.GraphNetwork.Distributions.FilterDistribution;
 import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
-import com.lucasbrown.GraphNetwork.Local.FilterDistribution;
-import com.lucasbrown.GraphNetwork.Local.IInputNode;
-import com.lucasbrown.GraphNetwork.Local.IOutputNode;
 import com.lucasbrown.GraphNetwork.Local.Arc;
 import com.lucasbrown.GraphNetwork.Local.InputNode;
 import com.lucasbrown.GraphNetwork.Local.Node;
 import com.lucasbrown.GraphNetwork.Local.OutputNode;
+import com.lucasbrown.NetworkTraining.History;
 import com.lucasbrown.NetworkTraining.ApproximationTools.ErrorFunction;
 
 /**
@@ -27,11 +29,6 @@ import com.lucasbrown.NetworkTraining.ApproximationTools.ErrorFunction;
  * Only postive reinforcement is implemented currently.
  */
 public class GraphNetwork {
-
-    /**
-     * An object to encapsulate all network hyperparameters
-     */
-    private final SharedNetworkData networkData;
 
     /**
      * A list of all nodes within the graph network
@@ -70,9 +67,7 @@ public class GraphNetwork {
      */
     private Consumer<HashMap<Integer, OutputNode>> outputOperation;
 
-    public GraphNetwork(){
-        // TODO: remove hardcoding
-        networkData = new SharedNetworkData(new ErrorFunction.MeanSquaredError(), 0.01);
+    public GraphNetwork() {
 
         nodes = new ArrayList<>();
         input_nodes = new HashMap<>();
@@ -95,6 +90,22 @@ public class GraphNetwork {
         } : outputOperation;
     }
 
+    public ArrayList<OutputNode> getOutputNodes() {
+        return getSortedNodes(output_nodes);
+    }
+
+    public ArrayList<InputNode> getInputNodes() {
+        return getSortedNodes(input_nodes);
+    }
+
+    private <T> ArrayList<T> getSortedNodes(HashMap<Integer, T> map) {
+        return map.entrySet()
+                .stream()
+                .sorted(GraphNetwork::IntegerEntryComparator)
+                .map(Entry::getValue)
+                .collect(Collectors.toCollection(ArrayList::new));
+    }
+
     /**
      * Creates a new node and adds it to the list of nodes within the network
      * TODO: Potentially remove external addition of nodes and connections in favor
@@ -103,24 +114,26 @@ public class GraphNetwork {
      * @return The node that was created
      */
     /*
-    public Node createHiddenNode(final ActivationFunction activationFunction) {
-        Node n = new Node(this, networkData, activationFunction);
-        nodes.add(n);
-        return n;
-    }
-
-    public InputNode createInputNode(final ActivationFunction activationFunction) {
-        InputNode n = new InputNode(this, networkData, activationFunction);
-        nodes.add(n);
-        return n;
-    }
-
-    public OutputNode createOutputNode(final ActivationFunction activationFunction) {
-        OutputNode n = new OutputNode(this, networkData, activationFunction);
-        nodes.add(n);
-        return n;
-    }
-    */
+     * public Node createHiddenNode(final ActivationFunction activationFunction) {
+     * Node n = new Node(this, networkData, activationFunction);
+     * nodes.add(n);
+     * return n;
+     * }
+     * 
+     * public InputNode createInputNode(final ActivationFunction activationFunction)
+     * {
+     * InputNode n = new InputNode(this, networkData, activationFunction);
+     * nodes.add(n);
+     * return n;
+     * }
+     * 
+     * public OutputNode createOutputNode(final ActivationFunction
+     * activationFunction) {
+     * OutputNode n = new OutputNode(this, networkData, activationFunction);
+     * nodes.add(n);
+     * return n;
+     * }
+     */
 
     public void addNewConnection(Node transmittingNode, Node recievingNode,
             FilterDistribution transferFunction) {
@@ -185,7 +198,7 @@ public class GraphNetwork {
     }
 
     private void sendInferenceSignals() {
-        //activeNodes.forEach(Node::sendInferenceSignals);
+        // activeNodes.forEach(Node::sendInferenceSignals);
     }
 
     /**
@@ -198,9 +211,9 @@ public class GraphNetwork {
     }
 
     @Override
-    public String toString()
-    {
-        //List<Node> activeForwardNodes = activeNodes.stream().filter(Node::hasValidForwardSignal).toList();
+    public String toString() {
+        // List<Node> activeForwardNodes =
+        // activeNodes.stream().filter(Node::hasValidForwardSignal).toList();
         return nodesToString(activeNodes);
     }
 
@@ -214,39 +227,28 @@ public class GraphNetwork {
         return sb.toString();
     }
 
-    public void deactivateAll()
-    {
+    public void deactivateAll() {
         activeNodes.forEach(Node::clearSignals);
         activeNextNodes.forEach(Node::clearSignals);
         activeNodes.clear();
         activeNextNodes.clear();
     }
 
-    public static <T> boolean hasIntersection(HashSet<T> s1, HashSet<T> s2) {
-        HashSet<T> intersection = new HashSet<T>(s1);
-        intersection.retainAll(s2);
-        return intersection.size() > 0;
-    }
-    
-
-    public final Node createHiddenNode(final ActivationFunction activationFunction)
-    {
-        Node node = new Node(this, networkData, activationFunction);
+    public final Node createHiddenNode(final ActivationFunction activationFunction) {
+        Node node = new Node(this, activationFunction);
         nodes.add(node);
         return node;
     }
 
-    public final InputNode createInputNode(final ActivationFunction activationFunction)
-    {
-        InputNode node = new InputNode(this, networkData, activationFunction);
+    public final InputNode createInputNode(final ActivationFunction activationFunction) {
+        InputNode node = new InputNode(this, activationFunction);
         nodes.add(node);
         input_nodes.put(node.getID(), node);
         return node;
     }
 
-    public final OutputNode createOutputNode(final ActivationFunction activationFunction)
-    {
-        OutputNode node = new OutputNode(this, networkData, activationFunction);
+    public final OutputNode createOutputNode(final ActivationFunction activationFunction) {
+        OutputNode node = new OutputNode(this, activationFunction);
         nodes.add(node);
         output_nodes.put(node.getID(), node);
         return node;
@@ -256,9 +258,11 @@ public class GraphNetwork {
         return nodes.get(id);
     }
 
-    public ArrayList<Node> getNodes()
-    {
+    public ArrayList<Node> getNodes() {
         return new ArrayList<Node>(nodes);
     }
 
+    private static int IntegerEntryComparator(Entry<Integer, ?> e1, Entry<Integer, ?> e2) {
+        return Integer.compare(e1.getKey(), e2.getKey());
+    }
 }

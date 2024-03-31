@@ -1,9 +1,11 @@
-package com.lucasbrown.GraphNetwork.Local;
+package com.lucasbrown.GraphNetwork.Distributions;
 
 import java.util.Random;
 import java.util.function.DoubleUnaryOperator;
 import java.util.stream.DoubleStream;
 
+import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
+import com.lucasbrown.GraphNetwork.Local.ICopyable;
 import com.lucasbrown.NetworkTraining.ApproximationTools.DoubleFunction;
 import com.lucasbrown.NetworkTraining.ApproximationTools.IntegralTransformations;
 

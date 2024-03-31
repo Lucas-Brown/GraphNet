@@ -8,6 +8,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Random;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -46,11 +47,6 @@ public class Node implements Comparable<Node> {
      * The network that this node belongs to
      */
     public final GraphNetwork network;
-
-    /**
-     * The network hyperparameters
-     */
-    public final SharedNetworkData networkData;
 
     /**
      * The activation function
@@ -99,9 +95,13 @@ public class Node implements Comparable<Node> {
     protected ArrayList<Outcome> outcomes;
 
     /**
-     * The error derivative at the given time step
+     * 
      */
-    private double error;
+    private HashMap<TimeKey, Double> error_signals;
+
+    private int[] delta_counts;
+    private double[] bias_delta;
+    private double[][] weights_delta;
 
     /**
      * The binary string representation of the incoming arcs being sent a backwards
@@ -111,12 +111,10 @@ public class Node implements Comparable<Node> {
 
     protected boolean hasValidForwardSignal;
 
-    public Node(final GraphNetwork network, final SharedNetworkData networkData,
-            final ActivationFunction activationFunction) {
+    public Node(final GraphNetwork network, final ActivationFunction activationFunction) {
         id = ID_COUNTER++;
         name = "Node " + id;
         this.network = Objects.requireNonNull(network);
-        this.networkData = Objects.requireNonNull(networkData);
         this.activationFunction = activationFunction;
         incoming = new ArrayList<Arc>();
         outgoing = new ArrayList<Arc>();
@@ -124,6 +122,11 @@ public class Node implements Comparable<Node> {
         weights = new double[1][1];
         biases = new double[1];
         weights[0] = new double[0];
+        delta_counts = new int[1];
+        bias_delta = new double[1];
+        weights_delta = new double[1][1];
+        weights_delta[0] = new double[0];
+        error_signals = new HashMap<>();
 
         uniqueIncomingNodeIDs = new HashSet<>();
         outcomes = new ArrayList<>();
@@ -191,6 +194,10 @@ public class Node implements Comparable<Node> {
         return outgoing.add(connection);
     }
 
+    public Optional<Arc> getOutgoingConnectionTo(Node recievingNode) {
+        return outgoing.stream().filter(arc -> arc.recieving == recievingNode).findAny();
+    }
+
     /**
      * Notify this node of a new incoming forward signal
      * 
@@ -199,6 +206,20 @@ public class Node implements Comparable<Node> {
     void recieveForwardSignal(Signal signal) {
         appendForward(signal);
         network.notifyNodeActivation(this);
+    }
+
+    public void recieveError(int timestep, int key, double error) {
+        TimeKey tk = new TimeKey(timestep, key);
+        Double error_rate = error_signals.get(tk);
+        if (error_rate == null) {
+            error_rate = Double.valueOf(0);
+        }
+        error_rate += error;
+        error_signals.put(tk, error_rate);
+    }
+
+    public Double getError(int timestep, int key) {
+        return error_signals.get(new TimeKey(timestep, key));
     }
 
     private void appendForward(Signal signal) {
@@ -255,6 +276,10 @@ public class Node implements Comparable<Node> {
         biases = Arrays.copyOf(biases, new_size);
         weights = Arrays.copyOf(weights, new_size);
 
+        delta_counts = new int[new_size];
+        bias_delta = new double[new_size];
+        weights_delta = new double[new_size][];
+
         // the second half needs entirely new data
         for (int i = old_size; i < new_size; i++) {
             biases[i] = rand.nextDouble();
@@ -265,6 +290,10 @@ public class Node implements Comparable<Node> {
             for (int j = 0; j < count; j++) {
                 weights[i][j] = rand.nextDouble();
             }
+        }
+
+        for (int i = 0; i < new_size; i++) {
+            weights_delta[i] = new double[weights.length];
         }
     }
 
@@ -410,11 +439,16 @@ public class Node implements Comparable<Node> {
      */
     private Outcome signalSetToOutcome(Collection<Signal> signalSet) {
         Outcome outcome = new Outcome();
+        signalSet = signalSet.stream().sorted((s1, s2) -> Integer.compare(s1.sendingNode.id, s2.sendingNode.id))
+                .toList();
         List<Node> nodeSet = signalSet.stream().map(signal -> signal.sendingNode).toList();
         outcome.binary_string = nodeSetToBinStr(nodeSet);
         outcome.netValue = computeMergedSignalStrength(signalSet, outcome.binary_string);
         outcome.activatedValue = activationFunction.activator(outcome.netValue);
         outcome.probability = getProbabilityOfSignalSet(signalSet);
+        outcome.sourceOutputs = signalSet.stream().mapToDouble(Signal::getOutputStrength).toArray();
+        outcome.sourceNodes = nodeSet.toArray(new Node[nodeSet.size()]);
+        outcome.sourceKeys = signalSet.stream().mapToInt(Signal::getSourceKey).toArray();
         return outcome;
     }
 
@@ -524,14 +558,14 @@ public class Node implements Comparable<Node> {
 
         // update weights and biases to reinforce forward signals
         // if the error == NAN then this node failed to send a signal to the next
-        if (!forward.isEmpty() && !Double.isNaN(error))
-            // updateWeightsAndBias(error);
+        // if (!forward.isEmpty() && !Double.isNaN(error))
+        // updateWeightsAndBias(error);
 
-            // reinforce backward signals
-            if (!backward.isEmpty()) {
-                ArrayList<Arc> arcs = binStrToArcList(backwardsBinStr);
-                arcs.forEach(arc -> arc.probDist.applyAdjustments());
-            }
+        // reinforce backward signals
+        if (!backward.isEmpty()) {
+            ArrayList<Arc> arcs = binStrToArcList(backwardsBinStr);
+            arcs.forEach(arc -> arc.probDist.applyAdjustments());
+        }
     }
 
     /**
@@ -540,92 +574,98 @@ public class Node implements Comparable<Node> {
      * @param
      */
     public void sendForwardSignals() {
-        int count = 0;
         for (Outcome out : outcomes) {
             for (Arc connection : outgoing) {
-                connection.sendForwardSignal(out.activatedValue, out.probability * connection.probDist.sendChance(out.netValue)); // oh god
+                connection.sendForwardSignal(out.binary_string, out.activatedValue,
+                        out.probability * connection.probDist.sendChance(out.netValue)); // oh god
             }
         }
 
     }
 
-    /* 
-    private double errorDerivativeOfOutput(double[] expectedValues, int count) {
-        double error = 0;
-        for (int i = 0; i < count; i++) {
-            error += networkData.errorFunc.error_derivative(mergedForwardStrength, expectedValues[i]);
-        }
-        return error / count;
-    }
-    */
+    /*
+     * private double errorDerivativeOfOutput(double[] expectedValues, int count) {
+     * double error = 0;
+     * for (int i = 0; i < count; i++) {
+     * error += networkData.errorFunc.error_derivative(mergedForwardStrength,
+     * expectedValues[i]);
+     * }
+     * return error / count;
+     * }
+     */
 
     /**
      * Send backwards signals and record differences of expectation for training
      * 
      * @param
      */
-    /* 
-    private void sendBackwardsSignals() {
-        // Select the backward signal combination
-        Convolution[] convolutions = getReverseOutcomes();
-        double[] densityWeights = evaluateConvolutions(convolutions);
-        backwardsBinStr = selectReverseOutcome(densityWeights) + 1;
-
-        // Sample signal strengths from the selected distribution
-        double[] sample = convolutions[backwardsBinStr - 1].sample(mergedBackwardStrength);
-
-        // Send the backward signals
-        ArrayList<Arc> arcs = binStrToArcList(backwardsBinStr);
-        for (int i = 0; i < sample.length; i++) {
-            Arc arc_i = arcs.get(i);
-            double sample_i = sample[i];
-            double sample_inverse = arc_i.recieving.activationFunction.inverse(sample_i);
-            arc_i.sendBackwardSignal(sample_inverse); // send signal backwards
-            arc_i.probDist.prepareReinforcement(sample_inverse); // prepare to reinforce the distribution
-        }
-    }
-
-    public Convolution[] getReverseOutcomes() {
-        // Loop over all possible incoming signal combinations and record the value of
-        // their convolution
-        int n_choices = 0b1 << incoming.size();
-        Convolution[] convolutions = new Convolution[n_choices - 1];
-        for (int binStr = 1; binStr < n_choices; binStr++) {
-            // get the arcs corresponding to this bit string
-            ArrayList<Arc> arcs = binStrToArcList(binStr);
-
-            // Seperate the arcs into their distributions and activation functions
-            ArrayList<FilterDistribution> distributions = arcs.stream()
-                    .map(arc -> arc.probDist)
-                    .collect(Collectors.toCollection(ArrayList<FilterDistribution>::new));
-
-            ArrayList<ActivationFunction> activators = arcs.stream()
-                    .map(arc -> arc.sending.activationFunction)
-                    .collect(Collectors.toCollection(ArrayList<ActivationFunction>::new));
-
-            // Get the weights of the corresponding arcs
-            double[] weights = getWeights(binStr);
-
-            // Get the probability density
-            convolutions[binStr - 1] = new Convolution(distributions, activators, weights);
-        }
-
-        return convolutions;
-    }
-
-    public double[] evaluateConvolutions(Convolution[] convolutions) {
-        double[] densityWeights = new double[convolutions.length];
-        for (int binStr = 1; binStr <= convolutions.length; binStr++) {
-            // Shift the signal strength by the bias
-            double shiftedStrength = mergedBackwardStrength - biases[binStr];
-
-            densityWeights[binStr - 1] = convolutions[binStr - 1].convolve(shiftedStrength);
-            assert Double.isFinite(densityWeights[binStr - 1]);
-            assert densityWeights[binStr - 1] >= 0;
-        }
-        return densityWeights;
-    }
-    */
+    /*
+     * private void sendBackwardsSignals() {
+     * // Select the backward signal combination
+     * Convolution[] convolutions = getReverseOutcomes();
+     * double[] densityWeights = evaluateConvolutions(convolutions);
+     * backwardsBinStr = selectReverseOutcome(densityWeights) + 1;
+     * 
+     * // Sample signal strengths from the selected distribution
+     * double[] sample = convolutions[backwardsBinStr -
+     * 1].sample(mergedBackwardStrength);
+     * 
+     * // Send the backward signals
+     * ArrayList<Arc> arcs = binStrToArcList(backwardsBinStr);
+     * for (int i = 0; i < sample.length; i++) {
+     * Arc arc_i = arcs.get(i);
+     * double sample_i = sample[i];
+     * double sample_inverse = arc_i.recieving.activationFunction.inverse(sample_i);
+     * arc_i.sendBackwardSignal(sample_inverse); // send signal backwards
+     * arc_i.probDist.prepareReinforcement(sample_inverse); // prepare to reinforce
+     * the distribution
+     * }
+     * }
+     * 
+     * public Convolution[] getReverseOutcomes() {
+     * // Loop over all possible incoming signal combinations and record the value
+     * of
+     * // their convolution
+     * int n_choices = 0b1 << incoming.size();
+     * Convolution[] convolutions = new Convolution[n_choices - 1];
+     * for (int binStr = 1; binStr < n_choices; binStr++) {
+     * // get the arcs corresponding to this bit string
+     * ArrayList<Arc> arcs = binStrToArcList(binStr);
+     * 
+     * // Seperate the arcs into their distributions and activation functions
+     * ArrayList<FilterDistribution> distributions = arcs.stream()
+     * .map(arc -> arc.probDist)
+     * .collect(Collectors.toCollection(ArrayList<FilterDistribution>::new));
+     * 
+     * ArrayList<ActivationFunction> activators = arcs.stream()
+     * .map(arc -> arc.sending.activationFunction)
+     * .collect(Collectors.toCollection(ArrayList<ActivationFunction>::new));
+     * 
+     * // Get the weights of the corresponding arcs
+     * double[] weights = getWeights(binStr);
+     * 
+     * // Get the probability density
+     * convolutions[binStr - 1] = new Convolution(distributions, activators,
+     * weights);
+     * }
+     * 
+     * return convolutions;
+     * }
+     * 
+     * public double[] evaluateConvolutions(Convolution[] convolutions) {
+     * double[] densityWeights = new double[convolutions.length];
+     * for (int binStr = 1; binStr <= convolutions.length; binStr++) {
+     * // Shift the signal strength by the bias
+     * double shiftedStrength = mergedBackwardStrength - biases[binStr];
+     * 
+     * densityWeights[binStr - 1] = convolutions[binStr -
+     * 1].convolve(shiftedStrength);
+     * assert Double.isFinite(densityWeights[binStr - 1]);
+     * assert densityWeights[binStr - 1] >= 0;
+     * }
+     * return densityWeights;
+     * }
+     */
 
     /**
      * Select an outcome each with a given weight
@@ -654,6 +694,66 @@ public class Node implements Comparable<Node> {
         return -1; // This should never happen
     }
 
+    public ArrayList<Outcome> getState() {
+        return outcomes;
+    }
+
+    public void sendErrorsBackwards(ArrayList<Outcome> outcomesAtTime, int timestep) {
+        for (Outcome outcome : outcomesAtTime) {
+            Double error = error_signals.get(new TimeKey(timestep, outcome.binary_string));
+            if (error != null) { // should it ever be null?
+                sendErrorsBackwards(outcome, timestep, error);
+            }
+        }
+    }
+
+    private void sendErrorsBackwards(Outcome outcomeAtTime, int timestep, double error) {
+        int binary_string = outcomeAtTime.binary_string;
+        double error_derivative = activationFunction.derivative(outcomeAtTime.netValue) * error;
+        double[] weightsOfNodes = weights[binary_string];
+        double[] weightsDeltaOfNodes = weights_delta[binary_string];
+
+        // may need to correct for probability weighting
+        bias_delta[binary_string] += error_derivative;
+        delta_counts[binary_string] += 1;
+        for (int i = 0; i < weightsOfNodes.length; i++) {
+            weightsDeltaOfNodes[i] += outcomeAtTime.sourceOutputs[i] * error_derivative;
+
+            Node sourceNode = outcomeAtTime.sourceNodes[i];
+            sourceNode.recieveError(timestep - 1, outcomeAtTime.sourceKeys[i], error_derivative * weightsOfNodes[i]);
+
+            // apply error as new point for the distribution
+            // Arc connection = sourceNode.getOutgoingConnectionTo(this).get();
+            // connection.probDist.prepareReinforcement(outcomeAtTime.netValue - error);
+        }
+
+    }
+
+    public void applyErrorSignals(double epsilon) {
+        for (int key = 1; key < biases.length; key++) {
+            int count = delta_counts[key];
+            if (count == 0)
+                continue;
+
+            double delta = -epsilon / count;
+            biases[key] += delta * bias_delta[key] ;
+            bias_delta[key] = 0;
+
+            for (int i = 0; i < weights[key].length; i++) {
+                weights[key][i] += delta * weights_delta[key][i];
+                weights_delta[key][i] = 0;
+            }
+
+            delta_counts[key] = 0;
+        }
+
+        for (Arc connection : outgoing) {
+            connection.probDist.applyAdjustments();
+        }
+
+        error_signals.clear();
+    }
+
     public void clearSignals() {
         hasRecentBackwardsSignal = false;
         hasValidForwardSignal = false;
@@ -667,7 +767,8 @@ public class Node implements Comparable<Node> {
 
     @Override
     public String toString() {
-        return name + ": " + outcomes.toString();
+        return name + ": " + outcomes.stream().sorted((o1, o2) -> -Double.compare(o1.probability, o2.probability))
+                .toList().toString();
     }
 
     @Override
@@ -685,6 +786,30 @@ public class Node implements Comparable<Node> {
         if (!(o instanceof Node))
             return false;
         return id == ((Node) o).id;
+    }
+
+    private class TimeKey {
+        private final int timestep;
+        private final int key;
+
+        public TimeKey(int timestep, int key) {
+            this.timestep = timestep;
+            this.key = key;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (!(o instanceof TimeKey))
+                return false;
+
+            TimeKey tk = (TimeKey) o;
+            return key == tk.key & timestep == tk.timestep;
+        }
+
+        @Override
+        public int hashCode() {
+            return timestep << 16 + key;
+        }
     }
 
 }

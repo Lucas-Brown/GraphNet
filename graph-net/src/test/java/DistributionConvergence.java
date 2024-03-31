@@ -1,6 +1,6 @@
 import java.util.ArrayList;
 
-import com.lucasbrown.GraphNetwork.Local.BellCurveDistribution;
+import com.lucasbrown.GraphNetwork.Distributions.BellCurveDistribution;
 
 public class DistributionConvergence {
 

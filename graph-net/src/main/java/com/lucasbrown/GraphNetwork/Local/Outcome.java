@@ -5,6 +5,9 @@ public class Outcome {
     public double netValue;
     public double activatedValue;
     public double probability;
+    public double[] sourceOutputs;
+    public Node[] sourceNodes;
+    public int[] sourceKeys;
 
     @Override 
     public String toString()

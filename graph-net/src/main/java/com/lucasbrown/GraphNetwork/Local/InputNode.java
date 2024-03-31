@@ -14,16 +14,15 @@ public class InputNode extends Node implements IInputNode {
 
     private double inputValue;
 
-    public InputNode(final GraphNetwork network, final SharedNetworkData networkData,
-            final ActivationFunction activationFunction) {
-        super(network, networkData, activationFunction);
+    public InputNode(final GraphNetwork network, final ActivationFunction activationFunction) {
+        super(network, activationFunction);
     }
 
     @Override
     public void acceptUserForwardSignal(double value) {
         inputValue = value;
         network.notifyNodeActivation(this);
-        hasValidForwardSignal = true;
+        hasValidForwardSignal = true; 
     }
 
     @Override
@@ -41,8 +40,26 @@ public class InputNode extends Node implements IInputNode {
     @Override
     public void sendForwardSignals() {
         for (Arc connection : outgoing) {
-            connection.sendForwardSignal(activationFunction.activator(inputValue), connection.probDist.sendChance(inputValue)); 
+            connection.sendForwardSignal(-1, activationFunction.activator(inputValue), connection.probDist.sendChance(inputValue)); 
         }
+    }
+
+    @Override
+    public ArrayList<Outcome> getState()
+    {
+        outcomes = new ArrayList<>(1);
+        Outcome outcome = new Outcome();
+        outcome.netValue = inputValue;
+        outcome.activatedValue = activationFunction.activator(inputValue);
+        outcome.binary_string = -1;
+        outcome.probability = 1;
+        outcomes.add(outcome);
+        return outcomes;
+    }
+
+    @Override 
+    public void sendErrorsBackwards(ArrayList<Outcome> outcomesAtTime, int timestep){
+        // since this is an input node, there's nothing to send an error to
     }
     /*
      * @Override
@@ -68,6 +85,12 @@ public class InputNode extends Node implements IInputNode {
     @Override
     public boolean addIncomingConnection(Arc connection) {
         throw new UnsupportedOperationException("Input nodes are not allowed to have any incoming connections.");
+    }
+
+    
+    @Override
+    public String toString() {
+        return name + ": (" + inputValue + ", 100%)";
     }
 
 }

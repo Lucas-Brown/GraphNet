@@ -4,9 +4,9 @@ import java.util.ArrayList;
 import java.util.Objects;
 import java.util.stream.IntStream;
 
+import com.lucasbrown.GraphNetwork.Distributions.BellCurveDistribution;
 import com.lucasbrown.GraphNetwork.Global.DataGraphNetwork;
 import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
-import com.lucasbrown.GraphNetwork.Local.BellCurveDistribution;
 import com.lucasbrown.GraphNetwork.Local.IInputNode;
 import com.lucasbrown.GraphNetwork.Local.Node;
 import com.lucasbrown.GraphNetwork.Local.DataStructure.InputDataNode;

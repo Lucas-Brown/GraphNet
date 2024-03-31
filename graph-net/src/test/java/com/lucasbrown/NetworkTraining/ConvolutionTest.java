@@ -8,9 +8,9 @@ import java.util.function.DoubleUnaryOperator;
 
 import org.junit.Test;
 
+import com.lucasbrown.GraphNetwork.Distributions.BellCurveDistribution;
+import com.lucasbrown.GraphNetwork.Distributions.NormalDistribution;
 import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
-import com.lucasbrown.GraphNetwork.Local.BellCurveDistribution;
-import com.lucasbrown.GraphNetwork.Local.NormalDistribution;
 import com.lucasbrown.NetworkTraining.ApproximationTools.Convolution;
 
 

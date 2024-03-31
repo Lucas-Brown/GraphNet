@@ -4,6 +4,8 @@ import static org.junit.Assert.assertEquals;
 
 import org.junit.Test;
 
+import com.lucasbrown.GraphNetwork.Distributions.BellCurveDistribution;
+
 public class ActivationProbabilityDistributionTest {
 
     @Test

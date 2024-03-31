@@ -1,4 +1,4 @@
-package com.lucasbrown.GraphNetwork.Local;
+package com.lucasbrown.GraphNetwork.Distributions;
 
 public class NormalDistribution extends FilterDistribution {
 

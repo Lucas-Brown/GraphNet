@@ -9,9 +9,8 @@ import com.lucasbrown.GraphNetwork.Global.SharedNetworkData;
  */
 public class OutputNode extends Node implements IOutputNode{
 
-    public OutputNode(final GraphNetwork network, final SharedNetworkData networkData,
-            final ActivationFunction activationFunction) {
-        super(network, networkData, activationFunction);
+    public OutputNode(final GraphNetwork network, final ActivationFunction activationFunction) {
+        super(network, activationFunction);
     }
 
     /**
@@ -37,7 +36,7 @@ public class OutputNode extends Node implements IOutputNode{
 
     @Override
     public void acceptUserBackwardSignal(double value) {
-        super.recieveBackwardSignal(new Signal(this, null, value, 1));
+        super.recieveBackwardSignal(new Signal(this, null, -1, value, 1));
     }
 
     /*

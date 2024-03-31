@@ -8,8 +8,8 @@ import java.util.stream.DoubleStream;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
+import com.lucasbrown.GraphNetwork.Distributions.FilterDistribution;
 import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
-import com.lucasbrown.GraphNetwork.Local.FilterDistribution;
 
 import jsat.math.integration.Romberg;
 import jsat.distributions.multivariate.NormalM;

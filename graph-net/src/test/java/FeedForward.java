@@ -1,8 +1,8 @@
 import java.util.HashMap;
 
+import com.lucasbrown.GraphNetwork.Distributions.BellCurveDistribution;
 import com.lucasbrown.GraphNetwork.Global.GraphNetwork;
 import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
-import com.lucasbrown.GraphNetwork.Local.BellCurveDistribution;
 import com.lucasbrown.GraphNetwork.Local.InputNode;
 import com.lucasbrown.GraphNetwork.Local.Node;
 import com.lucasbrown.GraphNetwork.Local.OutputNode;
@@ -34,7 +34,7 @@ public class FeedForward {
         //net.addNewConnection(in, out, new BellCurveDistribution(0, 1));
 
         net.setInputOperation(FeedForward::inputOperation);
-        net.setOutputOperation(FeedForward::trainOutputOperation);
+        //net.setOutputOperation(FeedForward::trainOutputOperation);
 
         for (int i = 0; i < 3; i++) {
 

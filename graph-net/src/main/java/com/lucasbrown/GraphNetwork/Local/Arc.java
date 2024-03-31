@@ -1,5 +1,7 @@
 package com.lucasbrown.GraphNetwork.Local;
 
+import com.lucasbrown.GraphNetwork.Distributions.FilterDistribution;
+
 /**
  * A one-way connection between a sending node and a recieving node.
  * Holds the probability distribution for determining activation likelyhood
@@ -34,11 +36,13 @@ public class Arc {
      * @param strength The strength of the signal to send
      * @return the signal or null if no signal was sent
      */
+    /* 
     Signal sendInferenceSignal(double strength, double probability) {
         Signal signal = new Signal(sending, recieving, strength, probability);
         recieving.recieveInferenceSignal(signal);
         return signal;
     }
+    */
 
 
     /**
@@ -47,8 +51,8 @@ public class Arc {
      * @param strength The strength of the signal to send
      * @return the signal or null if no signal was sent
      */
-    Signal sendForwardSignal(double strength, double probability) {
-        Signal signal = new Signal(sending, recieving, strength, probability);
+    Signal sendForwardSignal(int sourceKey, double strength, double probability) {
+        Signal signal = new Signal(sending, recieving, sourceKey, strength, probability);
         recieving.recieveForwardSignal(signal);
         return signal;
     }
@@ -59,12 +63,14 @@ public class Arc {
      * @param strength The strength of the signal to send
      * @return the signal or null if no signal was sent
      */
+    /* 
     Signal sendBackwardSignal(double strength, double probability) {
         // sending and recieving have reversed meanings here
         Signal signal = new Signal(recieving, sending, strength, probability);
         sending.recieveBackwardSignal(signal);
         return signal;
     }
+    */
 
     
     /**

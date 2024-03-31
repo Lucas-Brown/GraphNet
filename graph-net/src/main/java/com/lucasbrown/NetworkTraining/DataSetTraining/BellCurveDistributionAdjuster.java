@@ -5,7 +5,7 @@ import java.util.List;
 import java.util.function.DoubleUnaryOperator;
 import java.util.stream.IntStream;
 
-import com.lucasbrown.GraphNetwork.Local.BellCurveDistribution;
+import com.lucasbrown.GraphNetwork.Distributions.BellCurveDistribution;
 import com.lucasbrown.NetworkTraining.ApproximationTools.IntegralTransformations;
 import com.lucasbrown.NetworkTraining.ApproximationTools.LinearInterpolation2D;
 import com.lucasbrown.NetworkTraining.ApproximationTools.LinearRange;

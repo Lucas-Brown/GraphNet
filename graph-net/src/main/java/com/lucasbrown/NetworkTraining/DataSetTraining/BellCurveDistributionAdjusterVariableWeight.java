@@ -1,6 +1,6 @@
 package com.lucasbrown.NetworkTraining.DataSetTraining;
 
-import com.lucasbrown.GraphNetwork.Local.BellCurveDistribution;
+import com.lucasbrown.GraphNetwork.Distributions.BellCurveDistribution;
 
 /**
  * Testing of this class showed that it is an improper representation and should not be used
