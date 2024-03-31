@@ -54,7 +54,7 @@ public class LinearDataBackpropTraining {
         // net.addNewConnection(in, hidden2, new BellCurveDistribution(1, 1));
         // net.addNewConnection(hidden1, out, new BellCurveDistribution(-1, 1));
         // net.addNewConnection(hidden2, out, new BellCurveDistribution(0, 1));
-        net.addNewConnection(in, out, new OpenFilter());
+        net.addNewConnection(in, out, new BellCurveDistribution(0, 1, 5, 1000));
 
         BackpropTrainer bt = new BackpropTrainer(net, new ErrorFunction.MeanSquaredError());
 

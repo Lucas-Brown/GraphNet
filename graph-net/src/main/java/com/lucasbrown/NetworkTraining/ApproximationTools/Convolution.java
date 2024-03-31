@@ -22,8 +22,8 @@ public class Convolution {
 
     private final Random rng = new Random();
 
-    private ArrayList<FilterDistribution> activationDistributions;
-    private ArrayList<ActivationFunction> activators;
+    private ArrayList<? extends FilterDistribution> activationDistributions;
+    private ArrayList<? extends ActivationFunction> activators;
     private double[] weights;
     private List<DoubleUnaryOperator> distributions;
     private DoubleUnaryOperator conv_func;
@@ -31,8 +31,8 @@ public class Convolution {
     private int[] dependentIndices;
     private int[] independentIndices;
 
-    public Convolution(ArrayList<FilterDistribution> activationDistributions,
-            ArrayList<ActivationFunction> activators, double[] weights) {
+    public Convolution(ArrayList<? extends FilterDistribution> activationDistributions,
+            ArrayList<? extends ActivationFunction> activators, double[] weights) {
         this.activationDistributions = activationDistributions;
         this.activators = activators;
         this.weights = weights;
@@ -102,7 +102,7 @@ public class Convolution {
         double[][] independent_samples = generateIndependentSamples(count);
         double[][] dependent_samples = generateDependentSamples(z, count);
 
-        return mergeSamples(dependent_samples, independent_samples);
+        return mergeSamples(dependent_samples, independent_samples); 
     }
 
     private double[][] generateIndependentSamples(int count) {
@@ -111,11 +111,9 @@ public class Convolution {
         for (int i = 0; i < independentIndices.length; i++) {
             int idx = independentIndices[i];
             FilterDistribution dist = activationDistributions.get(idx);
-            ActivationFunction af = activators.get(idx);
-            double w = weights[idx];
 
             for (int n = 0; n < count; n++) {
-                independent_samples[n][i] = w * af.activator(dist.sample());
+                independent_samples[n][i] = dist.sample();
             }
         }
         return independent_samples;
@@ -125,7 +123,7 @@ public class Convolution {
         final int dof = dependentIndices.length - 1;
 
         // if there's only 1 dependent sample then there's no degrees of freedom (i.e,
-        // return z)
+        // return inverse of z)
         if (dependentIndices.length == 0) {
             return new double[count][0];
         } else if (dependentIndices.length == 1) {
@@ -133,7 +131,7 @@ public class Convolution {
             for (int n = 0; n < sample.length; n++) {
                 sample[n] = new double[] { z };
             }
-            return sample;
+            return invertSamples(sample, dependentIndices);
         }
 
         // Getting a true sample is far too difficult and probably not worth it
@@ -144,10 +142,13 @@ public class Convolution {
                 .mapToDouble(
                         i -> activationDistributions.get(i).getMeanOfAppliedActivation(activators.get(i), weights[i]))
                 .toArray();
-        double[] vars = IntStream.of(dependentIndices)
+        double[] vars = IntStream.range(0, dependentIndices.length)
                 .mapToDouble(
-                        i -> activationDistributions.get(i).getVarianceOfAppliedActivation(activators.get(i),
-                                weights[i], means[i]))
+                        i -> {
+                            int idx = dependentIndices[i];
+                            return activationDistributions.get(idx).getVarianceOfAppliedActivation(activators.get(idx),
+                                    weights[idx], means[i]);
+                        })
                 .toArray();
 
         double[] vars2 = DoubleStream.of(vars).map(s -> s * s).toArray();
@@ -189,13 +190,13 @@ public class Convolution {
 
         // use the sample to generate the remaining component
         double[][] dependent_samples = new double[count][dof + 1];
-        for (int i = 0; i < dof; i++) {
+        for (int i = 0; i < count; i++) {
             double[] sample_i = samples_conditional.get(i).arrayCopy();
             System.arraycopy(sample_i, 0, dependent_samples[i], 0, dof);
             dependent_samples[i][dof] = z - DoubleStream.of(sample_i).sum();
         }
 
-        return dependent_samples;
+        return invertSamples(dependent_samples, dependentIndices);
     }
 
     private double[][] mergeSamples(double[][] dependent_samples, double[][] independent_samples) {
@@ -223,6 +224,25 @@ public class Convolution {
         }
 
         return samples;
+    }
+
+    /**
+     * For each x_i in the convolution sample, find y_i such that x_i = w_i *
+     * activator_i(y_i)
+     * 
+     * @param samples
+     * @return
+     */
+    private double[][] invertSamples(double[][] samples, int[] indices) {
+        double[][] invertedSamples = new double[samples.length][];
+        for (int sample = 0; sample < samples.length; sample++) {
+            invertedSamples[sample] = new double[samples[sample].length];
+            for (int i = 0; i < invertedSamples[sample].length; i++) {
+                int idx = indices[i];
+                invertedSamples[sample][i] = activators.get(idx).inverse(samples[sample][i] / weights[idx]);
+            }
+        }
+        return invertedSamples;
     }
 
     /**

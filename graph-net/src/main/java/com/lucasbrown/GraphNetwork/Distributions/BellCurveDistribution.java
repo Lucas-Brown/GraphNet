@@ -18,6 +18,12 @@ public class BellCurveDistribution extends FilterDistribution {
      */
     private double N;
 
+    
+    /**
+     * Maximum number of points this distribution can represent.
+     */
+    private double N_max;
+
     /**
      * An object to apply adjustments to this distribution given new data
      */
@@ -35,15 +41,20 @@ public class BellCurveDistribution extends FilterDistribution {
         this(mean, variance, 10);
     }
 
+    public BellCurveDistribution(double mean, double variance, double N) {
+        this(mean, variance, N, 1000);
+    }
+
     /**
      * @param mean     mean value of the normal distribution
      * @param variance variance of the normal distribution
      * @param N        the number of points this distribution approximates
      */
-    public BellCurveDistribution(double mean, double variance, double N) {
+    public BellCurveDistribution(double mean, double variance, double N, double N_max) {
         this.mean = mean;
         this.variance = variance;
         this.N = N;
+        this.N_max = N_max;
         this.adjuster = new BellCurveDistributionAdjuster(this, false);
     }
 
@@ -65,7 +76,7 @@ public class BellCurveDistribution extends FilterDistribution {
      */
     @Override
     public void prepareReinforcement(double valueToReinforce) {
-        adjuster.addPoint(valueToReinforce, true, 1+0/getProbabilityDensity(valueToReinforce));
+        adjuster.addPoint(valueToReinforce, true, 1+0/computeNormalizedDist(valueToReinforce));
     }
 
     /**
@@ -75,7 +86,7 @@ public class BellCurveDistribution extends FilterDistribution {
      */
     @Override
     public void prepareDiminishment(double valueToDiminish) {
-        adjuster.addPoint(valueToDiminish, false, 1+0/(1-getProbabilityDensity(valueToDiminish))); 
+        adjuster.addPoint(valueToDiminish, false, 1+0/(1-computeNormalizedDist(valueToDiminish))); 
     }
 
     @Override 
@@ -118,7 +129,7 @@ public class BellCurveDistribution extends FilterDistribution {
         adjuster.applyAdjustments();
         mean = adjuster.getMean();
         variance = adjuster.getVariance();
-        N = adjuster.getN();
+        N = Math.min(adjuster.getN(), N_max);
     }
 
     private static double NormalizedDist(double x, double mean, double variance) {

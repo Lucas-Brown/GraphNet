@@ -156,6 +156,10 @@ public class BellCurveDistributionAdjuster implements Function {
     }
 
     public void applyAdjustments() {
+        mean = parentDistribution.getMean();
+        variance = parentDistribution.getVariance();
+        N = parentDistribution.getN();
+
         NelderMead nm = new NelderMead();
         List<Vec> init_points = new ArrayList<>(3);
 
@@ -169,7 +173,7 @@ public class BellCurveDistributionAdjuster implements Function {
 
         double weight_sum = point_weights.stream().mapToDouble(w -> w).sum();
         weight_sum += distribution_weights.stream().mapToDouble(w -> w).sum();
-        N = N + weight_sum > 1000 ? N + weight_sum : 1000;
+        N += weight_sum;
         clear();
     }
 
