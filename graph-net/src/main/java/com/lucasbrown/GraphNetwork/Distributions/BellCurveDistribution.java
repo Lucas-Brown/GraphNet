@@ -1,12 +1,24 @@
 package com.lucasbrown.GraphNetwork.Distributions;
 
+import java.util.function.DoubleUnaryOperator;
+import java.util.function.Supplier;
+import java.util.stream.Stream;
+
+import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
+import com.lucasbrown.NetworkTraining.ApproximationTools.DoubleFunction;
+import com.lucasbrown.NetworkTraining.ApproximationTools.IntegralTransformations;
+import com.lucasbrown.NetworkTraining.ApproximationTools.Convolution.GenericConvolution;
+import com.lucasbrown.NetworkTraining.ApproximationTools.Convolution.IConvolution;
+import com.lucasbrown.NetworkTraining.ApproximationTools.Convolution.LinearBellConvolution;
 import com.lucasbrown.NetworkTraining.DataSetTraining.BellCurveDistributionAdjuster;
+
+import jsat.math.integration.Trapezoidal;
 
 
 /**
  * A Bernoulli distribution with p = p(x) = Normal(mean, variance)
  */
-public class BellCurveDistribution extends FilterDistribution {
+public class BellCurveDistribution extends FilterDistribution{
 
     /**
      * mean value and standard deviation of a normal distribution
@@ -55,7 +67,7 @@ public class BellCurveDistribution extends FilterDistribution {
         this.variance = variance;
         this.N = N;
         this.N_max = N_max;
-        this.adjuster = new BellCurveDistributionAdjuster(this, false);
+        this.adjuster = new BellCurveDistributionAdjuster(this, true);
     }
 
     /**
@@ -106,6 +118,28 @@ public class BellCurveDistribution extends FilterDistribution {
     }
 
     @Override
+    public double getMeanOfAppliedActivation(ActivationFunction activator, double w) {
+        if(activator instanceof ActivationFunction.Linear)
+        {
+            return mean;
+        }
+        else{
+            return super.getMeanOfAppliedActivation(activator, w);
+        }
+    }
+
+    @Override
+    public double getVarianceOfAppliedActivation(ActivationFunction activator, double w, double mean) {
+        if(activator instanceof ActivationFunction.Linear)
+        {
+            return variance;
+        }
+        else{
+            return super.getVarianceOfAppliedActivation(activator, w, mean);
+        }
+    }
+
+    @Override
     public double differenceOfExpectation(double x) {
         return mean - x; //1 - computeNormalizedDist(x);
     }
@@ -117,7 +151,7 @@ public class BellCurveDistribution extends FilterDistribution {
 
     @Override
     public double getVariance() {
-        return variance;
+        return variance/Math.sqrt(2);
     }
 
     public double getN() {
@@ -140,6 +174,15 @@ public class BellCurveDistribution extends FilterDistribution {
     @Override
     public FilterDistribution copy() {
         return new BellCurveDistribution(this);
+    }
+
+    @Override
+    public IConvolution toConvolution(ActivationFunction activator, double weight) {
+        if(activator.equals(ActivationFunction.LINEAR)){
+            return new LinearBellConvolution(this, weight);
+        }
+
+        return super.toConvolution(activator, weight);
     }
 
 }

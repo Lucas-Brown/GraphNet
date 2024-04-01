@@ -12,6 +12,7 @@ import org.junit.Test;
 import com.lucasbrown.GraphNetwork.Distributions.BellCurveDistribution;
 import com.lucasbrown.GraphNetwork.Distributions.FilterDistribution;
 import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
+import com.lucasbrown.NetworkTraining.ApproximationTools.Convolution.FilterDistributionConvolution;
 
 public class ConvolutionTest {
 
@@ -30,7 +31,7 @@ public class ConvolutionTest {
 
         double[] weights = new double[] { 1, 0, -2};
 
-        Convolution convolution = new Convolution(distributions, activators, weights);
+        FilterDistributionConvolution convolution = new FilterDistributionConvolution(distributions, activators, weights);
 
         double[] sample = convolution.sample(target);
         double reconstruction = IntStream.range(0, sample.length)

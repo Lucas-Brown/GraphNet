@@ -22,6 +22,7 @@ public interface ActivationFunction {
 
     public static final Linear LINEAR = new Linear();
     public static final SignedQuadratic SIGNED_QUADRATIC = new SignedQuadratic();
+    public static final SignedLogarithmic SIGNED_LOGARITHMIC = new SignedLogarithmic();
 
     static class Linear implements ActivationFunction {
 
@@ -67,6 +68,30 @@ public interface ActivationFunction {
         @Override
         public double inverseDerivative(double x) {
             return 1 / Math.sqrt(2*Math.abs(x) + 1);
+        }
+
+    }
+
+    static class SignedLogarithmic implements ActivationFunction {
+
+        @Override
+        public double activator(double x) {
+            return Math.signum(x) * Math.log(Math.abs(x) + 1);
+        }
+
+        @Override
+        public double derivative(double x) {
+            return 1/(Math.abs(x) + 1);
+        }
+
+        @Override
+        public double inverse(double x) {
+            return Math.signum(x) * Math.expm1(Math.abs(x));
+        }
+
+        @Override
+        public double inverseDerivative(double x) {
+            return Math.exp(Math.abs(x));
         }
 
     }

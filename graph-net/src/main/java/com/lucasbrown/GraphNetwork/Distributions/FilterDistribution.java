@@ -2,12 +2,15 @@ package com.lucasbrown.GraphNetwork.Distributions;
 
 import java.util.Random;
 import java.util.function.DoubleUnaryOperator;
+import java.util.function.Supplier;
 import java.util.stream.DoubleStream;
 
 import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
 import com.lucasbrown.GraphNetwork.Local.ICopyable;
 import com.lucasbrown.NetworkTraining.ApproximationTools.DoubleFunction;
 import com.lucasbrown.NetworkTraining.ApproximationTools.IntegralTransformations;
+import com.lucasbrown.NetworkTraining.ApproximationTools.Convolution.GenericConvolution;
+import com.lucasbrown.NetworkTraining.ApproximationTools.Convolution.IConvolution;
 
 import jsat.math.integration.Romberg;
 import jsat.math.integration.Trapezoidal;
@@ -19,7 +22,7 @@ import jsat.math.integration.Trapezoidal;
  * TODO: alter methods to include negative reinforcement as well
  */
 public abstract class FilterDistribution implements ICopyable<FilterDistribution> {
-    
+
     private static final int TRAP_COUNT = 100;
 
     /**
@@ -66,24 +69,21 @@ public abstract class FilterDistribution implements ICopyable<FilterDistribution
      */
     public abstract double differenceOfExpectation(double x);
 
-    
-    public double[] sample(int count)
-    {
+    public double[] sample(int count) {
         return DoubleStream.generate(this::sample).limit(count).toArray();
     }
-
 
     /**
      * Get the mean value of a distribution whose underlying data has undergone the
      * transformation of the activator
      * 
      * @param activator
-     * @param w 
+     * @param w
      * @return
      */
     public double getMeanOfAppliedActivation(ActivationFunction activator, double w) {
         DoubleUnaryOperator integrand = t -> IntegralTransformations
-                .asymptoticTransform(x -> w*activator.activator(x) * this.getProbabilityDensity(x), t);
+                .asymptoticTransform(x -> w * activator.activator(x) * this.getProbabilityDensity(x), t);
         return Trapezoidal.trapz(new DoubleFunction(integrand), -1, 1, TRAP_COUNT);
     }
 
@@ -96,7 +96,8 @@ public abstract class FilterDistribution implements ICopyable<FilterDistribution
      */
     public double getVarianceOfAppliedActivation(ActivationFunction activator, double w, double mean) {
         DoubleUnaryOperator integrand = t -> IntegralTransformations
-                .asymptoticTransform(x -> Math.pow(w*activator.activator(x) - mean, 2) * this.getProbabilityDensity(x), t);
+                .asymptoticTransform(
+                        x -> Math.pow(w * activator.activator(x) - mean, 2) * this.getProbabilityDensity(x), t);
         return Math.sqrt(Trapezoidal.trapz(new DoubleFunction(integrand), -1, 1, TRAP_COUNT));
     }
 
@@ -110,4 +111,15 @@ public abstract class FilterDistribution implements ICopyable<FilterDistribution
     public double getVarianceOfAppliedActivation(ActivationFunction activator, double w) {
         return getVarianceOfAppliedActivation(activator, w, getMeanOfAppliedActivation(activator, w));
     }
+
+    public DoubleUnaryOperator getActivatedDistribution(ActivationFunction activator, double weight) {
+        return x -> getProbabilityDensity(activator.inverse(x) / weight)
+                * Math.abs(activator.inverseDerivative(x) / weight);
+    }
+
+    public IConvolution toConvolution(ActivationFunction activator, double weight){
+        DoubleUnaryOperator activatedDist = getActivatedDistribution(activator, weight);
+        return new GenericConvolution(activatedDist);
+    }
+
 }

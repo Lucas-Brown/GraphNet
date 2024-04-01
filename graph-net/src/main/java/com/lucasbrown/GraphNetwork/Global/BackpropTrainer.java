@@ -45,9 +45,9 @@ public class BackpropTrainer {
         this.targets = targets;
     }
 
-    public void trainNetwork(int steps){
+    public void trainNetwork(int steps, int print_interval){
         while(steps-- > 0){
-            trainingStep(steps % 100 == 0);
+            trainingStep(steps % print_interval == 0);
         }
     }
 
@@ -85,13 +85,13 @@ public class BackpropTrainer {
     private void computeErrorOfOutput(OutputNode node, int timestep, double target){
         ArrayList<Outcome> outcomes = networkHistory.getStateOfNode(timestep, node.getID());
 
-        double normalization_const = 0;
-        for(Outcome outcome : outcomes){
-            normalization_const += outcome.probability;
-        }
+        // double normalization_const = 0;
+        // for(Outcome outcome : outcomes){
+        //     normalization_const += outcome.probability;
+        // }
 
         for(Outcome outcome : outcomes){
-            //double error = outcome.probability * errorFunction.error_derivative(outcome.netValue, target) / normalization_const;
+            // double error = outcome.probability * errorFunction.error_derivative(outcome.netValue, target) / normalization_const;
             double error = errorFunction.error_derivative(outcome.activatedValue, target);
             node.recieveError(timestep, outcome.binary_string, error);
         }
@@ -118,11 +118,15 @@ public class BackpropTrainer {
     }
 
     private void applyInputToNode(HashMap<Integer, InputNode> inputNodeMap){
+        applyInputToNode(inputNodeMap, inputs, timestep);
+    }
+
+    public static void applyInputToNode(HashMap<Integer, InputNode> inputNodeMap, Double[][] input, int counter){
         InputNode[] sortedNodes = inputNodeMap.values().stream().sorted().toArray(InputNode[]::new);
 
         for (int i = 0; i < sortedNodes.length; i++) {
-            if(inputs[timestep][i] != null){
-                sortedNodes[i].acceptUserForwardSignal(inputs[timestep][i]);
+            if(input[counter][i] != null){
+                sortedNodes[i].acceptUserForwardSignal(input[counter][i]);
             }
         }
     }

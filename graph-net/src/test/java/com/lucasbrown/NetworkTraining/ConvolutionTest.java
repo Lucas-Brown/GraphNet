@@ -11,7 +11,7 @@ import org.junit.Test;
 import com.lucasbrown.GraphNetwork.Distributions.BellCurveDistribution;
 import com.lucasbrown.GraphNetwork.Distributions.NormalDistribution;
 import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
-import com.lucasbrown.NetworkTraining.ApproximationTools.Convolution;
+import com.lucasbrown.NetworkTraining.ApproximationTools.Convolution.FilterDistributionConvolution;
 
 
 public class ConvolutionTest {
@@ -24,7 +24,7 @@ public class ConvolutionTest {
         DoubleUnaryOperator d1 = x -> Math.exp(-x*x/2)/Math.sqrt(2 * Math.PI);
         DoubleUnaryOperator d2 = x -> Math.exp(-(x-1)*(x-1)/2)/Math.sqrt(2 * Math.PI); 
 
-        DoubleUnaryOperator convOp = Convolution.convolution(d1, d2);
+        DoubleUnaryOperator convOp = FilterDistributionConvolution.convolution(d1, d2);
 
         assertEquals(0.219695644734, convOp.applyAsDouble(0), TOLLERANCE);
         assertEquals(0.282094791774, convOp.applyAsDouble(1), TOLLERANCE);
@@ -40,7 +40,7 @@ public class ConvolutionTest {
         ActivationFunction a1 = ActivationFunction.LINEAR;
         ActivationFunction a2 = ActivationFunction.LINEAR;
 
-        Convolution convolution = new Convolution(new ArrayList(List.of(d1, d2)), new ArrayList(List.of(a1, a2)), new double[]{1,1});
+        FilterDistributionConvolution convolution = new FilterDistributionConvolution(new ArrayList(List.of(d1, d2)), new ArrayList(List.of(a1, a2)), new double[]{1,1});
         assertEquals(0.241970724519, convolution.convolve(0), TOLLERANCE);
         assertEquals(0.398942280401, convolution.convolve(1), TOLLERANCE);
         assertEquals(0.000133830225765, convolution.convolve(5), TOLLERANCE);
@@ -54,7 +54,7 @@ public class ConvolutionTest {
         ActivationFunction a1 = ActivationFunction.SIGNED_QUADRATIC;
         ActivationFunction a2 = ActivationFunction.SIGNED_QUADRATIC;
 
-        Convolution convolution = new Convolution(new ArrayList(List.of(d1, d2)), new ArrayList(List.of(a1, a2)), new double[]{2,1});
+        FilterDistributionConvolution convolution = new FilterDistributionConvolution(new ArrayList(List.of(d1, d2)), new ArrayList(List.of(a1, a2)), new double[]{2,1});
         assertEquals(0.120853388328, convolution.convolve(0), TOLLERANCE);
         assertEquals(0.151640520652, convolution.convolve(1), TOLLERANCE);
         assertEquals(0.0591454337874, convolution.convolve(5), TOLLERANCE);
@@ -85,7 +85,7 @@ public class ConvolutionTest {
         ActivationFunction a1 = ActivationFunction.LINEAR;
         ActivationFunction a2 = ActivationFunction.LINEAR;
 
-        Convolution convolution = new Convolution(new ArrayList(List.of(d1, d2)), new ArrayList(List.of(a1, a2)), new double[]{1,1});
+        FilterDistributionConvolution convolution = new FilterDistributionConvolution(new ArrayList(List.of(d1, d2)), new ArrayList(List.of(a1, a2)), new double[]{1,1});
         double[][] samples = convolution.sample(z, (int) (10/sample_tollerance/sample_tollerance));
 
         double mean_1 = 0;

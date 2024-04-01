@@ -1,4 +1,4 @@
-package com.lucasbrown.NetworkTraining.ApproximationTools;
+package com.lucasbrown.NetworkTraining.ApproximationTools.Convolution;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -10,6 +10,8 @@ import java.util.stream.Stream;
 
 import com.lucasbrown.GraphNetwork.Distributions.FilterDistribution;
 import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
+import com.lucasbrown.NetworkTraining.ApproximationTools.DoubleFunction;
+import com.lucasbrown.NetworkTraining.ApproximationTools.IntegralTransformations;
 
 import jsat.math.integration.Romberg;
 import jsat.distributions.multivariate.NormalM;
@@ -18,20 +20,20 @@ import jsat.linear.DenseVector;
 import jsat.linear.Matrix;
 import jsat.linear.Vec;
 
-public class Convolution {
+public class FilterDistributionConvolution {
 
     private final Random rng = new Random();
 
     private ArrayList<? extends FilterDistribution> activationDistributions;
     private ArrayList<? extends ActivationFunction> activators;
     private double[] weights;
-    private List<DoubleUnaryOperator> distributions;
-    private DoubleUnaryOperator conv_func;
+    private List<IConvolution> distributions;
+    private IConvolution conv_func;
 
     private int[] dependentIndices;
     private int[] independentIndices;
 
-    public Convolution(ArrayList<? extends FilterDistribution> activationDistributions,
+    public FilterDistributionConvolution(ArrayList<? extends FilterDistribution> activationDistributions,
             ArrayList<? extends ActivationFunction> activators, double[] weights) {
         this.activationDistributions = activationDistributions;
         this.activators = activators;
@@ -45,8 +47,7 @@ public class Convolution {
         // combine distributions, activation functions, and weights into one probability
         // distribution
         distributions = IntStream.range(0, activationDistributions.size())
-                .mapToObj(i -> applyActivationToDistribution(activationDistributions.get(i), activators.get(i),
-                        weights[i]))
+                .mapToObj(i -> activationDistributions.get(i).toConvolution(activators.get(i), weights[i]))
                 .toList();
 
         if (dependentIndices.length == 0)
@@ -56,7 +57,7 @@ public class Convolution {
         conv_func = distributions.get(dependentIndices[0]);
         for (int i = 1; i < dependentIndices.length; i++) {
             int idx = dependentIndices[i];
-            conv_func = convolution(conv_func, distributions.get(idx));
+            conv_func = conv_func.convolveWith(distributions.get(idx));
         }
 
     }
@@ -102,7 +103,7 @@ public class Convolution {
         double[][] independent_samples = generateIndependentSamples(count);
         double[][] dependent_samples = generateDependentSamples(z, count);
 
-        return mergeSamples(dependent_samples, independent_samples); 
+        return mergeSamples(dependent_samples, independent_samples);
     }
 
     private double[][] generateIndependentSamples(int count) {
@@ -243,28 +244,6 @@ public class Convolution {
             }
         }
         return invertedSamples;
-    }
-
-    /**
-     * Convolution of two functions
-     * 
-     * @param f1
-     * @param f2
-     * @return
-     */
-    public static DoubleUnaryOperator convolution(DoubleUnaryOperator f1, DoubleUnaryOperator f2) {
-        return z -> Romberg.romb(new DoubleFunction(convolutionIntegrand(f1, f2, z)), -1, 1);
-    }
-
-    public static DoubleUnaryOperator convolutionIntegrand(DoubleUnaryOperator f1, DoubleUnaryOperator f2, double z) {
-        return t -> IntegralTransformations
-                .asymptoticTransform(x -> f1.applyAsDouble(x) * f2.applyAsDouble(z - x), t);
-    }
-
-    public static DoubleUnaryOperator applyActivationToDistribution(
-            FilterDistribution activationDistribution, ActivationFunction activator, double weight) {
-        return x -> activationDistribution.getProbabilityDensity(activator.inverse(x) / weight)
-                * Math.abs(activator.inverseDerivative(x) / weight);
     }
 
 }

@@ -12,7 +12,7 @@ public class LinearDataBackpropTraining {
     
     private static int counter = 0;
 
-    private int N = 5;
+    private int N = 10;
     private Double[][] inputData;
     private Double[][] outputData;
 
@@ -41,25 +41,21 @@ public class LinearDataBackpropTraining {
         GraphNetwork net = new GraphNetwork();
 
         Node in = net.createInputNode(ActivationFunction.LINEAR);
+        //Node hidden = net.createHiddenNode(ActivationFunction.LINEAR);
         Node out = net.createOutputNode(ActivationFunction.LINEAR);
-        //Node hidden1 = net.createHiddenNode(ActivationFunction.LINEAR);
-        //Node hidden2 = net.createHiddenNode(ActivationFunction.LINEAR);
 
         in.setName("Input");
+        //hidden.setName("Hidden");
         out.setName("Output");
-        //hidden1.setName("Hidden1");
-        //hidden2.setName("Hidden2");
 
-        // net.addNewConnection(in, hidden1, new BellCurveDistribution(0, 1));
-        // net.addNewConnection(in, hidden2, new BellCurveDistribution(1, 1));
-        // net.addNewConnection(hidden1, out, new BellCurveDistribution(-1, 1));
-        // net.addNewConnection(hidden2, out, new BellCurveDistribution(0, 1));
-        net.addNewConnection(in, out, new BellCurveDistribution(0, 1, 5, 1000));
+        //net.addNewConnection(in, hidden, new BellCurveDistribution(0, 1));
+        //net.addNewConnection(hidden, out, new BellCurveDistribution(-1, 1));
+        net.addNewConnection(in, out, new BellCurveDistribution(-1, 1));
 
         BackpropTrainer bt = new BackpropTrainer(net, new ErrorFunction.MeanSquaredError());
 
         bt.setTrainingData(linear.inputData, linear.outputData);
-        bt.trainNetwork(1000);
+        bt.trainNetwork(1000, 100);
 
         net.deactivateAll();
         net.setInputOperation(nodeMap -> nodeMap.values().iterator().next().acceptUserForwardSignal(linear.inputData[counter++][0]));

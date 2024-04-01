@@ -17,7 +17,7 @@ import com.lucasbrown.GraphNetwork.Distributions.FilterDistribution;
 import com.lucasbrown.GraphNetwork.Global.GraphNetwork;
 import com.lucasbrown.GraphNetwork.Global.SharedNetworkData;
 import com.lucasbrown.NetworkTraining.ApproximationTools.ArrayTools;
-import com.lucasbrown.NetworkTraining.ApproximationTools.Convolution;
+import com.lucasbrown.NetworkTraining.ApproximationTools.Convolution.FilterDistributionConvolution;
 
 /**
  * A node within a graph neural network.
@@ -602,29 +602,31 @@ public class Node implements Comparable<Node> {
      */
 
     // private void sendBackwardsSignals() {
-    //     // Select the backward signal combination
-    //     Convolution[] convolutions = getReverseOutcomes();
-    //     double[] densityWeights = evaluateConvolutions(convolutions);
-    //     backwardsBinStr = selectReverseOutcome(densityWeights) + 1;
-        
-    //     // Sample signal strengths from the selected distribution
-    //     double[] sample = convolutions[backwardsBinStr - 1].sample(mergedBackwardStrength);
-        
-    //     // Send the backward signals
-    //     ArrayList<Arc> arcs = binStrToArcList(backwardsBinStr);
-    //     for (int i = 0; i < sample.length; i++) {
-    //     Arc arc_i = arcs.get(i);
-    //     double sample_i = sample[i];
-    //     double sample_inverse = arc_i.recieving.activationFunction.inverse(sample_i);
-    //     arc_i.sendBackwardSignal(sample_inverse); // send signal backwards
-    //     arc_i.probDist.prepareReinforcement(sample_inverse); // prepare to reinforce// the distribution
+    // // Select the backward signal combination
+    // Convolution[] convolutions = getReverseOutcomes();
+    // double[] densityWeights = evaluateConvolutions(convolutions);
+    // backwardsBinStr = selectReverseOutcome(densityWeights) + 1;
+
+    // // Sample signal strengths from the selected distribution
+    // double[] sample = convolutions[backwardsBinStr -
+    // 1].sample(mergedBackwardStrength);
+
+    // // Send the backward signals
+    // ArrayList<Arc> arcs = binStrToArcList(backwardsBinStr);
+    // for (int i = 0; i < sample.length; i++) {
+    // Arc arc_i = arcs.get(i);
+    // double sample_i = sample[i];
+    // double sample_inverse = arc_i.recieving.activationFunction.inverse(sample_i);
+    // arc_i.sendBackwardSignal(sample_inverse); // send signal backwards
+    // arc_i.probDist.prepareReinforcement(sample_inverse); // prepare to
+    // reinforce// the distribution
     // }
 
-    public Convolution[] getReverseOutcomes() {
+    public FilterDistributionConvolution[] getReverseOutcomes() {
         // Loop over all possible incoming signal combinations and record the value
         // of their convolution
         int n_choices = 0b1 << incoming.size();
-        Convolution[] convolutions = new Convolution[n_choices - 1];
+        FilterDistributionConvolution[] convolutions = new FilterDistributionConvolution[n_choices - 1];
         for (int binStr = 1; binStr < n_choices; binStr++) {
             // get the arcs corresponding to this bit string
             ArrayList<Arc> arcs = binStrToArcList(binStr);
@@ -642,14 +644,14 @@ public class Node implements Comparable<Node> {
             double[] weights = getWeights(binStr);
 
             // Get the probability density
-            convolutions[binStr - 1] = new Convolution(distributions, activators,
+            convolutions[binStr - 1] = new FilterDistributionConvolution(distributions, activators,
                     weights);
         }
 
         return convolutions;
     }
 
-    public double[] evaluateConvolutions(Convolution[] convolutions, double activatedValue) {
+    public double[] evaluateConvolutions(FilterDistributionConvolution[] convolutions, double activatedValue) {
         double[] densityWeights = new double[convolutions.length];
         for (int binStr = 1; binStr <= convolutions.length; binStr++) {
             // Shift the signal strength by the bias
@@ -695,12 +697,18 @@ public class Node implements Comparable<Node> {
     }
 
     public void sendErrorsBackwards(ArrayList<Outcome> outcomesAtTime, int timestep) {
+
+        double normalization_const = 0;
+        for(Outcome outcome : outcomesAtTime){
+            normalization_const += outcome.probability;
+        }
+
         for (Outcome outcome : outcomesAtTime) {
             Double error = error_signals.get(new TimeKey(timestep, outcome.binary_string));
-            assert Double.isFinite(error);
-
-            sendErrorsBackwards(outcome, timestep, error);
-            sendBackwardsSample(outcome, error);
+            if (error != null) {
+                sendErrorsBackwards(outcome, timestep, error * outcome.probability / normalization_const);
+                sendBackwardsSample(outcome, error);
+            }
         }
     }
 
@@ -730,19 +738,20 @@ public class Node implements Comparable<Node> {
         double activatedValue = outcomeAtTime.netValue - error;
 
         // Select the backward signal combination
-        Convolution[] convolutions = getReverseOutcomes();
+        FilterDistributionConvolution[] convolutions = getReverseOutcomes();
         double[] densityWeights = evaluateConvolutions(convolutions, activatedValue);
         backwardsBinStr = selectReverseOutcome(densityWeights) + 1;
-        
+
         // Sample signal strengths from the selected distribution
         double[] sample = convolutions[backwardsBinStr - 1].sample(activatedValue - biases[backwardsBinStr]);
-        
+
         // Send the backward signals
         ArrayList<Arc> arcs = binStrToArcList(backwardsBinStr);
         for (int i = 0; i < sample.length; i++) {
             Arc arc_i = arcs.get(i);
             double sample_i = sample[i];
             double sample_inverse = arc_i.recieving.activationFunction.inverse(sample_i);
+            assert Double.isFinite(sample_inverse);
             arc_i.probDist.prepareReinforcement(sample_inverse); // prepare to reinforce// the distribution
         }
     }

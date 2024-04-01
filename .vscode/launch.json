@@ -6,10 +6,19 @@
     "configurations": [
         {
             "type": "java",
+            "name": "AdderTest",
+            "request": "launch",
+            "mainClass": "com.lucasbrown.NetworkTraining.AdderTest",
+            "projectName": "graph-net",
+            "vmArgs": "-enableassertions"
+        },
+        {
+            "type": "java",
             "name": "LinearDataBackpropTraining",
             "request": "launch",
             "mainClass": "com.lucasbrown.NetworkTraining.LinearDataBackpropTraining",
-            "projectName": "graph-net"
+            "projectName": "graph-net",
+            "vmArgs": "-enableassertions"
         },
         {
             "type": "java",
