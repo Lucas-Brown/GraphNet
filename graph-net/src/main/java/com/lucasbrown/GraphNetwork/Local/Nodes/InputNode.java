@@ -1,4 +1,4 @@
-package com.lucasbrown.GraphNetwork.Local;
+package com.lucasbrown.GraphNetwork.Local.Nodes;
 
 import java.security.InvalidAlgorithmParameterException;
 import java.util.ArrayList;
@@ -10,26 +10,26 @@ import com.lucasbrown.GraphNetwork.Global.SharedNetworkData;
  * A node which exposes the functionality of recieving signals.
  * InputNodes cannot have any incoming connections
  */
-public class InputNode extends Node implements IInputNode {
+public class InputNode extends NodeWrapper implements IInputNode {
 
     private double inputValue;
 
-    public InputNode(final GraphNetwork network, final ActivationFunction activationFunction) {
-        super(network, activationFunction);
+    public InputNode(INode node){
+        super(node);
     }
 
     @Override
     public void acceptUserForwardSignal(double value) {
         inputValue = value;
-        network.notifyNodeActivation(this);
-        hasValidForwardSignal = true; 
+        wrappingNode.network.notifyNodeActivation(this);
+        wrappingNode.hasValidForwardSignal = true; 
     }
 
     @Override
     public void acceptUserInferenceSignal(double value) {
         inputValue = value;
-        network.notifyNodeActivation(this);
-        hasValidForwardSignal = true;
+        wrappingNode.network.notifyNodeActivation(this);
+        wrappingNode.hasValidForwardSignal = true;
     }
 
     @Override
@@ -86,11 +86,11 @@ public class InputNode extends Node implements IInputNode {
     public boolean addIncomingConnection(Arc connection) {
         throw new UnsupportedOperationException("Input nodes are not allowed to have any incoming connections.");
     }
-
     
     @Override
     public String toString() {
         return name + ": (" + inputValue + ", 100%)";
     }
 
+    
 }

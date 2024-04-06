@@ -1,4 +1,4 @@
-package com.lucasbrown.GraphNetwork.Local;
+package com.lucasbrown.GraphNetwork.Local.Nodes;
 
 import com.lucasbrown.GraphNetwork.Global.GraphNetwork;
 import com.lucasbrown.GraphNetwork.Global.SharedNetworkData;
@@ -7,10 +7,10 @@ import com.lucasbrown.GraphNetwork.Global.SharedNetworkData;
  * A node which exposes it's value and can be sent a corrective (backward)
  * signal
  */
-public class OutputNode extends Node implements IOutputNode{
+public class OutputNode extends NodeWrapper implements IOutputNode {
 
-    public OutputNode(final GraphNetwork network, final ActivationFunction activationFunction) {
-        super(network, activationFunction);
+    public OutputNode(Node node) {
+        super(node);
     }
 
     /**

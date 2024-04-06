@@ -1,4 +1,4 @@
-package com.lucasbrown.GraphNetwork.Local.ComplexNode;
+package com.lucasbrown.GraphNetwork.Local.Nodes.ComplexNode;
 
 import java.security.InvalidAlgorithmParameterException;
 import java.util.ArrayList;

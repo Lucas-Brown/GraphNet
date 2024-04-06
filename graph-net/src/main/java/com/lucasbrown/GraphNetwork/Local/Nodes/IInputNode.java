@@ -1,4 +1,4 @@
-package com.lucasbrown.GraphNetwork.Local;
+package com.lucasbrown.GraphNetwork.Local.Nodes;
 
 public interface IInputNode {
 

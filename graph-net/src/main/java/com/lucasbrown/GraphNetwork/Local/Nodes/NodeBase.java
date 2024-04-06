@@ -1,4 +1,4 @@
-package com.lucasbrown.GraphNetwork.Local;
+package com.lucasbrown.GraphNetwork.Local.Nodes;
 
 import java.security.InvalidAlgorithmParameterException;
 import java.util.ArrayList;
@@ -25,7 +25,7 @@ import com.lucasbrown.NetworkTraining.ApproximationTools.Convolution.FilterDistr
  * Each node uses a @code NodeConnection to evaluate its own likelyhood of
  * sending a signal out to other connected nodes
  */
-public abstract class Node implements Comparable<Node> {
+public abstract class NodeBase implements INode {
 
     private final Random rng = new Random();
 
@@ -277,7 +277,7 @@ public abstract class Node implements Comparable<Node> {
      * 
      * @throws InvalidAlgorithmParameterException
      */
-    public void acceptSignals() throws InvalidAlgorithmParameterException {
+    public void acceptSignals() {
         if (forwardNext.isEmpty() & backwardNext.isEmpty() & inferenceNext.isEmpty()) {
             throw new InvalidAlgorithmParameterException(
                     "handleIncomingSignals should never be called if no signals have been recieved.");
@@ -362,14 +362,6 @@ public abstract class Node implements Comparable<Node> {
     private double getRecentBackwardsSignal() {
         return backward.stream().mapToDouble(Signal::getOutputStrength).average().getAsDouble();
     }
-
-    /**
-     * Compute the merged signal strength of a set of incoming signals
-     * 
-     * @param incomingSignals
-     * @return
-     */
-    protected abstract double computeMergedSignalStrength(Collection<Signal> incomingSignals, int binary_string);
 
     /**
      * Set the state parameters for incoming signal (i.e, either the forward or
@@ -592,10 +584,6 @@ public abstract class Node implements Comparable<Node> {
         }
     }
 
-    protected abstract void addBiasDelta(int bitStr, double error);
-
-    protected abstract void addWeightDelta(int bitStr, int weight_index, double error);
-
     private void sendErrorsBackwards(Outcome outcomeAtTime, int timestep, double error) {
         int binary_string = outcomeAtTime.binary_string;
         double error_derivative = activationFunction.derivative(outcomeAtTime.netValue) * error;
@@ -699,4 +687,7 @@ public abstract class Node implements Comparable<Node> {
         return id == ((Node) o).id;
     }
 
+    abstract void addBiasDelta(int bitStr, double error);
+
+    abstract void addWeightDelta(int bitStr, int weight_index, double error);
 }
