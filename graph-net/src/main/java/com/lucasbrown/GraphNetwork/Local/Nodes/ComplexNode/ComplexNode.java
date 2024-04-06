@@ -180,7 +180,7 @@ public class ComplexNode extends Node {
         ArrayList<Signal> sortedSignals = new ArrayList<>(incomingSignals);
         // sorting by id to ensure that the weights are applied to the correct
         // node/signal
-        sortedSignals.sort((s1, s2) -> Integer.compare(s1.recievingNode.id, s2.recievingNode.id));
+        sortedSignals.sort(Signal::CompareSendingNodeIDs);
 
         double[] input_weights = weights[binary_string];
 

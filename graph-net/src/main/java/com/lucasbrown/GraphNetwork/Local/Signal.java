@@ -1,6 +1,6 @@
 package com.lucasbrown.GraphNetwork.Local;
 
-public class Signal {
+public class Signal{
     public final Node sendingNode;
     public final Node recievingNode;
     public final int sourceKey;
@@ -35,5 +35,9 @@ public class Signal {
     
     public double getProbability() {
         return probability;
+    }
+
+    public static int CompareSendingNodeIDs(Signal s1, Signal s2){
+        return Integer.compare(s1.sendingNode.id, s2.sendingNode.id);
     }
 }

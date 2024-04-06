@@ -335,8 +335,7 @@ public abstract class Node implements Comparable<Node> {
      */
     private Outcome signalSetToOutcome(Collection<Signal> signalSet) {
         Outcome outcome = new Outcome();
-        signalSet = signalSet.stream().sorted((s1, s2) -> Integer.compare(s1.sendingNode.id, s2.sendingNode.id))
-                .toList();
+        signalSet = signalSet.stream().sorted(Signal::CompareSendingNodeIDs).toList();
         List<Node> nodeSet = signalSet.stream().map(Signal::getSendingNode).toList();
         outcome.binary_string = nodeSetToBinStr(nodeSet);
         outcome.netValue = computeMergedSignalStrength(signalSet, outcome.binary_string);
@@ -677,8 +676,10 @@ public abstract class Node implements Comparable<Node> {
 
     @Override
     public String toString() {
-        return name + ": " + outcomes.stream().sorted((o1, o2) -> -Double.compare(o1.probability, o2.probability))
-                .toList().toString();
+        return name + ": " + outcomes.stream()
+                .sorted(Signal::CompareSendingNodeIDs)
+                .toList()
+                .toString();
     }
 
     @Override
