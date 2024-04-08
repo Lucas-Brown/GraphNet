@@ -45,8 +45,6 @@ public class ComplexNode extends NodeBase {
      */
     private int backwardsBinStr;
 
-    protected boolean hasValidForwardSignal;
-
     public ComplexNode(final ActivationFunction activationFunction){
         this(null, activationFunction);
     }
@@ -61,8 +59,6 @@ public class ComplexNode extends NodeBase {
         weights_delta = new double[1][1];
         weights_delta[0] = new double[0];
         error_signals = new HashMap<>();
-
-        uniqueIncomingNodeIDs = new HashSet<>();
     }
 
     /**
@@ -73,19 +69,8 @@ public class ComplexNode extends NodeBase {
      */
     @Override
     public boolean addIncomingConnection(Arc connection) {
-        orderedIDMap.put(connection.getSendingID(), 1 << orderedIDMap.size());
         appendWeightsAndBiases();
         return super.addIncomingConnection(connection);
-    }
-
-    /**
-     * Notify this node of a new incoming forward signal
-     * 
-     * @param signal
-     */
-    public void recieveForwardSignal(Signal signal) {
-        appendForward(signal);
-        super.recieveForwardSignal(signal);
     }
 
     @Override
@@ -104,24 +89,10 @@ public class ComplexNode extends NodeBase {
         return error_signals.get(new TimeKey(timestep, key));
     }
 
-    private void appendForward(Signal signal) {
-        int signal_id = orderedIDMap.get(signal.getSendingID());
-        ArrayList<Signal> signals = forwardNext.get(signal_id);
-        if (signals == null) {
-            signals = new ArrayList<Signal>(1);
-            signals.add(signal);
-            forwardNext.put(signal_id, signals);
-        } else {
-            signals.add(signal);
-        }
-        uniqueIncomingNodeIDs.add(signal.getSendingID());
-    }
-
     /**
      * Adds another layer of depth to the weights and biases hyper array
      */
     private void appendWeightsAndBiases() {
-        Random rand = new Random();
         final int old_size = biases.length;
         final int new_size = old_size * 2;
 
@@ -135,13 +106,13 @@ public class ComplexNode extends NodeBase {
 
         // the second half needs entirely new data
         for (int i = old_size; i < new_size; i++) {
-            biases[i] = rand.nextDouble();
+            biases[i] = rng.nextDouble();
 
             // populate the weights array
             int count = weights[i - old_size].length + 1;
             weights[i] = new double[count];
             for (int j = 0; j < count; j++) {
-                weights[i][j] = rand.nextDouble();
+                weights[i][j] = rng.nextDouble();
             }
         }
 
@@ -169,10 +140,7 @@ public class ComplexNode extends NodeBase {
     @Override
     protected double computeMergedSignalStrength(Collection<Signal> incomingSignals, int binary_string) {
 
-        ArrayList<Signal> sortedSignals = new ArrayList<>(incomingSignals);
-        // sorting by id to ensure that the weights are applied to the correct
-        // node/signal
-        sortedSignals.sort(Signal::compareSendingNodeIDs);
+        ArrayList<Signal> sortedSignals = sortSignalByID(incomingSignals);
 
         double[] input_weights = weights[binary_string];
 

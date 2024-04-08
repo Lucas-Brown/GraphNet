@@ -40,6 +40,17 @@ public class ArrayTools {
         return intersection.size() > 0;
     }
 
+    public static double[] applyMask(double[] array, int mask){
+        double[] filtered_array = new double[Integer.bitCount(mask)];
+        int filtered_count = 0;
+        for(int i = 0; i < array.length; i++){
+            if(((mask >> i) & 0b1) == 1){
+                filtered_array[filtered_count++] = array[i]; 
+            }
+        }
+        return filtered_array;
+    }
+
     @SuppressWarnings("unchecked")
     public static <T> HashSet<HashSet<T>> shallowCopy(HashSet<HashSet<T>> toCopy) {
         HashSet<HashSet<T>> copy = new HashSet<>(toCopy.size());

@@ -12,8 +12,7 @@ public class OpenFilter extends FilterDistribution {
 
     @Override
     public double getProbabilityDensity(double x) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getProbabilityDensity'");
+        return 0;
     }
 
     @Override

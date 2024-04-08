@@ -91,19 +91,19 @@ public class BackpropTrainer {
     private double computeErrorOfOutput(OutputNode node, int timestep, double target){
         ArrayList<Outcome> outcomes = networkHistory.getStateOfNode(timestep, node.getID());
 
-        // double normalization_const = 0;
-        // for(Outcome outcome : outcomes){
-        //     normalization_const += outcome.probability;
-        // }
+        double normalization_const = 0;
+        for(Outcome outcome : outcomes){
+            normalization_const += outcome.probability;
+        }
 
         double total_error = 0;
         for(Outcome outcome : outcomes){
-            // double error = outcome.probability * errorFunction.error_derivative(outcome.netValue, target) / normalization_const;
-            total_error += errorFunction.error(outcome.activatedValue, target);
-            double error = errorFunction.error_derivative(outcome.activatedValue, target);
+            double error = outcome.probability * errorFunction.error_derivative(outcome.netValue, target) / normalization_const;
+            total_error += outcome.probability * errorFunction.error(outcome.activatedValue, target);
+            //double error = errorFunction.error_derivative(outcome.activatedValue, target);
             node.recieveError(timestep, outcome.binary_string, error);
         }
-        return total_error;
+        return total_error/normalization_const;
     }
 
     private void backpropagateErrors() {

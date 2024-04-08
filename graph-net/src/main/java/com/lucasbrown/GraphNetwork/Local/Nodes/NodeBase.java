@@ -29,7 +29,7 @@ import com.lucasbrown.NetworkTraining.ApproximationTools.Convolution.FilterDistr
  */
 public abstract class NodeBase implements INode {
 
-    private final Random rng = new Random();
+    protected final Random rng = new Random();
 
     /**
      * The coutner is used to give each node a unique ID
@@ -84,7 +84,7 @@ public abstract class NodeBase implements INode {
      * Maps all incoming node ID's to an int from 0 to the number of incoming nodes
      * -1
      */
-    protected final HashMap<Integer, Integer> orderedIDMap;
+    private final HashMap<Integer, Integer> orderedIDMap;
 
     protected ArrayList<Outcome> outcomes;
 
@@ -144,6 +144,10 @@ public abstract class NodeBase implements INode {
         return activationFunction;
     }
 
+    protected int getIndexOfIncomingNode(INode incoming){
+        return orderedIDMap.get(incoming.getID());
+    }
+
     /**
      * 
      * @param node
@@ -179,6 +183,7 @@ public abstract class NodeBase implements INode {
      */
     @Override
     public boolean addIncomingConnection(Arc connection) {
+        orderedIDMap.put(connection.getSendingID(), 1 << orderedIDMap.size());
         return incoming.add(connection);
     }
 
@@ -215,6 +220,7 @@ public abstract class NodeBase implements INode {
      */
     @Override
     public void recieveForwardSignal(Signal signal) {
+        appendForward(signal);
         network.notifyNodeActivation(this);
     }
 
@@ -253,6 +259,19 @@ public abstract class NodeBase implements INode {
     @Override
     public void setValidForwardSignal(boolean state) {
         hasValidForwardSignal = state;
+    }
+
+    private void appendForward(Signal signal) {
+        int signal_id = orderedIDMap.get(signal.getSendingID());
+        ArrayList<Signal> signals = forwardNext.get(signal_id);
+        if (signals == null) {
+            signals = new ArrayList<Signal>(1);
+            signals.add(signal);
+            forwardNext.put(signal_id, signals);
+        } else {
+            signals.add(signal);
+        }
+        uniqueIncomingNodeIDs.add(signal.getSendingID());
     }
 
     /**
@@ -397,9 +416,9 @@ public abstract class NodeBase implements INode {
         return outcome;
     }
 
-    private ArrayList<Signal> sortSignalByID(Collection<Signal> toSort) {
+    public ArrayList<Signal> sortSignalByID(Collection<Signal> toSort) {
         ArrayList<Signal> sortedSignals = new ArrayList<>(toSort);
-        sortedSignals.sort(Signal::compareSendingNodeIDs);
+        sortedSignals.sort(this::mappedIDComparator);
         return sortedSignals;
     }
 
@@ -635,7 +654,7 @@ public abstract class NodeBase implements INode {
 
         for (Outcome outcome : outcomesAtTime) {
             Double error = getError(timestep, outcome.binary_string);
-            if (error != null) {
+            if (error != null & outcome.probability > 0) {
                 sendErrorsBackwards(outcome, timestep, error * outcome.probability / normalization_const);
                 sendBackwardsSample(outcome, error);
             }
@@ -648,6 +667,7 @@ public abstract class NodeBase implements INode {
         double[] weightsOfNodes = getWeights(binary_string);
 
         // may need to correct for probability weighting
+        addProbabilityWeight(binary_string, outcomeAtTime.probability);
         addBiasDelta(binary_string, error_derivative);
         for (int i = 0; i < weightsOfNodes.length; i++) {
             addWeightDelta(binary_string, i, outcomeAtTime.sourceOutputs[i] * error_derivative);
@@ -684,6 +704,12 @@ public abstract class NodeBase implements INode {
         }
     }
 
+    public int mappedIDComparator(Signal s1, Signal s2){
+        int i1 = orderedIDMap.get(s1.sendingNode.getID());
+        int i2 = orderedIDMap.get(s2.sendingNode.getID());
+        return i1 - i2;
+    }
+
     public void clearSignals() {
         hasRecentBackwardsSignal = false;
         hasValidForwardSignal = false;
@@ -698,6 +724,7 @@ public abstract class NodeBase implements INode {
     @Override
     public String toString() {
         return name + ": " + outcomes.stream()
+                .filter(outcome -> outcome.probability > 0)
                 .sorted(Outcome::descendingProbabilitiesComparator)
                 .toList()
                 .toString();
@@ -729,6 +756,8 @@ public abstract class NodeBase implements INode {
     public abstract double[] getWeights(int bitStr);
 
     public abstract double getBias(int bitStr);
+
+    protected abstract void addProbabilityWeight(int bitStr, double weight);
 
     protected abstract void addBiasDelta(int bitStr, double error);
 

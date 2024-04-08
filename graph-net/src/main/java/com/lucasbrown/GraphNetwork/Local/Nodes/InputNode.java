@@ -97,7 +97,7 @@ public class InputNode extends NodeWrapper implements IInputNode {
     
     @Override
     public String toString() {
-        return getName() + ": (" + inputValue + ", 100%)";
+        return String.format("%s: (%.2e, 100%s)", getName(), inputValue, "%");
     }
 
     
