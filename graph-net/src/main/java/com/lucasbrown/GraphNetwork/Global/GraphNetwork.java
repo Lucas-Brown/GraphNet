@@ -5,21 +5,18 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.TreeSet;
 import java.util.Map.Entry;
 import java.util.function.Consumer;
-import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
 import com.lucasbrown.GraphNetwork.Distributions.FilterDistribution;
-import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
 import com.lucasbrown.GraphNetwork.Local.Arc;
-import com.lucasbrown.GraphNetwork.Local.InputNode;
-import com.lucasbrown.GraphNetwork.Local.Node;
-import com.lucasbrown.GraphNetwork.Local.OutputNode;
-import com.lucasbrown.NetworkTraining.History;
-import com.lucasbrown.NetworkTraining.ApproximationTools.ErrorFunction;
+import com.lucasbrown.GraphNetwork.Local.Nodes.IInputNode;
+import com.lucasbrown.GraphNetwork.Local.Nodes.INode;
+import com.lucasbrown.GraphNetwork.Local.Nodes.IOutputNode;
+import com.lucasbrown.GraphNetwork.Local.Nodes.InputNode;
+import com.lucasbrown.GraphNetwork.Local.Nodes.OutputNode;
 
 /**
  * A neural network using a probabalistic directed graph representation.
@@ -33,7 +30,7 @@ public class GraphNetwork {
     /**
      * A list of all nodes within the graph network
      */
-    private final ArrayList<Node> nodes;
+    private final ArrayList<INode> nodes;
 
     /**
      * All input nodes
@@ -48,24 +45,24 @@ public class GraphNetwork {
     /**
      * A hash set containing every node that recieved a signal this step
      */
-    private HashSet<Node> activeNodes;
+    private HashSet<INode> activeNodes;
 
     /**
      * A hash set containing every node that will recieve a signal in the next step
      */
-    private HashSet<Node> activeNextNodes;
+    private HashSet<INode> activeNextNodes;
 
     /**
      * An operation which is to be defined by the user to set the values of input
      * nodes
      */
-    private Consumer<HashMap<Integer, InputNode>> inputOperation;
+    private Consumer<HashMap<Integer, ? extends IInputNode>> inputOperation;
 
     /**
      * An operation which is to be defined by the user to correct the values of
      * output nodes during training or get output data
      */
-    private Consumer<HashMap<Integer, OutputNode>> outputOperation;
+    private Consumer<HashMap<Integer, ? extends IOutputNode>> outputOperation;
 
     public GraphNetwork() {
 
@@ -80,12 +77,12 @@ public class GraphNetwork {
         };
     }
 
-    public void setInputOperation(Consumer<HashMap<Integer, InputNode>> inputOperation) {
+    public void setInputOperation(Consumer<HashMap<Integer, ? extends IInputNode>> inputOperation) {
         this.inputOperation = inputOperation == null ? (_1) -> {
         } : inputOperation;
     }
 
-    public void setOutputOperation(Consumer<HashMap<Integer, OutputNode>> outputOperation) {
+    public void setOutputOperation(Consumer<HashMap<Integer, ? extends IOutputNode>> outputOperation) {
         this.outputOperation = outputOperation == null ? (_1) -> {
         } : outputOperation;
     }
@@ -114,8 +111,8 @@ public class GraphNetwork {
      * @return The node that was created
      */
     /*
-     * public Node createHiddenNode(final ActivationFunction activationFunction) {
-     * Node n = new Node(this, networkData, activationFunction);
+     * public INode createHiddenNode(final ActivationFunction activationFunction) {
+     * INode n = new INode(this, networkData, activationFunction);
      * nodes.add(n);
      * return n;
      * }
@@ -135,7 +132,7 @@ public class GraphNetwork {
      * }
      */
 
-    public void addNewConnection(Node transmittingNode, Node recievingNode,
+    public void addNewConnection(INode transmittingNode, INode recievingNode,
             FilterDistribution transferFunction) {
         // boolean doesConnectionExist =
         // transmittingNode.DoesContainConnection(recievingNode);
@@ -153,7 +150,7 @@ public class GraphNetwork {
      * 
      * @param activatedNode
      */
-    public void notifyNodeActivation(Node activatedNode) {
+    public void notifyNodeActivation(INode activatedNode) {
         activeNextNodes.add(activatedNode);
     }
 
@@ -198,7 +195,7 @@ public class GraphNetwork {
     }
 
     private void sendInferenceSignals() {
-        // activeNodes.forEach(Node::sendInferenceSignals);
+        // activeNodes.forEach(INode::sendInferenceSignals);
     }
 
     /**
@@ -206,19 +203,19 @@ public class GraphNetwork {
      */
     private void sendTrainingSignals() {
         // Will automatically collect generated signals in {@code activeNextNodes}
-        activeNodes.stream().forEach(Node::sendTrainingSignals);
-        activeNodes.stream().forEach(Node::applyTrainingChanges);
+        activeNodes.stream().forEach(INode::sendTrainingSignals);
+        //activeNodes.stream().forEach(INode::applyTrainingChanges);
     }
 
     @Override
     public String toString() {
-        // List<Node> activeForwardNodes =
-        // activeNodes.stream().filter(Node::hasValidForwardSignal).toList();
+        // List<INode> activeForwardNodes =
+        // activeNodes.stream().filter(INode::hasValidForwardSignal).toList();
         return nodesToString(activeNodes);
     }
 
-    public static String nodesToString(Collection<Node> nodes) {
-        TreeSet<Node> sSet = new TreeSet<Node>(nodes);
+    public static String nodesToString(Collection<INode> nodes) {
+        TreeSet<INode> sSet = new TreeSet<INode>(nodes);
         StringBuilder sb = new StringBuilder();
         sSet.forEach(node -> {
             sb.append(node.toString());
@@ -228,38 +225,29 @@ public class GraphNetwork {
     }
 
     public void deactivateAll() {
-        activeNodes.forEach(Node::clearSignals);
-        activeNextNodes.forEach(Node::clearSignals);
+        activeNodes.forEach(INode::clearSignals);
+        activeNextNodes.forEach(INode::clearSignals);
         activeNodes.clear();
         activeNextNodes.clear();
     }
 
-    public final Node createHiddenNode(final ActivationFunction activationFunction) {
-        Node node = new Node(this, activationFunction);
+    public void addNodeToNetwork(INode node){
+        node.setParentNetwork(this);
         nodes.add(node);
-        return node;
+        if(node instanceof InputNode){
+            input_nodes.put(node.getID(), (InputNode) node);
+        }
+        if(node instanceof OutputNode){
+            output_nodes.put(node.getID(), (OutputNode) node);
+        }
     }
 
-    public final InputNode createInputNode(final ActivationFunction activationFunction) {
-        InputNode node = new InputNode(this, activationFunction);
-        nodes.add(node);
-        input_nodes.put(node.getID(), node);
-        return node;
-    }
-
-    public final OutputNode createOutputNode(final ActivationFunction activationFunction) {
-        OutputNode node = new OutputNode(this, activationFunction);
-        nodes.add(node);
-        output_nodes.put(node.getID(), node);
-        return node;
-    }
-
-    public Node getNode(int id) {
+    public INode getNode(int id) {
         return nodes.get(id);
     }
 
-    public ArrayList<Node> getNodes() {
-        return new ArrayList<Node>(nodes);
+    public ArrayList<INode> getNodes() {
+        return new ArrayList<INode>(nodes);
     }
 
     private static int IntegerEntryComparator(Entry<Integer, ?> e1, Entry<Integer, ?> e2) {

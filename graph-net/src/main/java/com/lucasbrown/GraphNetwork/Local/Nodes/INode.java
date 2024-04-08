@@ -2,27 +2,28 @@ package com.lucasbrown.GraphNetwork.Local.Nodes;
 
 import java.security.InvalidAlgorithmParameterException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
-import java.util.Random;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
-import com.lucasbrown.GraphNetwork.Distributions.FilterDistribution;
 import com.lucasbrown.GraphNetwork.Global.GraphNetwork;
-import com.lucasbrown.GraphNetwork.Global.SharedNetworkData;
-import com.lucasbrown.NetworkTraining.ApproximationTools.ArrayTools;
-import com.lucasbrown.NetworkTraining.ApproximationTools.Convolution.FilterDistributionConvolution;
+import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
+import com.lucasbrown.GraphNetwork.Local.Arc;
+import com.lucasbrown.GraphNetwork.Local.Outcome;
+import com.lucasbrown.GraphNetwork.Local.Signal;
 
 public interface INode extends Comparable<INode> {
 
     public abstract int getID();
+
+    public abstract String getName();
+
     public abstract void setName(String name);
+
+    public abstract void setParentNetwork(GraphNetwork network); 
+
+    public abstract GraphNetwork getParentNetwork(); 
+
+    public abstract ActivationFunction getActivationFunction();
 
     /**
      * 
@@ -48,6 +49,8 @@ public interface INode extends Comparable<INode> {
      */
     public abstract boolean addIncomingConnection(Arc connection);
 
+    public abstract Collection<Arc> getAllIncomingConnections();
+
     /**
      * Add an outgoing connection to the node
      * 
@@ -56,7 +59,9 @@ public interface INode extends Comparable<INode> {
      */
     public abstract boolean addOutgoingConnection(Arc connection);
 
-    public abstract Optional<Arc> getOutgoingConnectionTo(Node recievingNode);
+    public abstract Collection<Arc> getAllOutgoingConnections();
+
+    public abstract Optional<Arc> getOutgoingConnectionTo(INode recievingNode);
 
     /**
      * Notify this node of a new incoming forward signal
@@ -89,6 +94,13 @@ public interface INode extends Comparable<INode> {
      * @return
      */
     public abstract boolean hasValidForwardSignal();
+    
+    /**
+     * Get whether the current forward signal is set and valid
+     * 
+     * @return
+     */
+    public abstract void setValidForwardSignal(boolean state);
 
     public abstract double[] getWeights(int bitStr);
 
@@ -103,13 +115,14 @@ public interface INode extends Comparable<INode> {
      */
     public abstract void acceptSignals() throws InvalidAlgorithmParameterException;
 
+    public abstract void sendTrainingSignals();
+
     /**
      * Send forward signals and record differences of expectation for training
      * 
      * @param
      */
     public abstract void sendForwardSignals();
-
 
     public abstract ArrayList<Outcome> getState();
 
@@ -118,4 +131,5 @@ public interface INode extends Comparable<INode> {
     public abstract void applyErrorSignals(double epsilon);
 
     public abstract void clearSignals();
+
 }

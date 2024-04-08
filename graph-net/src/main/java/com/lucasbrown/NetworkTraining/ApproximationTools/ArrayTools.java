@@ -49,6 +49,15 @@ public class ArrayTools {
         return copy;
     }
 
+    public static <T> HashSet<Pair<HashSet<T>, HashSet<T>>> flatCartesianPowerProductPair(Collection<? extends Collection<T>> collection) {
+        HashSet<Pair<HashSet<T>, HashSet<T>>> flattened = new HashSet<>();
+        HashSet<HashSet<T>> cartesianProduct = flatCartesianProduct(collection);
+        for (HashSet<T> set : cartesianProduct) {
+            flattened.addAll(powerSet(set).stream().map(powSet -> new Pair<>(powSet, set)).toList());
+        }
+        return flattened;
+    }
+
     public static <T> HashSet<HashSet<T>> flatCartesianPowerProduct(Collection<? extends Collection<T>> collection) {
         HashSet<HashSet<T>> flattened = new HashSet<>();
         HashSet<HashSet<T>> cartesianProduct = flatCartesianProduct(collection);

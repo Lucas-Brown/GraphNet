@@ -2,7 +2,7 @@ import com.lucasbrown.GraphNetwork.Distributions.BellCurveDistribution;
 import com.lucasbrown.GraphNetwork.Global.GraphNetwork;
 import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
 import com.lucasbrown.GraphNetwork.Local.InputNode;
-import com.lucasbrown.GraphNetwork.Local.Node;
+import com.lucasbrown.GraphNetwork.Local.INode;
 import com.lucasbrown.GraphNetwork.Local.OutputNode;
 
 /**
@@ -22,7 +22,7 @@ public class SwitchNet {
 
         in = net.createInputNode(ActivationFunction.SIGMOID);
         out = net.createOutputNode(ActivationFunction.SIGMOID);
-        Node hidden = net.createHiddenNode(ActivationFunction.SIGMOID);
+        INode hidden = net.createHiddenNode(ActivationFunction.SIGMOID);
 
         in.setName("Input");
         out.setName("Output");

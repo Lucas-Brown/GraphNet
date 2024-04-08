@@ -4,7 +4,7 @@ import com.lucasbrown.GraphNetwork.Distributions.BellCurveDistribution;
 import com.lucasbrown.GraphNetwork.Global.GraphNetwork;
 import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
 import com.lucasbrown.GraphNetwork.Local.InputNode;
-import com.lucasbrown.GraphNetwork.Local.Node;
+import com.lucasbrown.GraphNetwork.Local.INode;
 import com.lucasbrown.GraphNetwork.Local.OutputNode;
 import com.lucasbrown.GraphNetwork.Local.Signal;
 
@@ -18,8 +18,8 @@ public class FeedForward {
 
         in = net.createInputNode(ActivationFunction.LINEAR);
         out = net.createOutputNode(ActivationFunction.LINEAR);
-        Node hidden1 = net.createHiddenNode(ActivationFunction.LINEAR);
-        Node hidden2 = net.createHiddenNode(ActivationFunction.LINEAR);
+        INode hidden1 = net.createHiddenNode(ActivationFunction.LINEAR);
+        INode hidden2 = net.createHiddenNode(ActivationFunction.LINEAR);
 
         in.setName("Input");
         out.setName("Output");

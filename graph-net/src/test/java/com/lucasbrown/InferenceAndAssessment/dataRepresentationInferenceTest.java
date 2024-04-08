@@ -4,7 +4,7 @@ import com.lucasbrown.GraphNetwork.Distributions.BellCurveDistribution;
 import com.lucasbrown.GraphNetwork.Global.DataGraphNetwork;
 import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
 import com.lucasbrown.GraphNetwork.Local.IInputNode;
-import com.lucasbrown.GraphNetwork.Local.Node;
+import com.lucasbrown.GraphNetwork.Local.INode;
 import com.lucasbrown.GraphNetwork.Local.DataStructure.InputDataNode;
 import com.lucasbrown.GraphNetwork.Local.DataStructure.OutputDataNode;
 
@@ -17,7 +17,7 @@ public class DataRepresentationInferenceTest {
 
         InputDataNode in = net.createInputNode(ActivationFunction.LINEAR);
         OutputDataNode out = net.createOutputNode(ActivationFunction.LINEAR);
-        Node hidden = net.createHiddenNode(ActivationFunction.LINEAR);
+        INode hidden = net.createHiddenNode(ActivationFunction.LINEAR);
 
         in.setName("Input");
         out.setName("Output");

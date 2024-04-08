@@ -85,7 +85,7 @@ public class BellCurveDistributionAdjuster implements Function {
         is_using_map = use_map;
         mean = parentDistribution.getMean();
         variance = parentDistribution.getVariance();
-        N = parentDistribution.getN();
+        N = parentDistribution.getNumberOfPointsInDistribution();
 
         influincingDistributions = new ArrayList<>();
         distribution_weights = new ArrayList<>();
@@ -158,7 +158,11 @@ public class BellCurveDistributionAdjuster implements Function {
     public void applyAdjustments() {
         mean = parentDistribution.getMean();
         variance = parentDistribution.getVariance();
-        N = parentDistribution.getN();
+        N = parentDistribution.getNumberOfPointsInDistribution();
+
+        double weight_sum = point_weights.stream().mapToDouble(w -> w).sum();
+        weight_sum += distribution_weights.stream().mapToDouble(w -> w).sum();
+        assert Double.isFinite(weight_sum);
 
         NelderMead nm = new NelderMead();
         List<Vec> init_points = new ArrayList<>(3);
@@ -171,9 +175,6 @@ public class BellCurveDistributionAdjuster implements Function {
         mean += solution.get(0);
         variance *= Math.exp(solution.get(1));
 
-        double weight_sum = point_weights.stream().mapToDouble(w -> w).sum();
-        weight_sum += distribution_weights.stream().mapToDouble(w -> w).sum();
-        assert Double.isFinite(weight_sum);
         N += weight_sum;
         clear();
     }
@@ -197,7 +198,7 @@ public class BellCurveDistributionAdjuster implements Function {
      * @return
      */
     public double logLikelihoodOfParameters(double shift, double scale) {
-        double likelihood = parentDistribution.getN() * logLikelihoodOfDistribution(parentDistribution, shift, scale);
+        double likelihood = parentDistribution.getNumberOfPointsInDistribution() * logLikelihoodOfDistribution(parentDistribution, shift, scale);
         likelihood += logLikelihoodOfPoints(shift, scale);
         likelihood += logLikelihoodOfDistributions(shift, scale);
 

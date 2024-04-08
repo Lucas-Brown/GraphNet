@@ -9,7 +9,9 @@ import com.lucasbrown.GraphNetwork.Distributions.OpenFilter;
 import com.lucasbrown.GraphNetwork.Global.BackpropTrainer;
 import com.lucasbrown.GraphNetwork.Global.GraphNetwork;
 import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
-import com.lucasbrown.GraphNetwork.Local.Node;
+import com.lucasbrown.GraphNetwork.Local.Nodes.ComplexNode;
+import com.lucasbrown.GraphNetwork.Local.Nodes.InputNode;
+import com.lucasbrown.GraphNetwork.Local.Nodes.OutputNode;
 import com.lucasbrown.NetworkTraining.ApproximationTools.ErrorFunction;
 
 public class AdderTest {
@@ -44,15 +46,20 @@ public class AdderTest {
 
         GraphNetwork net = new GraphNetwork();
 
-        Node in1 = net.createInputNode(ActivationFunction.LINEAR);
-        Node in2 = net.createInputNode(ActivationFunction.LINEAR);
-        Node in3 = net.createInputNode(ActivationFunction.LINEAR);
-        Node out = net.createOutputNode(ActivationFunction.LINEAR);
+        InputNode in1 = ComplexNode.asInputNode(ActivationFunction.LINEAR);
+        InputNode in2 = ComplexNode.asInputNode(ActivationFunction.LINEAR);
+        InputNode in3 = ComplexNode.asInputNode(ActivationFunction.LINEAR);
+        OutputNode out = ComplexNode.asOutputNode(ActivationFunction.LINEAR);
 
         in1.setName("Input 1");
         in2.setName("Input 2");
         in3.setName("Input 3");
         out.setName("Output");
+
+        net.addNodeToNetwork(in1);
+        net.addNodeToNetwork(in2);
+        net.addNodeToNetwork(in3);
+        net.addNodeToNetwork(out);
 
         net.addNewConnection(in1, out, new BellCurveDistribution(0, 1));
         net.addNewConnection(in2, out, new BellCurveDistribution(0, 1));
@@ -62,7 +69,7 @@ public class AdderTest {
         bt.epsilon = 0.05;
 
         bt.setTrainingData(adder.inputData, adder.outputData);
-        bt.trainNetwork(1000, 1);
+        bt.trainNetwork(1000, 100);
 
         net.deactivateAll();
         net.setInputOperation(nodeMap -> BackpropTrainer.applyInputToNode(nodeMap, adder.inputData, counter++));

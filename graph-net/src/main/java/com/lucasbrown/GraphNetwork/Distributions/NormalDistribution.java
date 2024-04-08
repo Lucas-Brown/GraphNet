@@ -35,13 +35,13 @@ public class NormalDistribution extends FilterDistribution {
     }
 
     @Override
-    public void prepareReinforcement(double valueToReinforce) {
+    public void prepareReinforcement(double valueToReinforce, double weight) {
         // TODO Auto-generated method stub
         throw new UnsupportedOperationException("Unimplemented method 'prepareReinforcement'");
     }
 
     @Override
-    public void prepareDiminishment(double valueToDiminish) {
+    public void prepareDiminishment(double valueToDiminish, double weight) {
         // TODO Auto-generated method stub
         throw new UnsupportedOperationException("Unimplemented method 'prepareDiminishment'");
     }
@@ -54,6 +54,12 @@ public class NormalDistribution extends FilterDistribution {
     @Override
     public double getVariance() {
         return variance;
+    }
+
+    @Override 
+    public double getNumberOfPointsInDistribution()
+    {
+        return 1;
     }
 
     @Override

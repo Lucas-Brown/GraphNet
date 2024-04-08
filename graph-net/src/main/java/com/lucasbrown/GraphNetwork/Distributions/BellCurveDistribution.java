@@ -1,18 +1,10 @@
 package com.lucasbrown.GraphNetwork.Distributions;
 
-import java.util.function.DoubleUnaryOperator;
-import java.util.function.Supplier;
-import java.util.stream.Stream;
-
 import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
-import com.lucasbrown.NetworkTraining.ApproximationTools.DoubleFunction;
-import com.lucasbrown.NetworkTraining.ApproximationTools.IntegralTransformations;
-import com.lucasbrown.NetworkTraining.ApproximationTools.Convolution.GenericConvolution;
 import com.lucasbrown.NetworkTraining.ApproximationTools.Convolution.IConvolution;
 import com.lucasbrown.NetworkTraining.ApproximationTools.Convolution.LinearBellConvolution;
 import com.lucasbrown.NetworkTraining.DataSetTraining.BellCurveDistributionAdjuster;
 
-import jsat.math.integration.Trapezoidal;
 
 
 /**
@@ -67,7 +59,7 @@ public class BellCurveDistribution extends FilterDistribution{
         this.variance = variance;
         this.N = N;
         this.N_max = N_max;
-        this.adjuster = new BellCurveDistributionAdjuster(this, true);
+        this.adjuster = new BellCurveDistributionAdjuster(this, false);
     }
 
     /**
@@ -87,8 +79,8 @@ public class BellCurveDistribution extends FilterDistribution{
      * @param valueToReinforce The new data to add to the distribution data set
      */
     @Override
-    public void prepareReinforcement(double valueToReinforce) {
-        adjuster.addPoint(valueToReinforce, true, 1+0/computeNormalizedDist(valueToReinforce));
+    public void prepareReinforcement(double valueToReinforce, double weight) {
+        adjuster.addPoint(valueToReinforce, true, weight);
     }
 
     /**
@@ -97,8 +89,8 @@ public class BellCurveDistribution extends FilterDistribution{
      * @param valueToDiminish The data point to diminish the likelihood
      */
     @Override
-    public void prepareDiminishment(double valueToDiminish) {
-        adjuster.addPoint(valueToDiminish, false, 1+0/(1-computeNormalizedDist(valueToDiminish))); 
+    public void prepareDiminishment(double valueToDiminish, double weight) {
+        adjuster.addPoint(valueToDiminish, false, weight); 
     }
 
     @Override 
@@ -154,7 +146,8 @@ public class BellCurveDistribution extends FilterDistribution{
         return variance/Math.sqrt(2);
     }
 
-    public double getN() {
+    @Override
+    public double getNumberOfPointsInDistribution(){
         return N;
     }
 

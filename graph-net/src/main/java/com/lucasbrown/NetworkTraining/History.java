@@ -4,8 +4,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 
 import com.lucasbrown.GraphNetwork.Global.GraphNetwork;
-import com.lucasbrown.GraphNetwork.Local.Node;
 import com.lucasbrown.GraphNetwork.Local.Outcome;
+import com.lucasbrown.GraphNetwork.Local.Nodes.INode;
 
 public class History {
 
@@ -20,9 +20,9 @@ public class History {
 
     public void captureState()
     {
-        ArrayList<Node> nodes = network.getNodes();
+        ArrayList<INode> nodes = network.getNodes();
         HashMap<Integer, ArrayList<Outcome>> state = new HashMap<>(nodes.size());
-        for(Node node : nodes){
+        for(INode node : nodes){
             state.put(node.getID(), node.getState());
         }
 

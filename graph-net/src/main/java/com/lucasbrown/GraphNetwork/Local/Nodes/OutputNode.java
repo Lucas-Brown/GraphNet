@@ -2,6 +2,7 @@ package com.lucasbrown.GraphNetwork.Local.Nodes;
 
 import com.lucasbrown.GraphNetwork.Global.GraphNetwork;
 import com.lucasbrown.GraphNetwork.Global.SharedNetworkData;
+import com.lucasbrown.GraphNetwork.Local.Signal;
 
 /**
  * A node which exposes it's value and can be sent a corrective (backward)
@@ -9,7 +10,7 @@ import com.lucasbrown.GraphNetwork.Global.SharedNetworkData;
  */
 public class OutputNode extends NodeWrapper implements IOutputNode {
 
-    public OutputNode(Node node) {
+    public OutputNode(INode node) {
         super(node);
     }
 

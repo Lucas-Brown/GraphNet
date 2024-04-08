@@ -1,6 +1,7 @@
 package com.lucasbrown.GraphNetwork.Local;
 
 import com.lucasbrown.GraphNetwork.Distributions.FilterDistribution;
+import com.lucasbrown.GraphNetwork.Local.Nodes.INode;
 
 /**
  * A one-way connection between a sending node and a recieving node.
@@ -11,22 +12,30 @@ public class Arc {
     /**
      * Sending and recieving node
      */
-    final Node sending, recieving;
+    public final INode sending, recieving;
 
     /**
-     * Node transfer function for determining probability and strength of signal
+     * INode transfer function for determining probability and strength of signal
      * forwarding
      */
     public final FilterDistribution probDist;
 
-    public Arc(final Node sending, final Node recieving,
+    public Arc(final INode sending, final INode recieving,
             final FilterDistribution transferFunc) {
         this.sending = sending;
         this.recieving = recieving;
         this.probDist = transferFunc;
     }
 
-    public boolean doesMatchNodes(Node sendingMatch, Node recievingMatch) {
+    public int getSendingID(){
+        return sending.getID();
+    }
+
+    public int getRecievingID(){
+        return recieving.getID();
+    }
+
+    public boolean doesMatchNodes(INode sendingMatch, INode recievingMatch) {
         return sending.equals(sendingMatch) && recieving.equals(recievingMatch);
     }
 
@@ -51,7 +60,7 @@ public class Arc {
      * @param strength The strength of the signal to send
      * @return the signal or null if no signal was sent
      */
-    Signal sendForwardSignal(int sourceKey, double strength, double probability) {
+    public Signal sendForwardSignal(int sourceKey, double strength, double probability) {
         Signal signal = new Signal(sending, recieving, sourceKey, strength, probability);
         recieving.recieveForwardSignal(signal);
         return signal;

@@ -1,12 +1,14 @@
 package com.lucasbrown.GraphNetwork.Local;
 
+import com.lucasbrown.GraphNetwork.Local.Nodes.INode;
+
 public class Outcome {
     public int binary_string;
     public double netValue;
     public double activatedValue;
     public double probability;
     public double[] sourceOutputs;
-    public Node[] sourceNodes;
+    public INode[] sourceNodes;
     public int[] sourceKeys;
 
     @Override 
@@ -39,5 +41,9 @@ public class Outcome {
         hash *= 37;
         hash += Double.hashCode(probability);
         return hash;
+    }
+
+    public static int descendingProbabilitiesComparator(Outcome o1, Outcome o2){
+        return (int) (o2.probability - o1.probability);
     }
 }

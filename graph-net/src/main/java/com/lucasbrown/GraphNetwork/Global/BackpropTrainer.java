@@ -4,10 +4,12 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map.Entry;
 
-import com.lucasbrown.GraphNetwork.Local.InputNode;
-import com.lucasbrown.GraphNetwork.Local.Node;
 import com.lucasbrown.GraphNetwork.Local.Outcome;
-import com.lucasbrown.GraphNetwork.Local.OutputNode;
+import com.lucasbrown.GraphNetwork.Local.Nodes.IInputNode;
+import com.lucasbrown.GraphNetwork.Local.Nodes.INode;
+import com.lucasbrown.GraphNetwork.Local.Nodes.IOutputNode;
+import com.lucasbrown.GraphNetwork.Local.Nodes.InputNode;
+import com.lucasbrown.GraphNetwork.Local.Nodes.OutputNode;
 import com.lucasbrown.NetworkTraining.History;
 import com.lucasbrown.NetworkTraining.ApproximationTools.ErrorFunction;
 
@@ -54,7 +56,7 @@ public class BackpropTrainer {
     public void trainingStep(boolean print_forward){
         captureForward(print_forward);
 
-        computeErrorOfOutputs();
+        computeErrorOfOutputs(print_forward);
         backpropagateErrors();
         applyErrorSignals();
         network.deactivateAll();
@@ -74,15 +76,19 @@ public class BackpropTrainer {
     }
 
 
-    private void computeErrorOfOutputs(){
+    private void computeErrorOfOutputs(boolean print_forward){
+        double total_error = 0;
         for(int time = timestep; time > 0; time--){
             for (int i = 0; i < outputNodes.size(); i++) {
-                computeErrorOfOutput(outputNodes.get(i), time, targets[time][i]);
+                total_error += computeErrorOfOutput(outputNodes.get(i), time, targets[time][i]);
             }
+        }
+        if(print_forward){
+            System.out.println(total_error);
         }
     }
 
-    private void computeErrorOfOutput(OutputNode node, int timestep, double target){
+    private double computeErrorOfOutput(OutputNode node, int timestep, double target){
         ArrayList<Outcome> outcomes = networkHistory.getStateOfNode(timestep, node.getID());
 
         // double normalization_const = 0;
@@ -90,19 +96,22 @@ public class BackpropTrainer {
         //     normalization_const += outcome.probability;
         // }
 
+        double total_error = 0;
         for(Outcome outcome : outcomes){
             // double error = outcome.probability * errorFunction.error_derivative(outcome.netValue, target) / normalization_const;
+            total_error += errorFunction.error(outcome.activatedValue, target);
             double error = errorFunction.error_derivative(outcome.activatedValue, target);
             node.recieveError(timestep, outcome.binary_string, error);
         }
+        return total_error;
     }
 
     private void backpropagateErrors() {
-        ArrayList<Node> nodes = network.getNodes();
+        ArrayList<INode> nodes = network.getNodes();
         while(timestep > 0){
             HashMap<Integer, ArrayList<Outcome>> state = networkHistory.getStateAtTimestep(timestep);
             for(Entry<Integer, ArrayList<Outcome>> e : state.entrySet()){
-                Node node = nodes.get(e.getKey());
+                INode node = nodes.get(e.getKey());
                 node.sendErrorsBackwards(e.getValue(), timestep);
             }
             timestep--;
@@ -113,15 +122,15 @@ public class BackpropTrainer {
         network.getNodes().forEach(this::applyErrorSignalsToNode);
     }
 
-    private void applyErrorSignalsToNode(Node node){
+    private void applyErrorSignalsToNode(INode node){
         node.applyErrorSignals(epsilon);
     }
 
-    private void applyInputToNode(HashMap<Integer, InputNode> inputNodeMap){
+    private void applyInputToNode(HashMap<Integer, ? extends IInputNode> inputNodeMap){
         applyInputToNode(inputNodeMap, inputs, timestep);
     }
 
-    public static void applyInputToNode(HashMap<Integer, InputNode> inputNodeMap, Double[][] input, int counter){
+    public static void applyInputToNode(HashMap<Integer, ? extends IInputNode> inputNodeMap, Double[][] input, int counter){
         InputNode[] sortedNodes = inputNodeMap.values().stream().sorted().toArray(InputNode[]::new);
 
         for (int i = 0; i < sortedNodes.length; i++) {

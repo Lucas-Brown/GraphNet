@@ -2,7 +2,6 @@ package com.lucasbrown.GraphNetwork.Local.Nodes;
 
 import java.security.InvalidAlgorithmParameterException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -11,12 +10,15 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Random;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 import com.lucasbrown.GraphNetwork.Distributions.FilterDistribution;
 import com.lucasbrown.GraphNetwork.Global.GraphNetwork;
-import com.lucasbrown.GraphNetwork.Global.SharedNetworkData;
+import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
+import com.lucasbrown.GraphNetwork.Local.Arc;
+import com.lucasbrown.GraphNetwork.Local.Outcome;
+import com.lucasbrown.GraphNetwork.Local.Signal;
 import com.lucasbrown.NetworkTraining.ApproximationTools.ArrayTools;
+import com.lucasbrown.NetworkTraining.ApproximationTools.Pair;
 import com.lucasbrown.NetworkTraining.ApproximationTools.Convolution.FilterDistributionConvolution;
 
 /**
@@ -47,7 +49,7 @@ public abstract class NodeBase implements INode {
     /**
      * The network that this node belongs to
      */
-    public final GraphNetwork network;
+    protected GraphNetwork network;
 
     /**
      * The activation function
@@ -88,13 +90,18 @@ public abstract class NodeBase implements INode {
 
     protected boolean hasValidForwardSignal;
 
-    public Node(final GraphNetwork network, final ActivationFunction activationFunction) {
+    public NodeBase(final ActivationFunction activationFunction) {
+        this(null, activationFunction);
+    }
+
+    public NodeBase(GraphNetwork network, final ActivationFunction activationFunction) {
         id = ID_COUNTER++;
-        name = "Node " + id;
-        this.network = Objects.requireNonNull(network);
+        name = "INode " + id;
+        this.network = network;
         this.activationFunction = activationFunction;
         incoming = new ArrayList<Arc>();
         outgoing = new ArrayList<Arc>();
+        orderedIDMap = new HashMap<>();
 
         uniqueIncomingNodeIDs = new HashSet<>();
         outcomes = new ArrayList<>();
@@ -107,12 +114,34 @@ public abstract class NodeBase implements INode {
         hasRecentBackwardsSignal = false;
     }
 
+    @Override
     public int getID() {
         return id;
     }
 
+    @Override
+    public String getName() {
+        return name;
+    }
+
+    @Override
     public void setName(String name) {
         this.name = name;
+    }
+
+    @Override
+    public void setParentNetwork(GraphNetwork network) {
+        this.network = network;
+    }
+
+    @Override
+    public GraphNetwork getParentNetwork() {
+        return network;
+    }
+
+    @Override
+    public ActivationFunction getActivationFunction() {
+        return activationFunction;
     }
 
     /**
@@ -120,7 +149,8 @@ public abstract class NodeBase implements INode {
      * @param node
      * @return whether this node is connected to the provided node
      */
-    public boolean doesContainConnection(Node node) {
+    @Override
+    public boolean doesContainConnection(INode node) {
         return outgoing.stream().anyMatch(connection -> connection.doesMatchNodes(this, node));
     }
 
@@ -131,7 +161,8 @@ public abstract class NodeBase implements INode {
      * @param recievingNode
      * @return The arc if present, otherwise null
      */
-    public Arc getArc(Node recievingNode) {
+    @Override
+    public Arc getArc(INode recievingNode) {
         for (Arc arc : outgoing) {
             if (arc.doesMatchNodes(this, recievingNode)) {
                 return arc;
@@ -146,8 +177,14 @@ public abstract class NodeBase implements INode {
      * @param connection
      * @return true
      */
+    @Override
     public boolean addIncomingConnection(Arc connection) {
         return incoming.add(connection);
+    }
+
+    @Override
+    public ArrayList<Arc> getAllIncomingConnections() {
+        return new ArrayList<>(incoming);
     }
 
     /**
@@ -156,11 +193,18 @@ public abstract class NodeBase implements INode {
      * @param connection
      * @return true
      */
+    @Override
     public boolean addOutgoingConnection(Arc connection) {
         return outgoing.add(connection);
     }
 
-    public Optional<Arc> getOutgoingConnectionTo(Node recievingNode) {
+    @Override
+    public ArrayList<Arc> getAllOutgoingConnections() {
+        return new ArrayList<>(outgoing);
+    }
+
+    @Override
+    public Optional<Arc> getOutgoingConnectionTo(INode recievingNode) {
         return outgoing.stream().filter(arc -> arc.recieving == recievingNode).findAny();
     }
 
@@ -169,20 +213,18 @@ public abstract class NodeBase implements INode {
      * 
      * @param signal
      */
-    void recieveForwardSignal(Signal signal) {
+    @Override
+    public void recieveForwardSignal(Signal signal) {
         network.notifyNodeActivation(this);
     }
-
-    public abstract void recieveError(int timestep, int key, double error);
-
-    public abstract Double getError(int timestep, int key);
 
     /**
      * Notify this node of a new incoming backward signal
      * 
      * @param signal
      */
-    void recieveBackwardSignal(Signal signal) {
+    @Override
+    public void recieveBackwardSignal(Signal signal) {
         backwardNext.add(signal);
         network.notifyNodeActivation(this);
     }
@@ -192,7 +234,8 @@ public abstract class NodeBase implements INode {
      * 
      * @param signal
      */
-    void recieveInferenceSignal(Signal signal) {
+    @Override
+    public void recieveInferenceSignal(Signal signal) {
         inferenceNext.add(signal);
         network.notifyNodeActivation(this);
     }
@@ -202,13 +245,15 @@ public abstract class NodeBase implements INode {
      * 
      * @return
      */
+    @Override
     public boolean hasValidForwardSignal() {
         return hasValidForwardSignal;
     }
 
-    public abstract double[] getWeights(int bitStr);
-
-    public abstract double getBias(int bitStr);
+    @Override
+    public void setValidForwardSignal(boolean state) {
+        hasValidForwardSignal = state;
+    }
 
     /**
      * map every incoming node id to its corresponding value and combine.
@@ -219,9 +264,9 @@ public abstract class NodeBase implements INode {
      * @return a bit string indicating the weights, bias, and error index to use for
      *         the given set of signals
      */
-    public int nodeSetToBinStr(Collection<Node> incomingNodes) {
+    public int nodeSetToBinStr(Collection<INode> incomingNodes) {
         return incomingNodes.stream()
-                .mapToInt(node -> orderedIDMap.get(node.id))
+                .mapToInt(node -> orderedIDMap.get(node.getID()))
                 .reduce(0, (result, id_bit) -> result |= id_bit); // effectively the same as a sum in this case
     }
 
@@ -277,7 +322,7 @@ public abstract class NodeBase implements INode {
      * 
      * @throws InvalidAlgorithmParameterException
      */
-    public void acceptSignals() {
+    public void acceptSignals() throws InvalidAlgorithmParameterException {
         if (forwardNext.isEmpty() & backwardNext.isEmpty() & inferenceNext.isEmpty()) {
             throw new InvalidAlgorithmParameterException(
                     "handleIncomingSignals should never be called if no signals have been recieved.");
@@ -319,9 +364,11 @@ public abstract class NodeBase implements INode {
      * Create ALL the possible combinations of outcomes for the incoming signals
      */
     private void combinePossibilities() {
-        HashSet<HashSet<Signal>> signalPowerSet = ArrayTools.flatCartesianPowerProduct(forward.values());
+        HashSet<Pair<HashSet<Signal>, HashSet<Signal>>> signalPowerSet = ArrayTools
+                .flatCartesianPowerProductPair(forward.values());
+
         outcomes = signalPowerSet.stream()
-                .filter(set -> !set.isEmpty()) // remove the null set
+                .filter(set -> !set.u.isEmpty()) // remove the null set
                 .map(this::signalSetToOutcome)
                 .collect(Collectors.toCollection(ArrayList::new));
     }
@@ -333,24 +380,33 @@ public abstract class NodeBase implements INode {
      * @param signalSet
      * @return
      */
-    private Outcome signalSetToOutcome(Collection<Signal> signalSet) {
+    private Outcome signalSetToOutcome(Pair<? extends Collection<Signal>, ? extends Collection<Signal>> setPair) {
         Outcome outcome = new Outcome();
-        signalSet = signalSet.stream().sorted(Signal::CompareSendingNodeIDs).toList();
-        List<Node> nodeSet = signalSet.stream().map(Signal::getSendingNode).toList();
+
+        // sorting by id to ensure that the weights are applied to the correct
+        // node/signal
+        ArrayList<Signal> signalSet = sortSignalByID(setPair.u);
+        List<INode> nodeSet = signalSet.stream().map(signal -> signal.sendingNode).toList();
         outcome.binary_string = nodeSetToBinStr(nodeSet);
         outcome.netValue = computeMergedSignalStrength(signalSet, outcome.binary_string);
         outcome.activatedValue = activationFunction.activator(outcome.netValue);
-        outcome.probability = getProbabilityOfSignalSet(signalSet);
+        outcome.probability = getProbabilityOfSignalSet(signalSet, setPair.v);
         outcome.sourceOutputs = signalSet.stream().mapToDouble(Signal::getOutputStrength).toArray();
-        outcome.sourceNodes = nodeSet.toArray(new Node[nodeSet.size()]);
+        outcome.sourceNodes = nodeSet.toArray(new INode[nodeSet.size()]);
         outcome.sourceKeys = signalSet.stream().mapToInt(Signal::getSourceKey).toArray();
         return outcome;
     }
 
-    private double getProbabilityOfSignalSet(Collection<Signal> signalSet) {
+    private ArrayList<Signal> sortSignalByID(Collection<Signal> toSort) {
+        ArrayList<Signal> sortedSignals = new ArrayList<>(toSort);
+        sortedSignals.sort(Signal::compareSendingNodeIDs);
+        return sortedSignals;
+    }
+
+    private double getProbabilityOfSignalSet(Collection<Signal> signalSet, Collection<Signal> allSendingSignals) {
         double probability = 1;
-        for (Signal s : signalSet) {
-            if (uniqueIncomingNodeIDs.contains(s.sendingNode.id)) {
+        for (Signal s : allSendingSignals) {
+            if (signalSet.contains(s)) {
                 probability *= s.probability;
             } else {
                 probability *= 1 - s.probability;
@@ -406,6 +462,7 @@ public abstract class NodeBase implements INode {
     /**
      * Attempt to send forward and backward signals
      */
+    @Override
     public void sendTrainingSignals() {
 
         if (!outgoing.isEmpty()) {
@@ -446,6 +503,7 @@ public abstract class NodeBase implements INode {
      * 
      * @param
      */
+    @Override
     public void sendForwardSignals() {
         for (Outcome out : outcomes) {
             for (Arc connection : outgoing) {
@@ -509,7 +567,7 @@ public abstract class NodeBase implements INode {
                     .collect(Collectors.toCollection(ArrayList<FilterDistribution>::new));
 
             ArrayList<ActivationFunction> activators = arcs.stream()
-                    .map(arc -> arc.sending.activationFunction)
+                    .map(arc -> arc.sending.getActivationFunction())
                     .collect(Collectors.toCollection(ArrayList<ActivationFunction>::new));
 
             // Get the weights of the corresponding arcs
@@ -587,14 +645,14 @@ public abstract class NodeBase implements INode {
     private void sendErrorsBackwards(Outcome outcomeAtTime, int timestep, double error) {
         int binary_string = outcomeAtTime.binary_string;
         double error_derivative = activationFunction.derivative(outcomeAtTime.netValue) * error;
-        double[] weightsOfNodes = weights[binary_string];
+        double[] weightsOfNodes = getWeights(binary_string);
 
         // may need to correct for probability weighting
         addBiasDelta(binary_string, error_derivative);
         for (int i = 0; i < weightsOfNodes.length; i++) {
             addWeightDelta(binary_string, i, outcomeAtTime.sourceOutputs[i] * error_derivative);
 
-            Node sourceNode = outcomeAtTime.sourceNodes[i];
+            INode sourceNode = outcomeAtTime.sourceNodes[i];
             sourceNode.recieveError(timestep - 1, outcomeAtTime.sourceKeys[i], error_derivative * weightsOfNodes[i]);
 
             // apply error as new point for the distribution
@@ -610,7 +668,7 @@ public abstract class NodeBase implements INode {
         // Select the backward signal combination
         FilterDistributionConvolution[] convolutions = getReverseOutcomes();
         double[] densityWeights = evaluateConvolutions(convolutions, activatedValue);
-        backwardsBinStr = selectReverseOutcome(densityWeights) + 1;
+        int backwardsBinStr = selectReverseOutcome(densityWeights) + 1;
 
         // Sample signal strengths from the selected distribution
         double[] sample = convolutions[backwardsBinStr - 1].sample(activatedValue - getBias(backwardsBinStr));
@@ -620,35 +678,10 @@ public abstract class NodeBase implements INode {
         for (int i = 0; i < sample.length; i++) {
             Arc arc_i = arcs.get(i);
             double sample_i = sample[i];
-            double sample_inverse = arc_i.recieving.activationFunction.inverse(sample_i);
+            double sample_inverse = arc_i.recieving.getActivationFunction().inverse(sample_i);
             assert Double.isFinite(sample_inverse);
-            arc_i.probDist.prepareReinforcement(sample_inverse); // prepare to reinforce// the distribution
+            arc_i.probDist.prepareWeightedReinforcement(sample_inverse); // prepare to reinforce the distribution
         }
-    }
-
-    public void applyErrorSignals(double epsilon) {
-        for (int key = 1; key < biases.length; key++) {
-            int count = delta_counts[key];
-            if (count == 0)
-                continue;
-
-            double delta = -epsilon / count;
-            biases[key] += delta * bias_delta[key];
-            bias_delta[key] = 0;
-
-            for (int i = 0; i < weights[key].length; i++) {
-                weights[key][i] += delta * weights_delta[key][i];
-                weights_delta[key][i] = 0;
-            }
-
-            delta_counts[key] = 0;
-        }
-
-        for (Arc connection : outgoing) {
-            connection.probDist.applyAdjustments();
-        }
-
-        error_signals.clear();
     }
 
     public void clearSignals() {
@@ -665,7 +698,7 @@ public abstract class NodeBase implements INode {
     @Override
     public String toString() {
         return name + ": " + outcomes.stream()
-                .sorted(Signal::CompareSendingNodeIDs)
+                .sorted(Outcome::descendingProbabilitiesComparator)
                 .toList()
                 .toString();
     }
@@ -676,18 +709,31 @@ public abstract class NodeBase implements INode {
     }
 
     @Override
-    public int compareTo(Node o) {
-        return id - o.id;
+    public int compareTo(INode o) {
+        return id - o.getID();
     }
 
     @Override
     public boolean equals(Object o) {
-        if (!(o instanceof Node))
+        if (!(o instanceof INode))
             return false;
-        return id == ((Node) o).id;
+        return id == ((INode) o).getID();
     }
 
-    abstract void addBiasDelta(int bitStr, double error);
+    protected abstract double computeMergedSignalStrength(Collection<Signal> incomingSignals, int binary_string);
 
-    abstract void addWeightDelta(int bitStr, int weight_index, double error);
+    public abstract void recieveError(int timestep, int key, double error);
+
+    public abstract Double getError(int timestep, int key);
+
+    public abstract double[] getWeights(int bitStr);
+
+    public abstract double getBias(int bitStr);
+
+    protected abstract void addBiasDelta(int bitStr, double error);
+
+    protected abstract void addWeightDelta(int bitStr, int weight_index, double error);
+
+    public abstract void applyErrorSignals(double epsilon);
+
 }

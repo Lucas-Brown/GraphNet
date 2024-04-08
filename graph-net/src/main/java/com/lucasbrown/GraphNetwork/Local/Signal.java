@@ -1,13 +1,15 @@
 package com.lucasbrown.GraphNetwork.Local;
 
+import com.lucasbrown.GraphNetwork.Local.Nodes.INode;
+
 public class Signal{
-    public final Node sendingNode;
-    public final Node recievingNode;
+    public final INode sendingNode;
+    public final INode recievingNode;
     public final int sourceKey;
     public final double strength;
     public final double probability;
 
-    public Signal(final Node sendingNode, final Node recievingNode, final int sourceKey, final double strength, final double probability) {
+    public Signal(final INode sendingNode, final INode recievingNode, final int sourceKey, final double strength, final double probability) {
         assert Double.isFinite(strength);
         this.sendingNode = sendingNode;
         this.recievingNode = recievingNode;
@@ -16,12 +18,20 @@ public class Signal{
         this.probability = probability;
     }
 
-    public Node getSendingNode() {
+    public INode getSendingNode() {
         return sendingNode;
     }
 
-    public Node getRecievingNode() {
+    public INode getRecievingNode() {
         return recievingNode;
+    }
+
+    public int getSendingID(){
+        return sendingNode.getID();
+    }
+
+    public int getRecievingID(){
+        return sendingNode.getID();
     }
 
     public int getSourceKey()
@@ -37,7 +47,7 @@ public class Signal{
         return probability;
     }
 
-    public static int CompareSendingNodeIDs(Signal s1, Signal s2){
-        return Integer.compare(s1.sendingNode.id, s2.sendingNode.id);
+    public static int compareSendingNodeIDs(Signal s1, Signal s2){
+        return Integer.compare(s1.sendingNode.getID(), s2.sendingNode.getID());
     }
 }

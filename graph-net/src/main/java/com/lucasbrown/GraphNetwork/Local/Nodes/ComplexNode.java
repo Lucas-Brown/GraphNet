@@ -1,23 +1,17 @@
-package com.lucasbrown.GraphNetwork.Local.Nodes.ComplexNode;
+package com.lucasbrown.GraphNetwork.Local.Nodes;
 
-import java.security.InvalidAlgorithmParameterException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
 import java.util.Random;
-import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import com.lucasbrown.GraphNetwork.Distributions.FilterDistribution;
 import com.lucasbrown.GraphNetwork.Global.GraphNetwork;
-import com.lucasbrown.GraphNetwork.Global.SharedNetworkData;
-import com.lucasbrown.NetworkTraining.ApproximationTools.ArrayTools;
-import com.lucasbrown.NetworkTraining.ApproximationTools.Convolution.FilterDistributionConvolution;
+import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
+import com.lucasbrown.GraphNetwork.Local.Arc;
+import com.lucasbrown.GraphNetwork.Local.Signal;
 
 /**
  * A node within a graph neural network.
@@ -25,13 +19,7 @@ import com.lucasbrown.NetworkTraining.ApproximationTools.Convolution.FilterDistr
  * Each node uses a @code NodeConnection to evaluate its own likelyhood of
  * sending a signal out to other connected nodes
  */
-public class ComplexNode extends Node {
-
-    /**
-     * Maps all incoming node ID's to an int from 0 to the number of incoming nodes
-     * -1
-     */
-    protected final HashMap<Integer, Integer> orderedIDMap;
+public class ComplexNode extends NodeBase {
 
     /**
      * Each possible combinations of inputs has a corresponding unique set of
@@ -59,6 +47,10 @@ public class ComplexNode extends Node {
 
     protected boolean hasValidForwardSignal;
 
+    public ComplexNode(final ActivationFunction activationFunction){
+        this(null, activationFunction);
+    }
+
     public ComplexNode(final GraphNetwork network, final ActivationFunction activationFunction) {
         super(network, activationFunction);
         weights = new double[1][1];
@@ -81,7 +73,7 @@ public class ComplexNode extends Node {
      */
     @Override
     public boolean addIncomingConnection(Arc connection) {
-        orderedIDMap.put(connection.sending.id, 1 << orderedIDMap.size());
+        orderedIDMap.put(connection.getSendingID(), 1 << orderedIDMap.size());
         appendWeightsAndBiases();
         return super.addIncomingConnection(connection);
     }
@@ -91,7 +83,7 @@ public class ComplexNode extends Node {
      * 
      * @param signal
      */
-    void recieveForwardSignal(Signal signal) {
+    public void recieveForwardSignal(Signal signal) {
         appendForward(signal);
         super.recieveForwardSignal(signal);
     }
@@ -113,7 +105,7 @@ public class ComplexNode extends Node {
     }
 
     private void appendForward(Signal signal) {
-        int signal_id = orderedIDMap.get(signal.sendingNode.id);
+        int signal_id = orderedIDMap.get(signal.getSendingID());
         ArrayList<Signal> signals = forwardNext.get(signal_id);
         if (signals == null) {
             signals = new ArrayList<Signal>(1);
@@ -122,7 +114,7 @@ public class ComplexNode extends Node {
         } else {
             signals.add(signal);
         }
-        uniqueIncomingNodeIDs.add(signal.sendingNode.id);
+        uniqueIncomingNodeIDs.add(signal.getSendingID());
     }
 
     /**
@@ -180,7 +172,7 @@ public class ComplexNode extends Node {
         ArrayList<Signal> sortedSignals = new ArrayList<>(incomingSignals);
         // sorting by id to ensure that the weights are applied to the correct
         // node/signal
-        sortedSignals.sort(Signal::CompareSendingNodeIDs);
+        sortedSignals.sort(Signal::compareSendingNodeIDs);
 
         double[] input_weights = weights[binary_string];
 
@@ -191,6 +183,32 @@ public class ComplexNode extends Node {
         strength += biases[binary_string];
 
         return strength;
+    }
+
+    @Override
+    public void applyErrorSignals(double epsilon) {
+        for (int key = 1; key < biases.length; key++) {
+            int count = delta_counts[key];
+            if (count == 0)
+                continue;
+
+            double delta = -epsilon / count;
+            biases[key] += delta * bias_delta[key];
+            bias_delta[key] = 0;
+
+            for (int i = 0; i < weights[key].length; i++) {
+                weights[key][i] += delta * weights_delta[key][i];
+                weights_delta[key][i] = 0;
+            }
+
+            delta_counts[key] = 0;
+        }
+
+        for (Arc connection : outgoing) {
+            connection.probDist.applyAdjustments();
+        }
+
+        error_signals.clear();
     }
 
     /**
@@ -215,7 +233,7 @@ public class ComplexNode extends Node {
     @Override
     protected void addBiasDelta(int bitStr, double error){
         bias_delta[bitStr] += error;
-        delta_counts[binary_string] += 1;
+        delta_counts[bitStr] += 1;
     }
     
     @Override
@@ -223,6 +241,14 @@ public class ComplexNode extends Node {
         weights_delta[bitStr][weight_index] += error; 
     }
     
+    public static InputNode asInputNode(ActivationFunction activator){
+        return new InputNode(new ComplexNode(activator));
+    }
+    
+    public static OutputNode asOutputNode(ActivationFunction activator){
+        return new OutputNode(new ComplexNode(activator));
+    } 
+
     private class TimeKey {
         private final int timestep;
         private final int key;

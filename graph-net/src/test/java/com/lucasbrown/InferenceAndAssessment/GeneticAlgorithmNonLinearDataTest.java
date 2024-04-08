@@ -8,7 +8,7 @@ import java.util.stream.IntStream;
 import com.lucasbrown.GraphNetwork.Distributions.BellCurveDistribution;
 import com.lucasbrown.GraphNetwork.Global.DataGraphNetwork;
 import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
-import com.lucasbrown.GraphNetwork.Local.Node;
+import com.lucasbrown.GraphNetwork.Local.INode;
 import com.lucasbrown.GraphNetwork.Local.DataStructure.InputDataNode;
 import com.lucasbrown.GraphNetwork.Local.DataStructure.OutputDataNode;
 import com.lucasbrown.NetworkTraining.GeneticAlgorithm.GeneticTrainer;
@@ -25,8 +25,8 @@ public class GeneticAlgorithmNonLinearDataTest {
 
         InputDataNode in = net.createInputNode(ActivationFunction.SIGNED_QUADRATIC);
         OutputDataNode out = net.createOutputNode(ActivationFunction.SIGNED_QUADRATIC);
-        Node hidden1 = net.createHiddenNode(ActivationFunction.SIGNED_QUADRATIC);
-        Node hidden2 = net.createHiddenNode(ActivationFunction.SIGNED_QUADRATIC);
+        INode hidden1 = net.createHiddenNode(ActivationFunction.SIGNED_QUADRATIC);
+        INode hidden2 = net.createHiddenNode(ActivationFunction.SIGNED_QUADRATIC);
 
         in.setName("Input");
         out.setName("Output");

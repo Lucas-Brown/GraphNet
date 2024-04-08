@@ -28,11 +28,11 @@ public class OpenFilter extends FilterDistribution {
     }
 
     @Override
-    public void prepareReinforcement(double valueToReinforce) {
+    public void prepareReinforcement(double valueToReinforce, double weight) {
     }
 
     @Override
-    public void prepareDiminishment(double valueToDiminish) {
+    public void prepareDiminishment(double valueToDiminish, double weight) {
     }
 
     @Override
@@ -45,6 +45,12 @@ public class OpenFilter extends FilterDistribution {
     public double getVariance() {
         // TODO Auto-generated method stub
         throw new UnsupportedOperationException("Unimplemented method 'getVariance'");
+    }
+
+    @Override 
+    public double getNumberOfPointsInDistribution()
+    {
+        return 1;
     }
 
     @Override

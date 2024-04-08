@@ -1,21 +1,53 @@
 package com.lucasbrown.GraphNetwork.Local.Nodes;
 
-import com.lucasbrown.GraphNetwork.Local.Nodes.INode;
+import java.security.InvalidAlgorithmParameterException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Optional;
+
+import com.lucasbrown.GraphNetwork.Global.GraphNetwork;
+import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
+import com.lucasbrown.GraphNetwork.Local.Arc;
+import com.lucasbrown.GraphNetwork.Local.Outcome;
+import com.lucasbrown.GraphNetwork.Local.Signal;
 
 public class NodeWrapper implements INode {
-    
-    private INode wrappingNode;
 
-    public NodeWrapper(INode node){
+    protected INode wrappingNode;
+
+    public NodeWrapper(INode node) {
         wrappingNode = node;
     }
-    
-    public int getID(){
+
+    @Override
+    public int getID() {
         return wrappingNode.getID();
     }
 
-    public void setName(String name){
+    @Override
+    public String getName()
+    {
+        return wrappingNode.getName();
+    }
+
+    @Override
+    public void setName(String name) {
         wrappingNode.setName(name);
+    }
+
+    @Override
+    public void setParentNetwork(GraphNetwork network){
+        wrappingNode.setParentNetwork(network);
+    }
+
+    @Override
+    public GraphNetwork getParentNetwork() {
+        return wrappingNode.getParentNetwork();
+    }
+
+    @Override
+    public ActivationFunction getActivationFunction() {
+        return wrappingNode.getActivationFunction();
     }
 
     /**
@@ -23,7 +55,8 @@ public class NodeWrapper implements INode {
      * @param node
      * @return whether this node is connected to the provided node
      */
-    public boolean doesContainConnection(INode node){
+    @Override
+    public boolean doesContainConnection(INode node) {
         return wrappingNode.doesContainConnection(node);
     }
 
@@ -34,7 +67,8 @@ public class NodeWrapper implements INode {
      * @param recievingNode
      * @return The arc if present, otherwise null
      */
-    public Arc getArc(INode recievingNode){
+    @Override
+    public Arc getArc(INode recievingNode) {
         return wrappingNode.getArc(recievingNode);
     }
 
@@ -44,8 +78,14 @@ public class NodeWrapper implements INode {
      * @param connection
      * @return true
      */
-    public boolean addIncomingConnection(Arc connection){
-        throw InvalidAlgorithmParameterException("Input nodes cannot have an incoming connection");
+    @Override
+    public boolean addIncomingConnection(Arc connection) {
+        return wrappingNode.addIncomingConnection(connection);
+    }
+
+    @Override
+    public Collection<Arc> getAllIncomingConnections() {
+        return wrappingNode.getAllIncomingConnections();
     }
 
     /**
@@ -54,11 +94,19 @@ public class NodeWrapper implements INode {
      * @param connection
      * @return true
      */
-    public boolean addOutgoingConnection(Arc connection){
+    @Override
+    public boolean addOutgoingConnection(Arc connection) {
         wrappingNode.addOutgoingConnection(connection);
+        return false;
     }
 
-    public Optional<Arc> getOutgoingConnectionTo(Node recievingNode){
+    @Override
+    public Collection<Arc> getAllOutgoingConnections() {
+        return wrappingNode.getAllOutgoingConnections();
+    }
+
+    @Override
+    public Optional<Arc> getOutgoingConnectionTo(INode recievingNode) {
         return wrappingNode.getOutgoingConnectionTo(recievingNode);
     }
 
@@ -67,15 +115,18 @@ public class NodeWrapper implements INode {
      * 
      * @param signal
      */
-    public void recieveForwardSignal(Signal signal){
+    @Override
+    public void recieveForwardSignal(Signal signal) {
         wrappingNode.recieveForwardSignal(signal);
     }
 
-    public void recieveError(int timestep, int key, double error){
+    @Override
+    public void recieveError(int timestep, int key, double error) {
         wrappingNode.recieveError(timestep, key, error);
     }
 
-    public Double getError(int timestep, int key){
+    @Override
+    public Double getError(int timestep, int key) {
         return wrappingNode.getError(timestep, key);
     }
 
@@ -84,7 +135,8 @@ public class NodeWrapper implements INode {
      * 
      * @param signal
      */
-    public void recieveBackwardSignal(Signal signal){
+    @Override
+    public void recieveBackwardSignal(Signal signal) {
         wrappingNode.recieveBackwardSignal(signal);
     }
 
@@ -93,8 +145,9 @@ public class NodeWrapper implements INode {
      * 
      * @param signal
      */
-    public void recieveInferenceSignal(Signal signal){
-        return wrappingNode.recieveInferenceSignal(signal);
+    @Override
+    public void recieveInferenceSignal(Signal signal) {
+        wrappingNode.recieveInferenceSignal(signal);
     }
 
     /**
@@ -102,35 +155,64 @@ public class NodeWrapper implements INode {
      * 
      * @return
      */
-    public boolean hasValidForwardSignal(){
+    @Override
+    public boolean hasValidForwardSignal() {
         return wrappingNode.hasValidForwardSignal();
     }
 
-    public double[] getWeights(int bitStr){
+    @Override
+    public void setValidForwardSignal(boolean state) {
+        wrappingNode.setValidForwardSignal(state);
+    }
+
+    @Override
+    public double[] getWeights(int bitStr) {
         return wrappingNode.getWeights(bitStr);
     }
 
-    public double getBias(int bitStr){
+    @Override
+    public double getBias(int bitStr) {
         return wrappingNode.getBias(bitStr);
     }
 
-    public void sendForwardSignals(){
+    @Override
+    public void sendForwardSignals() {
         wrappingNode.sendForwardSignals();
     }
 
-    public ArrayList<Outcome> getState(){
+    @Override
+    public ArrayList<Outcome> getState() {
         return wrappingNode.getState();
     }
 
-    public void sendErrorsBackwards(ArrayList<Outcome> outcomesAtTime, int timestep){
-        wrappingNode.sendErrorsBackwards(null, timestep);
+    @Override
+    public void sendErrorsBackwards(ArrayList<Outcome> outcomesAtTime, int timestep) {
+        wrappingNode.sendErrorsBackwards(outcomesAtTime, timestep);
     }
 
-    public void applyErrorSignals(double epsilon){
+    @Override
+    public void applyErrorSignals(double epsilon) {
         wrappingNode.applyErrorSignals(epsilon);
     }
 
-    public void clearSignals(){
+    @Override
+    public void acceptSignals() throws InvalidAlgorithmParameterException {
+        wrappingNode.acceptSignals();
+    }
+
+    @Override
+    public void clearSignals() {
         wrappingNode.clearSignals();
     }
+
+    @Override
+    public int compareTo(INode o) {
+        return getID() - o.getID();
+    }
+
+    @Override
+    public void sendTrainingSignals() {
+        wrappingNode.sendTrainingSignals();
+    }
+
 }

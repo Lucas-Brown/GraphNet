@@ -43,18 +43,42 @@ public abstract class FilterDistribution implements ICopyable<FilterDistribution
 
     public abstract double sendChance(double inputSignal);
 
-    public abstract void prepareReinforcement(double valueToReinforce);
+    public abstract void prepareReinforcement(double valueToReinforce, double weight);
 
-    public abstract void prepareDiminishment(double valueToDiminish);
+    public abstract void prepareDiminishment(double valueToDiminish, double weight);
 
     public abstract double getMean();
 
     public abstract double getVariance();
 
+    public abstract double getNumberOfPointsInDistribution();
+
     /**
      * Apply adjustments from reinforcing/diminishing the distribution
      */
     public abstract void applyAdjustments();
+
+    public void prepareReinforcement(double valueToReinforce){
+        prepareReinforcement(valueToReinforce, 1);
+    }
+
+    public void prepareDiminishment(double valueToDiminish){
+        prepareDiminishment(valueToDiminish, 1);
+    }
+
+    public void prepareWeightedReinforcement(double valueToReinforce){
+        prepareReinforcement(valueToReinforce, weightFunction(valueToReinforce));
+    }
+
+    private double weightFunction(double point){
+        final double inv_prob = 1/sendChance(point);
+        final double N = getNumberOfPointsInDistribution();
+        if(Double.isFinite(inv_prob)){ // inv_prob can be NaN due to divide by zero
+            return Math.min(inv_prob, N);
+        } else {
+            return N;
+        }
+    }
 
     public boolean shouldSend(double inputSignal) {
         // Use the normalized normal distribution as a measure of how likely

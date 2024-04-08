@@ -5,6 +5,8 @@ import java.util.ArrayList;
 
 import com.lucasbrown.GraphNetwork.Global.GraphNetwork;
 import com.lucasbrown.GraphNetwork.Global.SharedNetworkData;
+import com.lucasbrown.GraphNetwork.Local.Arc;
+import com.lucasbrown.GraphNetwork.Local.Outcome;
 
 /**
  * A node which exposes the functionality of recieving signals.
@@ -21,15 +23,15 @@ public class InputNode extends NodeWrapper implements IInputNode {
     @Override
     public void acceptUserForwardSignal(double value) {
         inputValue = value;
-        wrappingNode.network.notifyNodeActivation(this);
-        wrappingNode.hasValidForwardSignal = true; 
+        wrappingNode.getParentNetwork().notifyNodeActivation(this);
+        wrappingNode.setValidForwardSignal(true); 
     }
 
     @Override
     public void acceptUserInferenceSignal(double value) {
         inputValue = value;
-        wrappingNode.network.notifyNodeActivation(this);
-        wrappingNode.hasValidForwardSignal = true;
+        wrappingNode.getParentNetwork().notifyNodeActivation(this);
+        wrappingNode.setValidForwardSignal(true); 
     }
 
     @Override
@@ -37,20 +39,26 @@ public class InputNode extends NodeWrapper implements IInputNode {
         // do nothing!
     }
 
+    @Override 
+    public void sendTrainingSignals(){
+        sendForwardSignals();
+        setValidForwardSignal(false);
+    }
+
     @Override
     public void sendForwardSignals() {
-        for (Arc connection : outgoing) {
-            connection.sendForwardSignal(-1, activationFunction.activator(inputValue), connection.probDist.sendChance(inputValue)); 
+        for (Arc connection : getAllOutgoingConnections()) {
+            connection.sendForwardSignal(-1, getActivationFunction().activator(inputValue), connection.probDist.sendChance(inputValue)); 
         }
     }
 
     @Override
     public ArrayList<Outcome> getState()
     {
-        outcomes = new ArrayList<>(1);
+        ArrayList<Outcome> outcomes = new ArrayList<>(1);
         Outcome outcome = new Outcome();
         outcome.netValue = inputValue;
-        outcome.activatedValue = activationFunction.activator(inputValue);
+        outcome.activatedValue = getActivationFunction().activator(inputValue);
         outcome.binary_string = -1;
         outcome.probability = 1;
         outcomes.add(outcome);
@@ -89,7 +97,7 @@ public class InputNode extends NodeWrapper implements IInputNode {
     
     @Override
     public String toString() {
-        return name + ": (" + inputValue + ", 100%)";
+        return getName() + ": (" + inputValue + ", 100%)";
     }
 
     

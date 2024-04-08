@@ -5,7 +5,7 @@ import com.lucasbrown.GraphNetwork.Distributions.BellCurveDistribution;
 import com.lucasbrown.GraphNetwork.Global.GraphNetwork;
 import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
 import com.lucasbrown.GraphNetwork.Local.InputNode;
-import com.lucasbrown.GraphNetwork.Local.Node;
+import com.lucasbrown.GraphNetwork.Local.INode;
 import com.lucasbrown.GraphNetwork.Local.OutputNode;
 
 /**
@@ -26,8 +26,8 @@ public class Alternating {
 
         n1 = net.createInputNode(ActivationFunction.LINEAR);
         n2 = net.createOutputNode(ActivationFunction.SIGMOID);
-        Node h1 = net.createHiddenNode(ActivationFunction.SIGMOID);
-        Node h2 = net.createHiddenNode(ActivationFunction.SIGMOID);
+        INode h1 = net.createHiddenNode(ActivationFunction.SIGMOID);
+        INode h2 = net.createHiddenNode(ActivationFunction.SIGMOID);
 
         n1.setName("Input");
         n2.setName("Output");

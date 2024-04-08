@@ -4,7 +4,7 @@ import com.lucasbrown.GraphNetwork.Distributions.BellCurveDistribution;
 import com.lucasbrown.GraphNetwork.Global.ReferenceGraphNetwork;
 import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
 import com.lucasbrown.GraphNetwork.Local.InputNode;
-import com.lucasbrown.GraphNetwork.Local.Node;
+import com.lucasbrown.GraphNetwork.Local.INode;
 import com.lucasbrown.GraphNetwork.Local.ReferenceStructure.InputReferenceNode;
 import com.lucasbrown.GraphNetwork.Local.ReferenceStructure.OutputReferenceNode;
 
@@ -24,7 +24,7 @@ public class LinearData {
 
         in = net.createInputNode(ActivationFunction.LINEAR);
         out = net.createOutputNode(ActivationFunction.LINEAR);
-        Node hidden = net.createHiddenNode(ActivationFunction.LINEAR);
+        INode hidden = net.createHiddenNode(ActivationFunction.LINEAR);
 
         in.setName("Input");
         out.setName("Output");
