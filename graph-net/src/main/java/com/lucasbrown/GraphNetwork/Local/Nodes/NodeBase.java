@@ -410,9 +410,9 @@ public abstract class NodeBase implements INode {
         outcome.netValue = computeMergedSignalStrength(signalSet, outcome.binary_string);
         outcome.activatedValue = activationFunction.activator(outcome.netValue);
         outcome.probability = getProbabilityOfSignalSet(signalSet, setPair.v);
-        outcome.sourceOutputs = signalSet.stream().mapToDouble(Signal::getOutputStrength).toArray();
         outcome.sourceNodes = nodeSet.toArray(new INode[nodeSet.size()]);
         outcome.sourceKeys = signalSet.stream().mapToInt(Signal::getSourceKey).toArray();
+        outcome.sourceOutcomes = signalSet.stream().map(signal -> signal.sourceOutcome).toArray(Outcome[]::new);
         return outcome;
     }
 
@@ -426,9 +426,9 @@ public abstract class NodeBase implements INode {
         double probability = 1;
         for (Signal s : allSendingSignals) {
             if (signalSet.contains(s)) {
-                probability *= s.probability;
+                probability *= s.getProbability();
             } else {
-                probability *= 1 - s.probability;
+                probability *= 1 - s.getProbability();
             }
         }
         return probability;
@@ -526,8 +526,7 @@ public abstract class NodeBase implements INode {
     public void sendForwardSignals() {
         for (Outcome out : outcomes) {
             for (Arc connection : outgoing) {
-                connection.sendForwardSignal(out.binary_string, out.activatedValue,
-                        out.probability * connection.probDist.sendChance(out.netValue)); // oh god
+                connection.sendForwardSignal(out); // oh god
             }
         }
 
@@ -647,34 +646,22 @@ public abstract class NodeBase implements INode {
 
     public void sendErrorsBackwards(ArrayList<Outcome> outcomesAtTime, int timestep) {
 
-        double normalization_const = 0;
         for (Outcome outcome : outcomesAtTime) {
-            normalization_const += outcome.probability;
-        }
-
-        for (Outcome outcome : outcomesAtTime) {
-            Double error = getError(timestep, outcome.binary_string);
-            if (error != null & outcome.probability > 0) {
-                sendErrorsBackwards(outcome, timestep, error * outcome.probability / normalization_const);
-                sendBackwardsSample(outcome, error);
+            if (outcome.errorOfOutcome.nonZero() & outcome.probability > 0) {
+                sendErrorsBackwards(outcome, timestep);
+                sendBackwardsSample(outcome);
             }
         }
     }
 
-    private void sendErrorsBackwards(Outcome outcomeAtTime, int timestep, double error) {
+    private void sendErrorsBackwards(Outcome outcomeAtTime, int timestep) {
         int binary_string = outcomeAtTime.binary_string;
-        double error_derivative = activationFunction.derivative(outcomeAtTime.netValue) * error;
+        double error_derivative = activationFunction.derivative(outcomeAtTime.netValue) * outcomeAtTime.errorOfOutcome.getAverage();
         double[] weightsOfNodes = getWeights(binary_string);
 
-        // may need to correct for probability weighting
-        addProbabilityWeight(binary_string, outcomeAtTime.probability);
-        addBiasDelta(binary_string, error_derivative);
         for (int i = 0; i < weightsOfNodes.length; i++) {
-            addWeightDelta(binary_string, i, outcomeAtTime.sourceOutputs[i] * error_derivative);
-
-            INode sourceNode = outcomeAtTime.sourceNodes[i];
-            sourceNode.recieveError(timestep - 1, outcomeAtTime.sourceKeys[i], error_derivative * weightsOfNodes[i]);
-
+            outcomeAtTime.sourceOutcomes[i].errorOfOutcome.add(error_derivative * weightsOfNodes[i], outcomeAtTime.probability);
+            
             // apply error as new point for the distribution
             // Arc connection = sourceNode.getOutgoingConnectionTo(this).get();
             // connection.probDist.prepareReinforcement(outcomeAtTime.netValue - error);
@@ -682,8 +669,8 @@ public abstract class NodeBase implements INode {
 
     }
 
-    private void sendBackwardsSample(Outcome outcomeAtTime, double error) {
-        double activatedValue = outcomeAtTime.netValue - error;
+    private void sendBackwardsSample(Outcome outcomeAtTime) {
+        double activatedValue = outcomeAtTime.netValue - outcomeAtTime.errorOfOutcome.getAverage();
 
         // Select the backward signal combination
         FilterDistributionConvolution[] convolutions = getReverseOutcomes();
@@ -749,20 +736,8 @@ public abstract class NodeBase implements INode {
 
     protected abstract double computeMergedSignalStrength(Collection<Signal> incomingSignals, int binary_string);
 
-    public abstract void recieveError(int timestep, int key, double error);
-
-    public abstract Double getError(int timestep, int key);
-
     public abstract double[] getWeights(int bitStr);
 
     public abstract double getBias(int bitStr);
-
-    protected abstract void addProbabilityWeight(int bitStr, double weight);
-
-    protected abstract void addBiasDelta(int bitStr, double error);
-
-    protected abstract void addWeightDelta(int bitStr, int weight_index, double error);
-
-    public abstract void applyErrorSignals(double epsilon);
 
 }

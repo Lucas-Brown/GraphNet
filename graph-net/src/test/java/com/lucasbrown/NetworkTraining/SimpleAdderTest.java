@@ -1,5 +1,6 @@
 package com.lucasbrown.NetworkTraining;
 
+import java.util.Objects;
 import java.util.Random;
 import java.util.stream.Stream;
 
@@ -12,35 +13,41 @@ import com.lucasbrown.GraphNetwork.Local.Nodes.OutputNode;
 import com.lucasbrown.GraphNetwork.Local.Nodes.SimpleNode;
 import com.lucasbrown.NetworkTraining.ApproximationTools.ErrorFunction;
 
-public class AdderTest {
+public class SimpleAdderTest {
     
     private static Random rng = new Random();
     private static int counter = 0;
 
-    private int N = 15;
+    private int N = 20;
     private Double[][] inputData = new Double[][]{new Double[]{1d,2d,3d}, new Double[]{2d,1d,3d}, new Double[]{3d,2d,1d}, new Double[]{3d,2d,1d}};
     private Double[][] outputData = new Double[][]{new Double[]{6d}, new Double[]{6d}, new Double[]{6d}, new Double[]{6d}, new Double[]{6d}};
 
-    private void initializeInputData()
-    {
+    private void initializeInputData() {
         inputData = new Double[N][1];
         for (int i = 0; i < N; i++) {
-            inputData[i] = new Double[]{rng.nextDouble(), rng.nextDouble(), rng.nextDouble()};
+            inputData[i] = new Double[] { doubleOrNothing(), doubleOrNothing(), doubleOrNothing() };
+            if(inputData[i][0] == null & inputData[i][1] == null & inputData[i][2] == null){
+                i--;
+            }
         }
-    } 
+    }
 
-    private void initializeOutputData()
-    {
+    private void initializeOutputData() {
         outputData = new Double[N][1];
         for (int i = 0; i < N; i++) {
-            outputData[(i + 1) % N] = new Double[]{Stream.of(inputData[i]).mapToDouble(d -> d).sum()};
+            outputData[(i + 1) % N] = new Double[] {
+                    Stream.of(inputData[i]).filter(Objects::nonNull).mapToDouble(d -> d).sum() };
         }
-    } 
+    }
+
+    private Double doubleOrNothing() {
+        return rng.nextBoolean() ? rng.nextGaussian() : null;
+    }
 
     public static void main(String[] args){
-        AdderTest adder = new AdderTest();
-        adder.initializeInputData();
-        adder.initializeOutputData();
+        SimpleAdderTest adder = new SimpleAdderTest();
+        // adder.initializeInputData();
+        // adder.initializeOutputData();
 
         GraphNetwork net = new GraphNetwork();
 
@@ -68,10 +75,11 @@ public class AdderTest {
         net.addNewConnection(in3, out, new OpenFilter());
 
         BackpropTrainer bt = new BackpropTrainer(net, new ErrorFunction.MeanSquaredError());
-        bt.epsilon = 0.05;
+        bt.epsilon = 0.2;
 
         bt.setTrainingData(adder.inputData, adder.outputData);
-        bt.trainNetwork(10000, 1000);
+        bt.trainNetwork(10000, 100);
+        bt.trainNetwork(1000, 100);
 
         net.deactivateAll();
         net.setInputOperation(nodeMap -> BackpropTrainer.applyInputToNode(nodeMap, adder.inputData, counter++));

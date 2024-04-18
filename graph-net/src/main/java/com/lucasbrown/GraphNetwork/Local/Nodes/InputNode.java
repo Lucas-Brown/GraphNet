@@ -48,7 +48,7 @@ public class InputNode extends NodeWrapper implements IInputNode {
     @Override
     public void sendForwardSignals() {
         for (Arc connection : getAllOutgoingConnections()) {
-            connection.sendForwardSignal(-1, getActivationFunction().activator(inputValue), connection.probDist.sendChance(inputValue)); 
+            connection.sendForwardSignal(getOutcome()); 
         }
     }
 
@@ -56,13 +56,18 @@ public class InputNode extends NodeWrapper implements IInputNode {
     public ArrayList<Outcome> getState()
     {
         ArrayList<Outcome> outcomes = new ArrayList<>(1);
+        outcomes.add(getOutcome());
+        return outcomes;
+    }
+
+    
+    private Outcome getOutcome(){
         Outcome outcome = new Outcome();
         outcome.netValue = inputValue;
         outcome.activatedValue = getActivationFunction().activator(inputValue);
         outcome.binary_string = -1;
         outcome.probability = 1;
-        outcomes.add(outcome);
-        return outcomes;
+        return outcome;
     }
 
     @Override 

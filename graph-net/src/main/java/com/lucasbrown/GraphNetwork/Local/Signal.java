@@ -5,17 +5,15 @@ import com.lucasbrown.GraphNetwork.Local.Nodes.INode;
 public class Signal{
     public final INode sendingNode;
     public final INode recievingNode;
-    public final int sourceKey;
-    public final double strength;
-    public final double probability;
+    public final Outcome sourceOutcome;
+    public final double firingProbability;
 
-    public Signal(final INode sendingNode, final INode recievingNode, final int sourceKey, final double strength, final double probability) {
-        assert Double.isFinite(strength);
+    public Signal(final INode sendingNode, final INode recievingNode, final Outcome sourceOutcome, final double firingProbability) {
+        assert Double.isFinite(sourceOutcome.activatedValue);
         this.sendingNode = sendingNode;
         this.recievingNode = recievingNode;
-        this.sourceKey = sourceKey;
-        this.strength = strength;
-        this.probability = probability;
+        this.sourceOutcome = sourceOutcome;
+        this.firingProbability = firingProbability;
     }
 
     public INode getSendingNode() {
@@ -36,15 +34,15 @@ public class Signal{
 
     public int getSourceKey()
     {
-        return sourceKey;
+        return sourceOutcome.binary_string;
     }
 
     public double getOutputStrength() {
-        return strength;
+        return sourceOutcome.activatedValue;
     }
     
     public double getProbability() {
-        return probability;
+        return sourceOutcome.probability * firingProbability;
     }
 
     public static int compareSendingNodeIDs(Signal s1, Signal s2){

@@ -37,7 +37,7 @@ public class OutputNode extends NodeWrapper implements IOutputNode {
 
     @Override
     public void acceptUserBackwardSignal(double value) {
-        super.recieveBackwardSignal(new Signal(this, null, -1, value, 1));
+        //super.recieveBackwardSignal(new Signal(this, null, -1, value, 1));
     }
 
     /*

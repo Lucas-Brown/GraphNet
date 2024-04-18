@@ -1,8 +1,11 @@
 package com.lucasbrown.GraphNetwork.Global;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map.Entry;
+import java.util.Objects;
+import java.util.stream.Stream;
 
 import com.lucasbrown.GraphNetwork.Local.Outcome;
 import com.lucasbrown.GraphNetwork.Local.Nodes.IInputNode;
@@ -12,10 +15,12 @@ import com.lucasbrown.GraphNetwork.Local.Nodes.InputNode;
 import com.lucasbrown.GraphNetwork.Local.Nodes.OutputNode;
 import com.lucasbrown.NetworkTraining.History;
 import com.lucasbrown.NetworkTraining.ApproximationTools.ErrorFunction;
+import com.lucasbrown.NetworkTraining.ApproximationTools.WeightedAverage;
 
 public class BackpropTrainer {
     
     public double epsilon = 0.01;
+    private WeightedAverage total_error;
 
     private int timestep;
     private final GraphNetwork network;
@@ -35,6 +40,8 @@ public class BackpropTrainer {
 
         network.setInputOperation(this::applyInputToNode);
         outputNodes = network.getOutputNodes();
+
+        total_error = new WeightedAverage();
     }
 
     /**
@@ -68,7 +75,7 @@ public class BackpropTrainer {
         for (timestep = 0; timestep < inputs.length; timestep++) {
             network.trainingStep();
             if(print_forward) {
-                System.out.println(network);
+                System.out.println(network.toString() + " | Target = " + Arrays.toString(targets[timestep]));
             }
             networkHistory.captureState();
         }
@@ -77,33 +84,27 @@ public class BackpropTrainer {
 
 
     private void computeErrorOfOutputs(boolean print_forward){
-        double total_error = 0;
         for(int time = timestep; time > 0; time--){
             for (int i = 0; i < outputNodes.size(); i++) {
-                total_error += computeErrorOfOutput(outputNodes.get(i), time, targets[time][i]);
+                computeErrorOfOutput(outputNodes.get(i), time, targets[time][i]);
             }
         }
+        //assert total_error.getAverage() < 1E6;
+        assert Double.isFinite(total_error.getAverage());
         if(print_forward){
-            System.out.println(total_error);
+            System.out.println(total_error.getAverage());
         }
+        total_error.reset();
     }
 
-    private double computeErrorOfOutput(OutputNode node, int timestep, double target){
+    private void computeErrorOfOutput(OutputNode node, int timestep, double target){
         ArrayList<Outcome> outcomes = networkHistory.getStateOfNode(timestep, node.getID());
 
-        double normalization_const = 0;
         for(Outcome outcome : outcomes){
-            normalization_const += outcome.probability;
+            outcome.errorOfOutcome.add(errorFunction.error_derivative(outcome.activatedValue, target), outcome.probability);
+            assert Double.isFinite(errorFunction.error(outcome.activatedValue, target));
+            total_error.add(errorFunction.error(outcome.activatedValue, target), outcome.probability);
         }
-
-        double total_error = 0;
-        for(Outcome outcome : outcomes){
-            double error = outcome.probability * errorFunction.error_derivative(outcome.netValue, target) / normalization_const;
-            total_error += outcome.probability * errorFunction.error(outcome.activatedValue, target);
-            //double error = errorFunction.error_derivative(outcome.activatedValue, target);
-            node.recieveError(timestep, outcome.binary_string, error);
-        }
-        return total_error/normalization_const;
     }
 
     private void backpropagateErrors() {
@@ -123,7 +124,7 @@ public class BackpropTrainer {
     }
 
     private void applyErrorSignalsToNode(INode node){
-        node.applyErrorSignals(epsilon);
+        node.applyErrorSignals(epsilon, networkHistory.getOutcomesOfKeyFromNode(node.getID()));
     }
 
     private void applyInputToNode(HashMap<Integer, ? extends IInputNode> inputNodeMap){

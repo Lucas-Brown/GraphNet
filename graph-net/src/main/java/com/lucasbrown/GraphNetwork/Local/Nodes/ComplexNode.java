@@ -5,12 +5,14 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Random;
 import java.util.stream.IntStream;
 
 import com.lucasbrown.GraphNetwork.Global.GraphNetwork;
 import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
 import com.lucasbrown.GraphNetwork.Local.Arc;
+import com.lucasbrown.GraphNetwork.Local.Outcome;
 import com.lucasbrown.GraphNetwork.Local.Signal;
 
 /**
@@ -30,20 +32,9 @@ public class ComplexNode extends NodeBase {
     protected double[][] weights;
     protected double[] biases;
 
-    /**
-     * 
-     */
-    private HashMap<TimeKey, Double> error_signals;
-
-    private int[] delta_counts;
-    private double[] bias_delta;
-    private double[][] weights_delta;
-
-    /**
-     * The binary string representation of the incoming arcs being sent a backwards
-     * signal
-     */
-    private int backwardsBinStr;
+    private double[] probability_weight_sum;
+    private double[] bias_gradient;
+    private double[][] weights_gradient;
 
     public ComplexNode(final ActivationFunction activationFunction){
         this(null, activationFunction);
@@ -54,11 +45,10 @@ public class ComplexNode extends NodeBase {
         weights = new double[1][1];
         biases = new double[1];
         weights[0] = new double[0];
-        delta_counts = new int[1];
-        bias_delta = new double[1];
-        weights_delta = new double[1][1];
-        weights_delta[0] = new double[0];
-        error_signals = new HashMap<>();
+        probability_weight_sum = new double[1];
+        bias_gradient = new double[1];
+        weights_gradient = new double[1][1];
+        weights_gradient[0] = new double[0];
     }
 
     /**
@@ -73,22 +63,6 @@ public class ComplexNode extends NodeBase {
         return super.addIncomingConnection(connection);
     }
 
-    @Override
-    public void recieveError(int timestep, int key, double error) {
-        TimeKey tk = new TimeKey(timestep, key);
-        Double error_rate = error_signals.get(tk);
-        if (error_rate == null) {
-            error_rate = Double.valueOf(0);
-        }
-        error_rate += error;
-        error_signals.put(tk, error_rate);
-    }
-
-    @Override
-    public Double getError(int timestep, int key) {
-        return error_signals.get(new TimeKey(timestep, key));
-    }
-
     /**
      * Adds another layer of depth to the weights and biases hyper array
      */
@@ -100,9 +74,9 @@ public class ComplexNode extends NodeBase {
         biases = Arrays.copyOf(biases, new_size);
         weights = Arrays.copyOf(weights, new_size);
 
-        delta_counts = new int[new_size];
-        bias_delta = new double[new_size];
-        weights_delta = new double[new_size][];
+        probability_weight_sum = new double[new_size];
+        bias_gradient = new double[new_size];
+        weights_gradient = new double[new_size][];
 
         // the second half needs entirely new data
         for (int i = old_size; i < new_size; i++) {
@@ -117,7 +91,7 @@ public class ComplexNode extends NodeBase {
         }
 
         for (int i = 0; i < new_size; i++) {
-            weights_delta[i] = new double[weights.length];
+            weights_gradient[i] = new double[weights[i].length];
         }
     }
 
@@ -145,7 +119,7 @@ public class ComplexNode extends NodeBase {
         double[] input_weights = weights[binary_string];
 
         double strength = IntStream.range(0, input_weights.length)
-                .mapToDouble(i -> input_weights[i] * sortedSignals.get(i).strength)
+                .mapToDouble(i -> input_weights[i] * sortedSignals.get(i).getOutputStrength())
                 .sum();
 
         strength += biases[binary_string];
@@ -154,29 +128,44 @@ public class ComplexNode extends NodeBase {
     }
 
     @Override
-    public void applyErrorSignals(double epsilon) {
-        for (int key = 1; key < biases.length; key++) {
-            int count = delta_counts[key];
-            if (count == 0)
-                continue;
+    public void applyErrorSignals(double epsilon, HashMap<Integer, ArrayList<Outcome>> allOutcomes) {
+        computeGradient(allOutcomes);
+        applyGradient(epsilon);
+    }
 
-            double delta = -epsilon / count;
-            biases[key] += delta * bias_delta[key];
-            bias_delta[key] = 0;
+    private void computeGradient(HashMap<Integer, ArrayList<Outcome>> allOutcomes){
+        for (int key = 1; key < biases.length; key++) {
+            ArrayList<Outcome> outcomesOfKey = allOutcomes.get(key);
+            double inv_size = 1d/outcomesOfKey.size();
+            for(Outcome outcome : outcomesOfKey){
+                if(!outcome.errorOfOutcome.nonZero()){
+                    continue;
+                }
+
+                double error = outcome.errorOfOutcome.getAverage()*inv_size;
+                bias_gradient[key] += error;
+
+                for (int i = 0; i < weights[key].length; i++) {
+                    weights_gradient[key][i] += error * outcome.sourceOutcomes[i].activatedValue;
+                }
+            }
+        }
+    }
+
+    private void applyGradient(double epsilon){
+        for (int key = 1; key < biases.length; key++) {
+            biases[key] -= bias_gradient[key] * epsilon;
+            bias_gradient[key] = 0;
 
             for (int i = 0; i < weights[key].length; i++) {
-                weights[key][i] += delta * weights_delta[key][i];
-                weights_delta[key][i] = 0;
+                weights[key][i] -= weights_gradient[key][i] * epsilon;
+                weights_gradient[key][i] = 0;
             }
-
-            delta_counts[key] = 0;
         }
 
         for (Arc connection : outgoing) {
             connection.probDist.applyAdjustments();
         }
-
-        error_signals.clear();
     }
 
     /**
@@ -198,17 +187,6 @@ public class ComplexNode extends NodeBase {
 
     }
 
-    @Override
-    protected void addBiasDelta(int bitStr, double error){
-        bias_delta[bitStr] += error;
-        delta_counts[bitStr] += 1;
-    }
-    
-    @Override
-    protected void addWeightDelta(int bitStr, int weight_index, double error){
-        weights_delta[bitStr][weight_index] += error; 
-    }
-    
     public static InputNode asInputNode(ActivationFunction activator){
         return new InputNode(new ComplexNode(activator));
     }
@@ -240,4 +218,5 @@ public class ComplexNode extends NodeBase {
             return timestep << 16 + key;
         }
     }
+
 }

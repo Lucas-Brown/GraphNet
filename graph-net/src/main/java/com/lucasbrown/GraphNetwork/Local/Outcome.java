@@ -1,15 +1,18 @@
 package com.lucasbrown.GraphNetwork.Local;
 
 import com.lucasbrown.GraphNetwork.Local.Nodes.INode;
+import com.lucasbrown.NetworkTraining.ApproximationTools.WeightedAverage;
 
 public class Outcome {
     public int binary_string;
     public double netValue;
     public double activatedValue;
     public double probability;
-    public double[] sourceOutputs;
     public INode[] sourceNodes;
     public int[] sourceKeys;
+
+    public Outcome[] sourceOutcomes;
+    public WeightedAverage errorOfOutcome = new WeightedAverage();
 
     @Override 
     public String toString()
@@ -17,6 +20,7 @@ public class Outcome {
         return String.format("(%.2e, %2.0f%s)", netValue, probability*100, "%");
     }
 
+    /* 
     @Override
     public boolean equals(Object o)
     {
@@ -30,6 +34,7 @@ public class Outcome {
             & probability == out.probability;
 
     }
+    */
 
     @Override 
     public int hashCode(){

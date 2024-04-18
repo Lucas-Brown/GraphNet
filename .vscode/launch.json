@@ -6,7 +6,23 @@
     "configurations": [
         {
             "type": "java",
-            "name": "AdderTest",
+            "name": "SimpleAdderTest",
+            "request": "launch",
+            "mainClass": "com.lucasbrown.NetworkTraining.SimpleAdderTest",
+            "projectName": "graph-net",
+            "vmArgs": "-enableassertions"
+        },
+        {
+            "type": "java",
+            "name": "ComplexAdderTest",
+            "request": "launch",
+            "mainClass": "com.lucasbrown.NetworkTraining.ComplexAdderTest",
+            "projectName": "graph-net",
+            "vmArgs": "-enableassertions"
+        },
+        {
+            "type": "java",
+            "name": "SimpleAdderTest",
             "request": "launch",
             "mainClass": "com.lucasbrown.NetworkTraining.AdderTest",
             "projectName": "graph-net",

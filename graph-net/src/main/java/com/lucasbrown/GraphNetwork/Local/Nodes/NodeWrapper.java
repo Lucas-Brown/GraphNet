@@ -3,6 +3,7 @@ package com.lucasbrown.GraphNetwork.Local.Nodes;
 import java.security.InvalidAlgorithmParameterException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Optional;
 
 import com.lucasbrown.GraphNetwork.Global.GraphNetwork;
@@ -120,16 +121,6 @@ public class NodeWrapper implements INode {
         wrappingNode.recieveForwardSignal(signal);
     }
 
-    @Override
-    public void recieveError(int timestep, int key, double error) {
-        wrappingNode.recieveError(timestep, key, error);
-    }
-
-    @Override
-    public Double getError(int timestep, int key) {
-        return wrappingNode.getError(timestep, key);
-    }
-
     /**
      * Notify this node of a new incoming backward signal
      * 
@@ -191,8 +182,8 @@ public class NodeWrapper implements INode {
     }
 
     @Override
-    public void applyErrorSignals(double epsilon) {
-        wrappingNode.applyErrorSignals(epsilon);
+    public void applyErrorSignals(double epsilon, HashMap<Integer, ArrayList<Outcome>> allOutcomes) {
+        wrappingNode.applyErrorSignals(epsilon, allOutcomes);
     }
 
     @Override

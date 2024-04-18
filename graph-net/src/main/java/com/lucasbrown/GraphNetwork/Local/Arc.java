@@ -60,8 +60,8 @@ public class Arc {
      * @param strength The strength of the signal to send
      * @return the signal or null if no signal was sent
      */
-    public Signal sendForwardSignal(int sourceKey, double strength, double probability) {
-        Signal signal = new Signal(sending, recieving, sourceKey, strength, probability);
+    public Signal sendForwardSignal(Outcome sourceOutcome) {
+        Signal signal = new Signal(sending, recieving, sourceOutcome, probDist.sendChance(sourceOutcome.netValue));
         recieving.recieveForwardSignal(signal);
         return signal;
     }
