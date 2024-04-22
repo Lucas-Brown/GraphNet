@@ -2,6 +2,7 @@ package com.lucasbrown.GraphNetwork.Local.Nodes;
 
 import java.security.InvalidAlgorithmParameterException;
 import java.util.ArrayList;
+import java.util.List;
 
 import com.lucasbrown.GraphNetwork.Global.GraphNetwork;
 import com.lucasbrown.GraphNetwork.Global.SharedNetworkData;
@@ -74,6 +75,13 @@ public class InputNode extends NodeWrapper implements IInputNode {
     public void sendErrorsBackwards(ArrayList<Outcome> outcomesAtTime, int timestep){
         // since this is an input node, there's nothing to send an error to
     }
+
+    
+    @Override
+    public void applyErrorSignals(double epsilon, List<ArrayList<Outcome>> allOutcomes) {
+        // cannot apply any error
+    }
+    
     /*
      * @Override
      * protected void acceptIncomingForwardSignals(ArrayList<Signal>

@@ -61,7 +61,7 @@ public class BackpropTrainer {
     }
 
     public void trainingStep(boolean print_forward){
-        captureForward(print_forward);
+        captureForward(false);
 
         computeErrorOfOutputs(print_forward);
         backpropagateErrors();
@@ -97,8 +97,16 @@ public class BackpropTrainer {
         total_error.reset();
     }
 
-    private void computeErrorOfOutput(OutputNode node, int timestep, double target){
+    private void computeErrorOfOutput(OutputNode node, int timestep, Double target){
+        // TODO: weigh null signals??
+        if(target == null){
+            return; 
+        }
+
         ArrayList<Outcome> outcomes = networkHistory.getStateOfNode(timestep, node.getID());
+        if(outcomes == null){
+            return;
+        }
 
         for(Outcome outcome : outcomes){
             outcome.errorOfOutcome.add(errorFunction.error_derivative(outcome.activatedValue, target), outcome.probability);
@@ -124,7 +132,7 @@ public class BackpropTrainer {
     }
 
     private void applyErrorSignalsToNode(INode node){
-        node.applyErrorSignals(epsilon, networkHistory.getOutcomesOfKeyFromNode(node.getID()));
+        node.applyErrorSignals(epsilon, networkHistory.getHistoryOfNode(node.getID()));
     }
 
     private void applyInputToNode(HashMap<Integer, ? extends IInputNode> inputNodeMap){

@@ -25,13 +25,8 @@ public class SimpleNode extends NodeBase {
     protected double[] weights;
     protected double bias;
 
-    /**
-     * 
-     */
-    private HashMap<Integer, Double> error_signals;
-
-    private double bias_delta;
-    private double[] weights_delta;
+    private double bias_gradient;
+    private double[] weights_gradient;
 
     /**
      * The binary string representation of the incoming arcs being sent a backwards
@@ -46,9 +41,8 @@ public class SimpleNode extends NodeBase {
         super(network, activationFunction);
         weights = new double[0];
         bias = rng.nextGaussian();
-        bias_delta = 0;
-        weights_delta = new double[0];
-        error_signals = new HashMap<>();
+        bias_gradient = 0;
+        weights_gradient = new double[0];
     }
 
     /**
@@ -69,7 +63,7 @@ public class SimpleNode extends NodeBase {
     private void appendWeights() {
         weights = Arrays.copyOf(weights, weights.length + 1);
         weights[weights.length - 1] = rng.nextGaussian();
-        weights_delta = new double[weights.length];
+        weights_gradient = new double[weights.length];
         // for (int i = 0; i < weights_delta.length; i++) {
         //     weights_delta[i] = new double();
         // }
@@ -107,22 +101,67 @@ public class SimpleNode extends NodeBase {
     }
 
     @Override
-    public void applyErrorSignals(double epsilon, HashMap<Integer, ArrayList<Outcome>> allOutcomes) {
-        double delta = -epsilon / error_signals.size();
-        bias += delta * bias_delta;
-        bias_delta = 0;
+    public void applyErrorSignals(double epsilon, List<ArrayList<Outcome>> allOutcomes) {
+        computeGradient(allOutcomes);
+        applyGradient(epsilon);
+    }
+    
+    private void computeGradient(List<ArrayList<Outcome>> allOutcomes){
+        // for all time steps
+        for (ArrayList<Outcome> outcomesAtTime : allOutcomes) {
+            
+            // Compute the probability volume of this timestep 
+            double probabilityVolume = 0;
+            for(Outcome outcome : outcomesAtTime){
+                probabilityVolume += outcome.probability;
+            }
 
-        for (int i = 0; i < weights.length; i++) {
-            weights[i] += delta * weights_delta[i];
-            weights_delta[i] = 0;
+            // if zero volume, move on to next set
+            if(probabilityVolume == 0){
+                continue;
+            }
+
+            // add error to the gradient
+            for(Outcome outcome : outcomesAtTime){
+                int key = outcome.binary_string;
+
+                double error = outcome.errorOfOutcome.getProdSum()/probabilityVolume;
+                assert Double.isFinite(error);
+                bias_gradient += error;
+
+                int i = 0;
+                while (key > 0) {
+                    if((key & 0b1) == 1)
+                    {
+                        weights_gradient[i] += error * outcome.sourceOutcomes[i].activatedValue;
+                        i++;
+                    }
+                    key = key >> 0b1;
+                }
+            }
         }
 
+        // divide all gradients by the number of non-empty timesteps 
+        int T = allOutcomes.size();
+        bias_gradient /= T;
+
+        for (int i = 0; i < weights.length; i++) {
+            weights_gradient[i] /= T;
+        }
+    }
+
+    private void applyGradient(double epsilon){
+        bias -= bias_gradient * epsilon;
+        bias_gradient = 0;
+
+        for (int i = 0; i < weights.length; i++) {
+            weights[i] -= weights_gradient[i] * epsilon;
+            weights_gradient[i] = 0;
+        }
 
         for (Arc connection : outgoing) {
             connection.probDist.applyAdjustments();
         }
-
-        error_signals.clear();
     }
 
     /**

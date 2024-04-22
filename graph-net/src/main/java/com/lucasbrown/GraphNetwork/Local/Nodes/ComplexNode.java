@@ -128,26 +128,48 @@ public class ComplexNode extends NodeBase {
     }
 
     @Override
-    public void applyErrorSignals(double epsilon, HashMap<Integer, ArrayList<Outcome>> allOutcomes) {
+    public void applyErrorSignals(double epsilon, List<ArrayList<Outcome>> allOutcomes) {
         computeGradient(allOutcomes);
         applyGradient(epsilon);
     }
 
-    private void computeGradient(HashMap<Integer, ArrayList<Outcome>> allOutcomes){
-        for (int key = 1; key < biases.length; key++) {
-            ArrayList<Outcome> outcomesOfKey = allOutcomes.get(key);
-            double inv_size = 1d/outcomesOfKey.size();
-            for(Outcome outcome : outcomesOfKey){
-                if(!outcome.errorOfOutcome.nonZero()){
-                    continue;
-                }
+    private void computeGradient(List<ArrayList<Outcome>> allOutcomes){
 
-                double error = outcome.errorOfOutcome.getAverage()*inv_size;
+        // for all time steps
+        for (ArrayList<Outcome> outcomesAtTime : allOutcomes) {
+            
+            // Compute the probability volume of this timestep 
+            double probabilityVolume = 0;
+            for(Outcome outcome : outcomesAtTime){
+                probabilityVolume += outcome.probability;
+            }
+
+            // if zero volume, move on to next set
+            if(probabilityVolume == 0){
+                continue;
+            }
+
+            // add error to the gradient
+            for(Outcome outcome : outcomesAtTime){
+                int key = outcome.binary_string;
+
+                double error = outcome.errorOfOutcome.getProdSum()/probabilityVolume;
+                assert Double.isFinite(error);
                 bias_gradient[key] += error;
 
                 for (int i = 0; i < weights[key].length; i++) {
                     weights_gradient[key][i] += error * outcome.sourceOutcomes[i].activatedValue;
                 }
+            }
+        }
+
+        // divide all gradients by the number of non-empty timesteps 
+        int T = allOutcomes.size();
+        for(int key = 1; key < getIncomingPowerSetSize(); key++){
+            bias_gradient[key] /= T;
+
+            for (int i = 0; i < weights[key].length; i++) {
+                weights_gradient[key][i] /= T;
             }
         }
     }
@@ -194,29 +216,4 @@ public class ComplexNode extends NodeBase {
     public static OutputNode asOutputNode(ActivationFunction activator){
         return new OutputNode(new ComplexNode(activator));
     } 
-
-    private class TimeKey {
-        private final int timestep;
-        private final int key;
-
-        public TimeKey(int timestep, int key) {
-            this.timestep = timestep;
-            this.key = key;
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (!(o instanceof TimeKey))
-                return false;
-
-            TimeKey tk = (TimeKey) o;
-            return key == tk.key & timestep == tk.timestep;
-        }
-
-        @Override
-        public int hashCode() {
-            return timestep << 16 + key;
-        }
-    }
-
 }

@@ -250,6 +250,10 @@ public class GraphNetwork {
         return new ArrayList<INode>(nodes);
     }
 
+    public ArrayList<INode> getActiveNodes() {
+        return new ArrayList<INode>(activeNodes);
+    }
+
     private static int IntegerEntryComparator(Entry<Integer, ?> e1, Entry<Integer, ?> e2) {
         return Integer.compare(e1.getKey(), e2.getKey());
     }

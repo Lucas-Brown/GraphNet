@@ -126,7 +126,7 @@ public interface INode extends Comparable<INode> {
 
     public abstract void sendErrorsBackwards(ArrayList<Outcome> outcomesAtTime, int timestep);
 
-    public abstract void applyErrorSignals(double epsilon, HashMap<Integer, ArrayList<Outcome>> allOutcomes);
+    public abstract void applyErrorSignals(double epsilon, List<ArrayList<Outcome>> allOutcomes);
 
     public abstract void clearSignals();
 

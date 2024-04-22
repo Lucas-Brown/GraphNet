@@ -11,7 +11,6 @@ import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
 import com.lucasbrown.GraphNetwork.Local.Nodes.ComplexNode;
 import com.lucasbrown.GraphNetwork.Local.Nodes.InputNode;
 import com.lucasbrown.GraphNetwork.Local.Nodes.OutputNode;
-import com.lucasbrown.GraphNetwork.Local.Nodes.SimpleNode;
 import com.lucasbrown.NetworkTraining.ApproximationTools.ErrorFunction;
 
 public class ComplexAdderTest {
@@ -34,14 +33,20 @@ public class ComplexAdderTest {
     private void initializeOutputData() {
         outputData = new Double[N][1];
         for (int i = 0; i < N; i++) {
-            outputData[(i + 1) % N] = new Double[] {
-                    Stream.of(inputData[i]).filter(Objects::nonNull).mapToDouble(d -> d).sum() };
+            Double[] data = inputData[i];
+            if (Stream.of(data).allMatch(Objects::isNull)) {
+                outputData[(i + 1) % N] = new Double[]{null};
+            } else {
+                outputData[(i + 1) % N] = new Double[] {
+                        Stream.of(inputData[i]).filter(Objects::nonNull).mapToDouble(d -> d).sum() };
+            }
+
         }
     }
 
     private Double doubleOrNothing() {
-        return rng.nextGaussian();
-        //return rng.nextBoolean() ? rng.nextGaussian() : null;
+        // return rng.nextGaussian();
+        return rng.nextBoolean() ? rng.nextGaussian() : null;
     }
 
     public static void main(String[] args) {

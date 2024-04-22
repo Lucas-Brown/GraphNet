@@ -61,6 +61,8 @@ public abstract class NodeBase implements INode {
      */
     protected final ArrayList<Arc> incoming, outgoing;
 
+    private int incomingPowerSetSize;
+
     /**
      * Forward-training signals
      */
@@ -102,7 +104,8 @@ public abstract class NodeBase implements INode {
         incoming = new ArrayList<Arc>();
         outgoing = new ArrayList<Arc>();
         orderedIDMap = new HashMap<>();
-
+        incomingPowerSetSize = 1;
+        
         uniqueIncomingNodeIDs = new HashSet<>();
         outcomes = new ArrayList<>();
         inference = new ArrayList<>();
@@ -148,6 +151,10 @@ public abstract class NodeBase implements INode {
         return orderedIDMap.get(incoming.getID());
     }
 
+    public int getIncomingPowerSetSize(){
+        return incomingPowerSetSize;
+    }
+
     /**
      * 
      * @param node
@@ -183,7 +190,8 @@ public abstract class NodeBase implements INode {
      */
     @Override
     public boolean addIncomingConnection(Arc connection) {
-        orderedIDMap.put(connection.getSendingID(), 1 << orderedIDMap.size());
+        orderedIDMap.put(connection.getSendingID(), incomingPowerSetSize);
+        incomingPowerSetSize *= 2;
         return incoming.add(connection);
     }
 
@@ -389,6 +397,7 @@ public abstract class NodeBase implements INode {
         outcomes = signalPowerSet.stream()
                 .filter(set -> !set.u.isEmpty()) // remove the null set
                 .map(this::signalSetToOutcome)
+                .filter(outcome -> outcome.probability > 0)
                 .collect(Collectors.toCollection(ArrayList::new));
     }
 

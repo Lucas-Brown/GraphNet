@@ -4,6 +4,7 @@ import java.security.InvalidAlgorithmParameterException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Optional;
 
 import com.lucasbrown.GraphNetwork.Global.GraphNetwork;
@@ -182,7 +183,7 @@ public class NodeWrapper implements INode {
     }
 
     @Override
-    public void applyErrorSignals(double epsilon, HashMap<Integer, ArrayList<Outcome>> allOutcomes) {
+    public void applyErrorSignals(double epsilon, List<ArrayList<Outcome>> allOutcomes) {
         wrappingNode.applyErrorSignals(epsilon, allOutcomes);
     }
 
