@@ -5,7 +5,7 @@ import java.util.Objects;
 import java.util.function.DoubleSupplier;
 import java.util.stream.IntStream;
 
-import com.lucasbrown.GraphNetwork.Distributions.BellCurveDistribution;
+import com.lucasbrown.GraphNetwork.Distributions.BellCurveFilter;
 import com.lucasbrown.GraphNetwork.Global.DataGraphNetwork;
 import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
 import com.lucasbrown.GraphNetwork.Local.INode;
@@ -31,9 +31,9 @@ public class GeneticAlgorithmMixTest {
         out.setName("Output");
         hidden.setName("Hidden");
 
-        net.addNewConnection(in, hidden, new BellCurveDistribution(0, 1));
-        net.addNewConnection(hidden, hidden, new BellCurveDistribution(0, 1));
-        net.addNewConnection(hidden, out, new BellCurveDistribution(0, 1));
+        net.addNewConnection(in, hidden, new BellCurveFilter(0, 1));
+        net.addNewConnection(hidden, hidden, new BellCurveFilter(0, 1));
+        net.addNewConnection(hidden, out, new BellCurveFilter(0, 1));
 
         input_id = in.getID();
         output_id = out.getID();

@@ -1,6 +1,6 @@
 package com.lucasbrown.InferenceAndAssessment;
 
-import com.lucasbrown.GraphNetwork.Distributions.BellCurveDistribution;
+import com.lucasbrown.GraphNetwork.Distributions.BellCurveFilter;
 import com.lucasbrown.GraphNetwork.Global.DataGraphNetwork;
 import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
 import com.lucasbrown.GraphNetwork.Local.IInputNode;
@@ -23,8 +23,8 @@ public class DataRepresentationInferenceTest {
         out.setName("Output");
         hidden.setName("Hidden");
 
-        net.addNewConnection(in, hidden, new BellCurveDistribution(0, 1));
-        net.addNewConnection(hidden, out, new BellCurveDistribution(0, 1));
+        net.addNewConnection(in, hidden, new BellCurveFilter(0, 1));
+        net.addNewConnection(hidden, out, new BellCurveFilter(0, 1));
 
         // just test inference
         net.setInputOperation(input_nodes -> in.acceptUserForwardSignal(1));

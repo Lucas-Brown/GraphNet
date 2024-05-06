@@ -6,6 +6,13 @@
     "configurations": [
         {
             "type": "java",
+            "name": "FibonacciNetworkTest",
+            "request": "launch",
+            "mainClass": "com.lucasbrown.NetworkTraining.FibonacciNetworkTest",
+            "projectName": "graph-net"
+        },
+        {
+            "type": "java",
             "name": "SimpleAdderTest",
             "request": "launch",
             "mainClass": "com.lucasbrown.NetworkTraining.SimpleAdderTest",

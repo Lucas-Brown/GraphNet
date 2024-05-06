@@ -9,8 +9,8 @@ import java.util.stream.IntStream;
 
 import org.junit.Test;
 
-import com.lucasbrown.GraphNetwork.Distributions.BellCurveDistribution;
-import com.lucasbrown.GraphNetwork.Distributions.FilterDistribution;
+import com.lucasbrown.GraphNetwork.Distributions.BellCurveFilter;
+import com.lucasbrown.GraphNetwork.Distributions.Filter;
 import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
 import com.lucasbrown.NetworkTraining.ApproximationTools.Convolution.FilterDistributionConvolution;
 
@@ -20,10 +20,10 @@ public class ConvolutionTest {
     public void testSample() {
         double target = 0;
 
-        BellCurveDistribution bcd1 = new BellCurveDistribution(0, 1);
-        BellCurveDistribution bcd2 = new BellCurveDistribution(1, 1);
-        BellCurveDistribution bcd3 = new BellCurveDistribution(3, 0.1);
-        ArrayList<BellCurveDistribution> distributions = new ArrayList<>(List.of(bcd1, bcd2, bcd3));
+        BellCurveFilter bcd1 = new BellCurveFilter(0, 1);
+        BellCurveFilter bcd2 = new BellCurveFilter(1, 1);
+        BellCurveFilter bcd3 = new BellCurveFilter(3, 0.1);
+        ArrayList<BellCurveFilter> distributions = new ArrayList<>(List.of(bcd1, bcd2, bcd3));
 
         ArrayList<ActivationFunction> activators = new ArrayList<>(
                 List.of(ActivationFunction.SIGNED_QUADRATIC, ActivationFunction.LINEAR,

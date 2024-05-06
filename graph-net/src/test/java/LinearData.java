@@ -1,6 +1,6 @@
 import java.util.HashMap;
 
-import com.lucasbrown.GraphNetwork.Distributions.BellCurveDistribution;
+import com.lucasbrown.GraphNetwork.Distributions.BellCurveFilter;
 import com.lucasbrown.GraphNetwork.Global.ReferenceGraphNetwork;
 import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
 import com.lucasbrown.GraphNetwork.Local.InputNode;
@@ -30,9 +30,9 @@ public class LinearData {
         out.setName("Output");
         hidden.setName("Hidden1");
 
-        net.addNewConnection(in, hidden, new BellCurveDistribution(0, 1));
-        net.addNewConnection(hidden, hidden, new BellCurveDistribution(0, 1));
-        net.addNewConnection(hidden, out, new BellCurveDistribution(0, 1));
+        net.addNewConnection(in, hidden, new BellCurveFilter(0, 1));
+        net.addNewConnection(hidden, hidden, new BellCurveFilter(0, 1));
+        net.addNewConnection(hidden, out, new BellCurveFilter(0, 1));
 
         //net.addNewConnection(in, out, new BellCurveDistribution(0, 1));
 

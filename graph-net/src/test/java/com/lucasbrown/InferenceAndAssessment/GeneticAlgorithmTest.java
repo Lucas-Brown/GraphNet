@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.Objects;
 import java.util.stream.IntStream;
 
-import com.lucasbrown.GraphNetwork.Distributions.BellCurveDistribution;
+import com.lucasbrown.GraphNetwork.Distributions.BellCurveFilter;
 import com.lucasbrown.GraphNetwork.Global.DataGraphNetwork;
 import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
 import com.lucasbrown.GraphNetwork.Local.IInputNode;
@@ -32,8 +32,8 @@ public class GeneticAlgorithmTest {
         out.setName("Output");
         hidden.setName("Hidden");
 
-        net.addNewConnection(in, hidden, new BellCurveDistribution(1, 1));
-        net.addNewConnection(hidden, out, new BellCurveDistribution(-3, 1));
+        net.addNewConnection(in, hidden, new BellCurveFilter(1, 1));
+        net.addNewConnection(hidden, out, new BellCurveFilter(-3, 1));
 
         input_id = in.getID();
         output_id = out.getID();

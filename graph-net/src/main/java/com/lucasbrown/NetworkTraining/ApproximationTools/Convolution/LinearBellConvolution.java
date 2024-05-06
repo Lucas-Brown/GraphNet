@@ -1,14 +1,14 @@
 package com.lucasbrown.NetworkTraining.ApproximationTools.Convolution;
 
-import com.lucasbrown.GraphNetwork.Distributions.BellCurveDistribution;
+import com.lucasbrown.GraphNetwork.Distributions.BellCurveFilter;
 import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
 
 public class LinearBellConvolution extends GenericConvolution {
 
-    private BellCurveDistribution bcd;
+    private BellCurveFilter bcd;
     private double weight;
 
-    public LinearBellConvolution(BellCurveDistribution bcd, double weight){
+    public LinearBellConvolution(BellCurveFilter bcd, double weight){
         super(bcd.getActivatedDistribution(ActivationFunction.LINEAR, weight));
         this.bcd = bcd;
         this.weight = weight;
@@ -28,7 +28,7 @@ public class LinearBellConvolution extends GenericConvolution {
         double weighted_variance = weight*weight*bcd.getVariance()*bcd.getVariance();
         weighted_variance += lbc.weight*lbc.weight*lbc.bcd.getVariance()*lbc.bcd.getVariance();
         weighted_variance = Math.sqrt(2*weighted_variance);
-        return new LinearBellConvolution(new BellCurveDistribution(weighted_mean, weighted_variance), 1);
+        return new LinearBellConvolution(new BellCurveFilter(weighted_mean, weighted_variance), 1);
     }
     
 }

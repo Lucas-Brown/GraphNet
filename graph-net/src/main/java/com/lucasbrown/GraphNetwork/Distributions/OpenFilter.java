@@ -3,10 +3,10 @@ package com.lucasbrown.GraphNetwork.Distributions;
 /**
  * Always lets values pass through
  */
-public class OpenFilter extends FilterDistribution {
+public class OpenFilter extends Filter {
 
     @Override
-    public FilterDistribution copy() {
+    public Filter copy() {
         return new OpenFilter();
     }
 

@@ -128,6 +128,15 @@ public interface INode extends Comparable<INode> {
 
     public abstract void applyErrorSignals(double epsilon, List<ArrayList<Outcome>> allOutcomes);
 
+    public abstract void applyParameterUpdate();
+
     public abstract void clearSignals();
 
+    public static int CompareNodes(INode n1, INode n2){
+        return n1.getID() - n2.getID();
+    }
+
+    public static boolean areNodesEqual(INode n1, INode n2){
+            return n1.getID() == n2.getID();
+    }
 }

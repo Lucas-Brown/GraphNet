@@ -1,6 +1,6 @@
 import java.util.HashMap;
 
-import com.lucasbrown.GraphNetwork.Distributions.BellCurveDistribution;
+import com.lucasbrown.GraphNetwork.Distributions.BellCurveFilter;
 import com.lucasbrown.GraphNetwork.Global.GraphNetwork;
 import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
 import com.lucasbrown.GraphNetwork.Local.InputNode;
@@ -26,10 +26,10 @@ public class FeedForward {
         hidden1.setName("Hidden1");
         hidden2.setName("Hidden2");
 
-        net.addNewConnection(in, hidden1, new BellCurveDistribution(0, 1));
-        net.addNewConnection(in, hidden2, new BellCurveDistribution(1, 1));
-        net.addNewConnection(hidden1, out, new BellCurveDistribution(-1, 1));
-        net.addNewConnection(hidden2, out, new BellCurveDistribution(0, 1));
+        net.addNewConnection(in, hidden1, new BellCurveFilter(0, 1));
+        net.addNewConnection(in, hidden2, new BellCurveFilter(1, 1));
+        net.addNewConnection(hidden1, out, new BellCurveFilter(-1, 1));
+        net.addNewConnection(hidden2, out, new BellCurveFilter(0, 1));
 
         //net.addNewConnection(in, out, new BellCurveDistribution(0, 1));
 

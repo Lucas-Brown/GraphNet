@@ -21,7 +21,7 @@ import jsat.math.integration.Trapezoidal;
  * 
  * TODO: alter methods to include negative reinforcement as well
  */
-public abstract class FilterDistribution implements ICopyable<FilterDistribution> {
+public abstract class Filter implements ICopyable<Filter> {
 
     private static final int TRAP_COUNT = 100;
 
@@ -66,8 +66,12 @@ public abstract class FilterDistribution implements ICopyable<FilterDistribution
         prepareDiminishment(valueToDiminish, 1);
     }
 
+    public void prepareWeightedReinforcement(double valueToReinforce, double probability){
+        prepareReinforcement(valueToReinforce, probability*weightFunction(valueToReinforce));
+    }
+    
     public void prepareWeightedReinforcement(double valueToReinforce){
-        prepareReinforcement(valueToReinforce, weightFunction(valueToReinforce));
+        prepareReinforcement(valueToReinforce, 1);
     }
 
     private double weightFunction(double point){

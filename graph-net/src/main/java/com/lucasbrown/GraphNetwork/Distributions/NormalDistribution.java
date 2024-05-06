@@ -1,6 +1,6 @@
 package com.lucasbrown.GraphNetwork.Distributions;
 
-public class NormalDistribution extends FilterDistribution {
+public class NormalDistribution extends Filter {
 
     private double mean;
     private double variance;
@@ -106,7 +106,7 @@ public class NormalDistribution extends FilterDistribution {
     }
 
     @Override
-    public FilterDistribution copy() {
+    public Filter copy() {
         return new NormalDistribution(this);
     }
 

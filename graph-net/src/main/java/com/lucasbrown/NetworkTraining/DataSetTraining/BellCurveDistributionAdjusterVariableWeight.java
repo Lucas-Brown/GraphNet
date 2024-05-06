@@ -1,17 +1,17 @@
 package com.lucasbrown.NetworkTraining.DataSetTraining;
 
-import com.lucasbrown.GraphNetwork.Distributions.BellCurveDistribution;
+import com.lucasbrown.GraphNetwork.Distributions.BellCurveFilter;
 
 /**
  * Testing of this class showed that it is an improper representation and should not be used
  */
 public class BellCurveDistributionAdjusterVariableWeight extends BellCurveDistributionAdjuster {
 
-    public BellCurveDistributionAdjusterVariableWeight(BellCurveDistribution parentDistribution, boolean use_map) {
+    public BellCurveDistributionAdjusterVariableWeight(BellCurveFilter parentDistribution, boolean use_map) {
         super(parentDistribution, use_map);
     }
 
-    public BellCurveDistributionAdjusterVariableWeight(BellCurveDistribution parentDistribution) {
+    public BellCurveDistributionAdjusterVariableWeight(BellCurveFilter parentDistribution) {
         super(parentDistribution);
     }
 

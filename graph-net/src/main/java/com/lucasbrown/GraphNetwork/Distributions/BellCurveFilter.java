@@ -10,7 +10,7 @@ import com.lucasbrown.NetworkTraining.DataSetTraining.BellCurveDistributionAdjus
 /**
  * A Bernoulli distribution with p = p(x) = Normal(mean, variance)
  */
-public class BellCurveDistribution extends FilterDistribution{
+public class BellCurveFilter extends Filter{
 
     /**
      * mean value and standard deviation of a normal distribution
@@ -33,7 +33,7 @@ public class BellCurveDistribution extends FilterDistribution{
      */
     private BellCurveDistributionAdjuster adjuster;
 
-    public BellCurveDistribution(BellCurveDistribution toCopy){
+    public BellCurveFilter(BellCurveFilter toCopy){
         this(toCopy.mean, toCopy.variance, toCopy.N);
     }
 
@@ -41,11 +41,11 @@ public class BellCurveDistribution extends FilterDistribution{
      * @param mean     mean value of the normal distribution
      * @param variance variance of the normal distribution
      */
-    public BellCurveDistribution(double mean, double variance) {
+    public BellCurveFilter(double mean, double variance) {
         this(mean, variance, 10);
     }
 
-    public BellCurveDistribution(double mean, double variance, double N) {
+    public BellCurveFilter(double mean, double variance, double N) {
         this(mean, variance, N, 1000);
     }
 
@@ -54,12 +54,12 @@ public class BellCurveDistribution extends FilterDistribution{
      * @param variance variance of the normal distribution
      * @param N        the number of points this distribution approximates
      */
-    public BellCurveDistribution(double mean, double variance, double N, double N_max) {
+    public BellCurveFilter(double mean, double variance, double N, double N_max) {
         this.mean = mean;
         this.variance = variance;
         this.N = N;
         this.N_max = N_max;
-        this.adjuster = new BellCurveDistributionAdjuster(this, false);
+        this.adjuster = new BellCurveDistributionAdjuster(this, true);
     }
 
     /**
@@ -165,8 +165,8 @@ public class BellCurveDistribution extends FilterDistribution{
     }
 
     @Override
-    public FilterDistribution copy() {
-        return new BellCurveDistribution(this);
+    public Filter copy() {
+        return new BellCurveFilter(this);
     }
 
     @Override

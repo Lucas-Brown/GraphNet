@@ -4,6 +4,7 @@ import java.util.Objects;
 import java.util.Random;
 import java.util.stream.Stream;
 
+import com.lucasbrown.GraphNetwork.Distributions.BellCurveFilter;
 import com.lucasbrown.GraphNetwork.Distributions.OpenFilter;
 import com.lucasbrown.GraphNetwork.Global.BackpropTrainer;
 import com.lucasbrown.GraphNetwork.Global.GraphNetwork;
@@ -75,9 +76,9 @@ public class ComplexAdderTest {
         // net.addNewConnection(in2, out, new BellCurveDistribution(0, 1));
         // net.addNewConnection(in3, out, new BellCurveDistribution(0, 1));
 
-        net.addNewConnection(in1, out, new OpenFilter());
-        net.addNewConnection(in2, out, new OpenFilter());
-        net.addNewConnection(in3, out, new OpenFilter());
+        net.addNewConnection(in1, out, new BellCurveFilter(0, 1));
+        net.addNewConnection(in2, out, new BellCurveFilter(0, 1));
+        net.addNewConnection(in3, out, new BellCurveFilter(0, 1));
 
         BackpropTrainer bt = new BackpropTrainer(net, new ErrorFunction.MeanSquaredError());
         bt.epsilon = 0.01;

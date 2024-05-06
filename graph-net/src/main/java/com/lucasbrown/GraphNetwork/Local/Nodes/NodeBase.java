@@ -11,7 +11,7 @@ import java.util.Optional;
 import java.util.Random;
 import java.util.stream.Collectors;
 
-import com.lucasbrown.GraphNetwork.Distributions.FilterDistribution;
+import com.lucasbrown.GraphNetwork.Distributions.Filter;
 import com.lucasbrown.GraphNetwork.Global.GraphNetwork;
 import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
 import com.lucasbrown.GraphNetwork.Local.Arc;
@@ -105,7 +105,7 @@ public abstract class NodeBase implements INode {
         outgoing = new ArrayList<Arc>();
         orderedIDMap = new HashMap<>();
         incomingPowerSetSize = 1;
-        
+
         uniqueIncomingNodeIDs = new HashSet<>();
         outcomes = new ArrayList<>();
         inference = new ArrayList<>();
@@ -147,11 +147,11 @@ public abstract class NodeBase implements INode {
         return activationFunction;
     }
 
-    protected int getIndexOfIncomingNode(INode incoming){
+    protected int getIndexOfIncomingNode(INode incoming) {
         return orderedIDMap.get(incoming.getID());
     }
 
-    public int getIncomingPowerSetSize(){
+    public int getIncomingPowerSetSize() {
         return incomingPowerSetSize;
     }
 
@@ -218,7 +218,7 @@ public abstract class NodeBase implements INode {
 
     @Override
     public Optional<Arc> getOutgoingConnectionTo(INode recievingNode) {
-        return outgoing.stream().filter(arc -> arc.recieving == recievingNode).findAny();
+        return outgoing.stream().filter(arc -> arc.recieving.equals(recievingNode)).findAny();
     }
 
     /**
@@ -589,9 +589,9 @@ public abstract class NodeBase implements INode {
             ArrayList<Arc> arcs = binStrToArcList(binStr);
 
             // Seperate the arcs into their distributions and activation functions
-            ArrayList<FilterDistribution> distributions = arcs.stream()
+            ArrayList<Filter> distributions = arcs.stream()
                     .map(arc -> arc.probDist)
-                    .collect(Collectors.toCollection(ArrayList<FilterDistribution>::new));
+                    .collect(Collectors.toCollection(ArrayList<Filter>::new));
 
             ArrayList<ActivationFunction> activators = arcs.stream()
                     .map(arc -> arc.sending.getActivationFunction())
@@ -649,6 +649,13 @@ public abstract class NodeBase implements INode {
         return -1; // This should never happen
     }
 
+    @Override
+    public void applyParameterUpdate() {
+        for (Arc connection : outgoing) {
+            connection.probDist.applyAdjustments();
+        }
+    }
+
     public ArrayList<Outcome> getState() {
         return outcomes;
     }
@@ -665,15 +672,19 @@ public abstract class NodeBase implements INode {
 
     private void sendErrorsBackwards(Outcome outcomeAtTime, int timestep) {
         int binary_string = outcomeAtTime.binary_string;
-        double error_derivative = activationFunction.derivative(outcomeAtTime.netValue) * outcomeAtTime.errorOfOutcome.getAverage();
+        double error_derivative = activationFunction.derivative(outcomeAtTime.netValue)
+                * outcomeAtTime.errorOfOutcome.getProdSum();
         double[] weightsOfNodes = getWeights(binary_string);
 
         for (int i = 0; i < weightsOfNodes.length; i++) {
-            outcomeAtTime.sourceOutcomes[i].errorOfOutcome.add(error_derivative * weightsOfNodes[i], outcomeAtTime.probability);
-            
+            outcomeAtTime.sourceOutcomes[i].errorOfOutcome.add(error_derivative * weightsOfNodes[i],
+                    outcomeAtTime.probability);
+
             // apply error as new point for the distribution
-            // Arc connection = sourceNode.getOutgoingConnectionTo(this).get();
-            // connection.probDist.prepareReinforcement(outcomeAtTime.netValue - error);
+            // Arc connection =
+            // outcomeAtTime.sourceNodes[i].getOutgoingConnectionTo(this).get();
+            // connection.probDist.prepareReinforcement(outcomeAtTime.netValue -
+            // error_derivative);
         }
 
     }
@@ -687,20 +698,23 @@ public abstract class NodeBase implements INode {
         int backwardsBinStr = selectReverseOutcome(densityWeights) + 1;
 
         // Sample signal strengths from the selected distribution
-        double[] sample = convolutions[backwardsBinStr - 1].sample(activatedValue - getBias(backwardsBinStr));
+        double[][] sample = convolutions[backwardsBinStr - 1].sample(activatedValue - getBias(backwardsBinStr), 10);
 
         // Send the backward signals
         ArrayList<Arc> arcs = binStrToArcList(backwardsBinStr);
-        for (int i = 0; i < sample.length; i++) {
+        for(double[] sample_n : sample){
+            for (int i = 0; i < arcs.size(); i++) {
             Arc arc_i = arcs.get(i);
-            double sample_i = sample[i];
-            double sample_inverse = arc_i.recieving.getActivationFunction().inverse(sample_i);
-            assert Double.isFinite(sample_inverse);
-            arc_i.probDist.prepareWeightedReinforcement(sample_inverse); // prepare to reinforce the distribution
+                //double sample_inverse = arc_i.recieving.getActivationFunction().inverse(sample_i);
+                assert Double.isFinite(sample_n[i]);
+                // System.out.println(sample_i);
+                arc_i.probDist.prepareWeightedReinforcement(sample_n[i], 1/sample[i].length); // prepare to reinforce the distribution
+                // arc_i.probDist.prepareReinforcement(sample_n[i], Math.min(1/(outcomeAtTime.probability*sample[i].length), Math.sqrt(arc_i.probDist.getNumberOfPointsInDistribution())));
+            }
         }
     }
 
-    public int mappedIDComparator(Signal s1, Signal s2){
+    public int mappedIDComparator(Signal s1, Signal s2) {
         int i1 = orderedIDMap.get(s1.sendingNode.getID());
         int i2 = orderedIDMap.get(s2.sendingNode.getID());
         return i1 - i2;
@@ -733,14 +747,14 @@ public abstract class NodeBase implements INode {
 
     @Override
     public int compareTo(INode o) {
-        return id - o.getID();
+        return INode.CompareNodes(this, o);
     }
 
     @Override
     public boolean equals(Object o) {
         if (!(o instanceof INode))
             return false;
-        return id == ((INode) o).getID();
+        return INode.areNodesEqual(this, (INode) o);
     }
 
     protected abstract double computeMergedSignalStrength(Collection<Signal> incomingSignals, int binary_string);

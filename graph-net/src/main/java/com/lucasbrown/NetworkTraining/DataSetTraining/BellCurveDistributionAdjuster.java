@@ -5,7 +5,7 @@ import java.util.List;
 import java.util.function.DoubleUnaryOperator;
 import java.util.stream.IntStream;
 
-import com.lucasbrown.GraphNetwork.Distributions.BellCurveDistribution;
+import com.lucasbrown.GraphNetwork.Distributions.BellCurveFilter;
 import com.lucasbrown.NetworkTraining.ApproximationTools.IntegralTransformations;
 import com.lucasbrown.NetworkTraining.ApproximationTools.LinearInterpolation2D;
 import com.lucasbrown.NetworkTraining.ApproximationTools.LinearRange;
@@ -49,8 +49,10 @@ public class BellCurveDistributionAdjuster implements Function {
     // Indicates whether the expectation map has been initialized
     private static boolean is_map_initialized = false;
 
+    private final boolean is_using_map;
+
     // The distribution that is being updated
-    private final BellCurveDistribution parentDistribution;
+    private final BellCurveFilter parentDistribution;
 
     // The mean value of the parent distribution
     private double mean;
@@ -63,7 +65,7 @@ public class BellCurveDistributionAdjuster implements Function {
 
     // All distributions which will create a residual in updating the parent
     // distribution
-    private ArrayList<BellCurveDistribution> influincingDistributions;
+    private ArrayList<BellCurveFilter> influincingDistributions;
 
     // The weight of each distribution
     private ArrayList<Double> distribution_weights;
@@ -78,9 +80,8 @@ public class BellCurveDistributionAdjuster implements Function {
     // The weight of each point
     private ArrayList<Double> point_weights;
 
-    private final boolean is_using_map;
 
-    public BellCurveDistributionAdjuster(BellCurveDistribution parentDistribution, boolean use_map) {
+    public BellCurveDistributionAdjuster(BellCurveFilter parentDistribution, boolean use_map) {
         this.parentDistribution = parentDistribution;
         is_using_map = use_map;
         mean = parentDistribution.getMean();
@@ -103,7 +104,7 @@ public class BellCurveDistributionAdjuster implements Function {
         }
     }
 
-    public BellCurveDistributionAdjuster(BellCurveDistribution parentDistribution) {
+    public BellCurveDistributionAdjuster(BellCurveFilter parentDistribution) {
         this(parentDistribution, true);
     }
 
@@ -128,7 +129,7 @@ public class BellCurveDistributionAdjuster implements Function {
      * @param bcd
      * @param weight
      */
-    public void addDistribution(BellCurveDistribution bcd, double weight) {
+    public void addDistribution(BellCurveFilter bcd, double weight) {
         influincingDistributions.add(bcd);
         distribution_weights.add(weight);
     }
@@ -268,7 +269,7 @@ public class BellCurveDistributionAdjuster implements Function {
      * @param scale
      * @return
      */
-    public double logLikelihoodOfDistribution(BellCurveDistribution bcd, double shift, double scale) {
+    public double logLikelihoodOfDistribution(BellCurveFilter bcd, double shift, double scale) {
         final double w = getRelativeShift(bcd, shift, scale);
         final double eta = getRelativeScale(bcd, shift, scale);
 
@@ -325,7 +326,7 @@ public class BellCurveDistributionAdjuster implements Function {
      * @param bcd
      * @return
      */
-    private double getRelativeShift(BellCurveDistribution bcd, double shift, double scale) {
+    private double getRelativeShift(BellCurveFilter bcd, double shift, double scale) {
         return (bcd.getMean() - mean - shift) / (root_2 * scale * variance);
     }
 
@@ -335,7 +336,7 @@ public class BellCurveDistributionAdjuster implements Function {
      * @param bcd
      * @return
      */
-    private double getRelativeScale(BellCurveDistribution bcd, double shift, double scale) {
+    private double getRelativeScale(BellCurveFilter bcd, double shift, double scale) {
         double eta = scale * variance / bcd.getVariance();
         return eta * eta;
     }

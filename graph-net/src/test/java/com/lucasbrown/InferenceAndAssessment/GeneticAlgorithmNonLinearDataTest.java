@@ -5,7 +5,7 @@ import java.util.Objects;
 import java.util.function.DoubleSupplier;
 import java.util.stream.IntStream;
 
-import com.lucasbrown.GraphNetwork.Distributions.BellCurveDistribution;
+import com.lucasbrown.GraphNetwork.Distributions.BellCurveFilter;
 import com.lucasbrown.GraphNetwork.Global.DataGraphNetwork;
 import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
 import com.lucasbrown.GraphNetwork.Local.INode;
@@ -33,12 +33,12 @@ public class GeneticAlgorithmNonLinearDataTest {
         hidden1.setName("Hidden 1");
         hidden2.setName("Hidden 2");
 
-        net.addNewConnection(in, hidden1, new BellCurveDistribution(0, 1));
-        net.addNewConnection(hidden1, hidden1, new BellCurveDistribution(0, 1));
-        net.addNewConnection(hidden1, hidden2, new BellCurveDistribution(0, 1));
-        net.addNewConnection(hidden2, hidden1, new BellCurveDistribution(0, 1));
-        net.addNewConnection(hidden1, out, new BellCurveDistribution(0, 1));
-        net.addNewConnection(hidden2, out, new BellCurveDistribution(0, 1));
+        net.addNewConnection(in, hidden1, new BellCurveFilter(0, 1));
+        net.addNewConnection(hidden1, hidden1, new BellCurveFilter(0, 1));
+        net.addNewConnection(hidden1, hidden2, new BellCurveFilter(0, 1));
+        net.addNewConnection(hidden2, hidden1, new BellCurveFilter(0, 1));
+        net.addNewConnection(hidden1, out, new BellCurveFilter(0, 1));
+        net.addNewConnection(hidden2, out, new BellCurveFilter(0, 1));
 
         input_id = in.getID();
         output_id = out.getID();

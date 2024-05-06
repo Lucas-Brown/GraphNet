@@ -4,7 +4,7 @@ import static org.junit.Assert.assertEquals;
 
 import org.junit.Test;
 
-import com.lucasbrown.GraphNetwork.Distributions.BellCurveDistribution;
+import com.lucasbrown.GraphNetwork.Distributions.BellCurveFilter;
 import com.lucasbrown.NetworkTraining.DataSetTraining.BellCurveDistributionAdjuster;
 
 public class BellCurveDistributionAdjusterTest {
@@ -13,16 +13,16 @@ public class BellCurveDistributionAdjusterTest {
 
     @Test
     public void testLogLikelihoodOfDistribution() {
-        BellCurveDistribution parent = new BellCurveDistribution(0, 1);
+        BellCurveFilter parent = new BellCurveFilter(0, 1);
         BellCurveDistributionAdjuster adjuster = new BellCurveDistributionAdjuster(parent, false);
 
         assertEquals(-1.81822781821, adjuster.logLikelihoodOfDistribution(parent, 0, 1), TOLLERANCE);
         assertEquals(-2.127186179, adjuster.logLikelihoodOfDistribution(parent, 0.5, 1), TOLLERANCE);
         assertEquals(-2.01450384189, adjuster.logLikelihoodOfDistribution(parent, 0, 1.5), TOLLERANCE);
 
-        BellCurveDistribution test1 = new BellCurveDistribution(0.2, 1);
-        BellCurveDistribution test2 = new BellCurveDistribution(-0.3, 0.9);
-        BellCurveDistribution test3 = new BellCurveDistribution(4, 0.5);
+        BellCurveFilter test1 = new BellCurveFilter(0.2, 1);
+        BellCurveFilter test2 = new BellCurveFilter(-0.3, 0.9);
+        BellCurveFilter test3 = new BellCurveFilter(4, 0.5);
 
         assertEquals(-1.86999254089, adjuster.logLikelihoodOfDistribution(test1, 0, 1), TOLLERANCE);
         assertEquals(-2.40010541606, adjuster.logLikelihoodOfDistribution(test2, 0.5, 1.2), TOLLERANCE);
@@ -31,7 +31,7 @@ public class BellCurveDistributionAdjusterTest {
 
     @Test
     public void testlogLikelihood() {
-        BellCurveDistribution parent = new BellCurveDistribution(0, 1);
+        BellCurveFilter parent = new BellCurveFilter(0, 1);
         BellCurveDistributionAdjuster adjuster = new BellCurveDistributionAdjuster(parent, false);
 
         assertEquals(-1.9189385332, adjuster.logLikelihood(1, true, 0, 1), TOLLERANCE);
@@ -40,7 +40,7 @@ public class BellCurveDistributionAdjusterTest {
 
     @Test
     public void testReinforcePoint() {
-        BellCurveDistribution parent = new BellCurveDistribution(1.00516583438, 0.593675532771, 4);
+        BellCurveFilter parent = new BellCurveFilter(1.00516583438, 0.593675532771, 4);
         BellCurveDistributionAdjuster adjuster = new BellCurveDistributionAdjuster(parent, false);
 
         adjuster.addPoint(3, true, 1);
@@ -54,7 +54,7 @@ public class BellCurveDistributionAdjusterTest {
 
     @Test
     public void testDiminishPoint() {
-        BellCurveDistribution parent = new BellCurveDistribution(1.00516583438, 0.593675532771, 4);
+        BellCurveFilter parent = new BellCurveFilter(1.00516583438, 0.593675532771, 4);
         BellCurveDistributionAdjuster adjuster = new BellCurveDistributionAdjuster(parent, false);
 
         adjuster.addPoint(3, false, 1);

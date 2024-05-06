@@ -133,6 +133,7 @@ public class BackpropTrainer {
 
     private void applyErrorSignalsToNode(INode node){
         node.applyErrorSignals(epsilon, networkHistory.getHistoryOfNode(node.getID()));
+        node.applyParameterUpdate();
     }
 
     private void applyInputToNode(HashMap<Integer, ? extends IInputNode> inputNodeMap){

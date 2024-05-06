@@ -1,7 +1,7 @@
 
 import java.util.Random;
 
-import com.lucasbrown.GraphNetwork.Distributions.BellCurveDistribution;
+import com.lucasbrown.GraphNetwork.Distributions.BellCurveFilter;
 import com.lucasbrown.GraphNetwork.Global.GraphNetwork;
 import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
 import com.lucasbrown.GraphNetwork.Local.InputNode;
@@ -34,12 +34,12 @@ public class Alternating {
         h1.setName("Hidden 1");
         h2.setName("Hidden 2");
 
-        net.addNewConnection(n1, h1, new BellCurveDistribution(rand.nextDouble(), 1, 1000));
-        net.addNewConnection(n1, h2, new BellCurveDistribution(rand.nextDouble(), 1, 1000));
-        net.addNewConnection(h1, h2, new BellCurveDistribution(rand.nextDouble(), 1, 1000));
-        net.addNewConnection(h2, h1, new BellCurveDistribution(rand.nextDouble(), 1, 1000));
-        net.addNewConnection(h1, n2, new BellCurveDistribution(rand.nextDouble(), 1, 1000));
-        net.addNewConnection(h2, n2, new BellCurveDistribution(rand.nextDouble(), 1, 1000));
+        net.addNewConnection(n1, h1, new BellCurveFilter(rand.nextDouble(), 1, 1000));
+        net.addNewConnection(n1, h2, new BellCurveFilter(rand.nextDouble(), 1, 1000));
+        net.addNewConnection(h1, h2, new BellCurveFilter(rand.nextDouble(), 1, 1000));
+        net.addNewConnection(h2, h1, new BellCurveFilter(rand.nextDouble(), 1, 1000));
+        net.addNewConnection(h1, n2, new BellCurveFilter(rand.nextDouble(), 1, 1000));
+        net.addNewConnection(h2, n2, new BellCurveFilter(rand.nextDouble(), 1, 1000));
 
         net.setInputOperation(Alternating::inputOperation);
         net.setOutputOperation(Alternating::outputOperation);

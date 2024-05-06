@@ -1,6 +1,6 @@
 package com.lucasbrown.NetworkTraining;
 
-import com.lucasbrown.GraphNetwork.Distributions.BellCurveDistribution;
+import com.lucasbrown.GraphNetwork.Distributions.BellCurveFilter;
 import com.lucasbrown.GraphNetwork.Distributions.OpenFilter;
 import com.lucasbrown.GraphNetwork.Global.BackpropTrainer;
 import com.lucasbrown.GraphNetwork.Global.GraphNetwork;
@@ -54,7 +54,7 @@ public class LinearDataBackpropTraining {
 
         //net.addNewConnection(in, hidden, new BellCurveDistribution(0, 1));
         //net.addNewConnection(hidden, out, new BellCurveDistribution(-1, 1));
-        net.addNewConnection(in, out, new BellCurveDistribution(-1, 1));
+        net.addNewConnection(in, out, new BellCurveFilter(-1, 1));
 
         BackpropTrainer bt = new BackpropTrainer(net, new ErrorFunction.MeanSquaredError());
 

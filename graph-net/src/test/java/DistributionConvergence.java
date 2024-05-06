@@ -1,11 +1,11 @@
 import java.util.ArrayList;
 
-import com.lucasbrown.GraphNetwork.Distributions.BellCurveDistribution;
+import com.lucasbrown.GraphNetwork.Distributions.BellCurveFilter;
 
 public class DistributionConvergence {
 
     public static void main(String[] args) {
-        BellCurveDistribution bcd = new BellCurveDistribution(0.2, 1, 1, 10);
+        BellCurveFilter bcd = new BellCurveFilter(0.2, 1, 10, 1000);
 
         double checkpoint = 1;
         double checkpoint_factor = 1.5;
@@ -13,10 +13,14 @@ public class DistributionConvergence {
         ArrayList<Double> means = new ArrayList<Double>((int) Math.ceil(Math.log(n_iter)/Math.log(checkpoint_factor)));
 
         for (int i = 0; i < n_iter; i++) {
-            bcd.prepareReinforcement(0, weightFunction(bcd, 0));
-            bcd.prepareReinforcement(1, weightFunction(bcd, 0));
-            bcd.prepareReinforcement(2, weightFunction(bcd, 0));
-            bcd.prepareReinforcement(3, weightFunction(bcd, 0));
+            // bcd.prepareReinforcement(0, weightFunction(bcd, 0));
+            // bcd.prepareReinforcement(1, weightFunction(bcd, 0));
+            // bcd.prepareReinforcement(2, weightFunction(bcd, 0));
+            // bcd.prepareReinforcement(3, weightFunction(bcd, 0));
+            bcd.prepareWeightedReinforcement(0);
+            bcd.prepareWeightedReinforcement(1);
+            bcd.prepareWeightedReinforcement(2);
+            bcd.prepareWeightedReinforcement(3);
             bcd.applyAdjustments();
 
             if(i >= checkpoint)
@@ -30,7 +34,4 @@ public class DistributionConvergence {
         System.out.println();
     }
 
-    private static double weightFunction(BellCurveDistribution bcd, double point){
-        return Math.max(1/bcd.sendChance(point), bcd.getNumberOfPointsInDistribution());
-    }
 }

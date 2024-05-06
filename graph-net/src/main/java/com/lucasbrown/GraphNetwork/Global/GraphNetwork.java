@@ -10,7 +10,7 @@ import java.util.Map.Entry;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
-import com.lucasbrown.GraphNetwork.Distributions.FilterDistribution;
+import com.lucasbrown.GraphNetwork.Distributions.Filter;
 import com.lucasbrown.GraphNetwork.Local.Arc;
 import com.lucasbrown.GraphNetwork.Local.Nodes.IInputNode;
 import com.lucasbrown.GraphNetwork.Local.Nodes.INode;
@@ -132,8 +132,8 @@ public class GraphNetwork {
      * }
      */
 
-    public void addNewConnection(INode transmittingNode, INode recievingNode,
-            FilterDistribution transferFunction) {
+    public Arc addNewConnection(INode transmittingNode, INode recievingNode,
+            Filter transferFunction) {
         // boolean doesConnectionExist =
         // transmittingNode.DoesContainConnection(recievingNode);
         // if(!doesConnectionExist)
@@ -143,6 +143,7 @@ public class GraphNetwork {
         recievingNode.addIncomingConnection(connection);
         // }
         // return doesConnectionExist;
+        return connection;
     }
 
     /**

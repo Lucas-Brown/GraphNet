@@ -184,10 +184,6 @@ public class ComplexNode extends NodeBase {
                 weights_gradient[key][i] = 0;
             }
         }
-
-        for (Arc connection : outgoing) {
-            connection.probDist.applyAdjustments();
-        }
     }
 
     /**

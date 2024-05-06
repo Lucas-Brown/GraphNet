@@ -158,10 +158,6 @@ public class SimpleNode extends NodeBase {
             weights[i] -= weights_gradient[i] * epsilon;
             weights_gradient[i] = 0;
         }
-
-        for (Arc connection : outgoing) {
-            connection.probDist.applyAdjustments();
-        }
     }
 
     /**

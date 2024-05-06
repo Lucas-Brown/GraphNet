@@ -1,4 +1,4 @@
-import com.lucasbrown.GraphNetwork.Distributions.BellCurveDistribution;
+import com.lucasbrown.GraphNetwork.Distributions.BellCurveFilter;
 import com.lucasbrown.GraphNetwork.Global.GraphNetwork;
 import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
 import com.lucasbrown.GraphNetwork.Local.InputNode;
@@ -28,8 +28,8 @@ public class SwitchNet {
         out.setName("Output");
         hidden.setName("Hidden");
 
-        net.addNewConnection(in, hidden, new BellCurveDistribution(1, 2, 10000));
-        net.addNewConnection(hidden, out, new BellCurveDistribution(1, 2, 10000));
+        net.addNewConnection(in, hidden, new BellCurveFilter(1, 2, 10000));
+        net.addNewConnection(hidden, out, new BellCurveFilter(1, 2, 10000));
 
         net.setInputOperation(SwitchNet::inputOperation);
         net.setOutputOperation(SwitchNet::outputOperation);

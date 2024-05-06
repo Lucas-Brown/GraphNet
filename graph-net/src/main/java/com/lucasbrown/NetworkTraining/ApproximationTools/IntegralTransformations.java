@@ -64,4 +64,13 @@ public class IntegralTransformations {
         assert Double.isFinite(transformedIntegral);
         return 3 * transformedIntegral / 2;
     }
+
+    public static double expInvLogTransform(DoubleUnaryOperator func, double t) {
+        if(Math.abs(t) <= 1E-15){
+            return 0;
+        }
+        double absLog = Math.log(Math.abs(t));
+        double x = Math.exp(t/absLog);
+        return func.applyAsDouble(x) * x * (absLog - 1)/(absLog*absLog);
+    }
 }

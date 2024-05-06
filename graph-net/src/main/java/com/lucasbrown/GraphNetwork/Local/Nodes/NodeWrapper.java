@@ -27,8 +27,7 @@ public class NodeWrapper implements INode {
     }
 
     @Override
-    public String getName()
-    {
+    public String getName() {
         return wrappingNode.getName();
     }
 
@@ -38,7 +37,7 @@ public class NodeWrapper implements INode {
     }
 
     @Override
-    public void setParentNetwork(GraphNetwork network){
+    public void setParentNetwork(GraphNetwork network) {
         wrappingNode.setParentNetwork(network);
     }
 
@@ -183,6 +182,11 @@ public class NodeWrapper implements INode {
     }
 
     @Override
+    public void applyParameterUpdate() {
+        wrappingNode.applyParameterUpdate();
+    }
+
+    @Override
     public void applyErrorSignals(double epsilon, List<ArrayList<Outcome>> allOutcomes) {
         wrappingNode.applyErrorSignals(epsilon, allOutcomes);
     }
@@ -198,13 +202,21 @@ public class NodeWrapper implements INode {
     }
 
     @Override
-    public int compareTo(INode o) {
-        return getID() - o.getID();
-    }
-
-    @Override
     public void sendTrainingSignals() {
         wrappingNode.sendTrainingSignals();
     }
+
+    @Override
+    public int compareTo(INode o) {
+        return INode.CompareNodes(this, o);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (!(o instanceof INode))
+            return false;
+        return INode.areNodesEqual(this, (INode) o);
+    }
+
 
 }

@@ -1,6 +1,6 @@
 package com.lucasbrown.GraphNetwork.Local;
 
-import com.lucasbrown.GraphNetwork.Distributions.FilterDistribution;
+import com.lucasbrown.GraphNetwork.Distributions.Filter;
 import com.lucasbrown.GraphNetwork.Local.Nodes.INode;
 
 /**
@@ -18,10 +18,10 @@ public class Arc {
      * INode transfer function for determining probability and strength of signal
      * forwarding
      */
-    public final FilterDistribution probDist;
+    public final Filter probDist;
 
     public Arc(final INode sending, final INode recieving,
-            final FilterDistribution transferFunc) {
+            final Filter transferFunc) {
         this.sending = sending;
         this.recieving = recieving;
         this.probDist = transferFunc;

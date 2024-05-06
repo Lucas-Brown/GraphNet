@@ -8,7 +8,7 @@ import java.util.function.DoubleUnaryOperator;
 
 import org.junit.Test;
 
-import com.lucasbrown.GraphNetwork.Distributions.BellCurveDistribution;
+import com.lucasbrown.GraphNetwork.Distributions.BellCurveFilter;
 import com.lucasbrown.GraphNetwork.Distributions.NormalDistribution;
 import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
 import com.lucasbrown.NetworkTraining.ApproximationTools.Convolution.FilterDistributionConvolution;
@@ -34,8 +34,8 @@ public class ConvolutionTest {
     
     @Test
     public void testConvolveLinear() {
-        BellCurveDistribution d1 = new BellCurveDistribution(0, 1);
-        BellCurveDistribution d2 = new BellCurveDistribution(1, 1);
+        BellCurveFilter d1 = new BellCurveFilter(0, 1);
+        BellCurveFilter d2 = new BellCurveFilter(1, 1);
 
         ActivationFunction a1 = ActivationFunction.LINEAR;
         ActivationFunction a2 = ActivationFunction.LINEAR;
@@ -48,8 +48,8 @@ public class ConvolutionTest {
 
     @Test
     public void testConvolveQuadratic() {
-        BellCurveDistribution d1 = new BellCurveDistribution(0, 1);
-        BellCurveDistribution d2 = new BellCurveDistribution(1, 1);
+        BellCurveFilter d1 = new BellCurveFilter(0, 1);
+        BellCurveFilter d2 = new BellCurveFilter(1, 1);
 
         ActivationFunction a1 = ActivationFunction.SIGNED_QUADRATIC;
         ActivationFunction a2 = ActivationFunction.SIGNED_QUADRATIC;
