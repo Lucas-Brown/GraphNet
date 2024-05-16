@@ -11,7 +11,6 @@ import java.util.Optional;
 import java.util.Random;
 import java.util.stream.Collectors;
 
-import com.lucasbrown.GraphNetwork.Distributions.Filter;
 import com.lucasbrown.GraphNetwork.Global.GraphNetwork;
 import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
 import com.lucasbrown.GraphNetwork.Local.Arc;
@@ -20,6 +19,9 @@ import com.lucasbrown.GraphNetwork.Local.Signal;
 import com.lucasbrown.NetworkTraining.ApproximationTools.ArrayTools;
 import com.lucasbrown.NetworkTraining.ApproximationTools.Pair;
 import com.lucasbrown.NetworkTraining.ApproximationTools.Convolution.FilterDistributionConvolution;
+import com.lucasbrown.NetworkTraining.DataSetTraining.BackwardsSamplingDistribution;
+import com.lucasbrown.NetworkTraining.DataSetTraining.IExpectationAdjuster;
+import com.lucasbrown.NetworkTraining.DataSetTraining.ITrainableDistribution;
 
 /**
  * A node within a graph neural network.
@@ -61,6 +63,23 @@ public abstract class NodeBase implements INode {
      */
     protected final ArrayList<Arc> incoming, outgoing;
 
+    /**
+     * The distribution of outputs produced by this node
+     */
+    protected BackwardsSamplingDistribution outputDistribution;
+
+    /**
+     * An objects which adjusts the parameters of outputDistribution given new data
+     */
+    protected IExpectationAdjuster outputAdjuster;
+
+    /**
+     * The probability distribution corresponding to signal passes
+     */
+    public ITrainableDistribution signalChanceDistribution;
+
+    public IExpectationAdjuster chanceAdjuster;
+
     private int incomingPowerSetSize;
 
     /**
@@ -92,15 +111,24 @@ public abstract class NodeBase implements INode {
 
     protected boolean hasValidForwardSignal;
 
-    public NodeBase(final ActivationFunction activationFunction) {
-        this(null, activationFunction);
+    public NodeBase(GraphNetwork network, final ActivationFunction activationFunction,
+            BackwardsSamplingDistribution outputDistribution,
+            ITrainableDistribution signalChanceDistribution) {
+        this(network, activationFunction, outputDistribution, outputDistribution.getDefaulAdjuster(),
+                signalChanceDistribution, signalChanceDistribution.getDefaulAdjuster());
     }
 
-    public NodeBase(GraphNetwork network, final ActivationFunction activationFunction) {
+    public NodeBase(GraphNetwork network, final ActivationFunction activationFunction,
+            BackwardsSamplingDistribution outputDistribution, IExpectationAdjuster outputAdjuster,
+            ITrainableDistribution signalChanceDistribution, IExpectationAdjuster chanceAdjuster) {
         id = ID_COUNTER++;
         name = "INode " + id;
         this.network = network;
         this.activationFunction = activationFunction;
+        this.outputDistribution = outputDistribution;
+        this.outputAdjuster = outputAdjuster;
+        this.signalChanceDistribution = signalChanceDistribution;
+        this.chanceAdjuster = chanceAdjuster;
         incoming = new ArrayList<Arc>();
         outgoing = new ArrayList<Arc>();
         orderedIDMap = new HashMap<>();
@@ -147,6 +175,16 @@ public abstract class NodeBase implements INode {
         return activationFunction;
     }
 
+    @Override
+    public BackwardsSamplingDistribution getOutputDistribution() {
+        return outputDistribution;
+    }
+
+    @Override
+    public ITrainableDistribution getSignalChanceDistribution() {
+        return signalChanceDistribution;
+    }
+
     protected int getIndexOfIncomingNode(INode incoming) {
         return orderedIDMap.get(incoming.getID());
     }
@@ -163,23 +201,6 @@ public abstract class NodeBase implements INode {
     @Override
     public boolean doesContainConnection(INode node) {
         return outgoing.stream().anyMatch(connection -> connection.doesMatchNodes(this, node));
-    }
-
-    /**
-     * Get the arc associated with the transfer from this node to the given
-     * recieving node
-     * 
-     * @param recievingNode
-     * @return The arc if present, otherwise null
-     */
-    @Override
-    public Arc getArc(INode recievingNode) {
-        for (Arc arc : outgoing) {
-            if (arc.doesMatchNodes(this, recievingNode)) {
-                return arc;
-            }
-        }
-        return null;
     }
 
     /**
@@ -219,6 +240,11 @@ public abstract class NodeBase implements INode {
     @Override
     public Optional<Arc> getOutgoingConnectionTo(INode recievingNode) {
         return outgoing.stream().filter(arc -> arc.recieving.equals(recievingNode)).findAny();
+    }
+
+    @Override
+    public Optional<Arc> getIncomingConnectionFrom(INode sendingNode) {
+        return incoming.stream().filter(arc -> arc.sending.equals(sendingNode)).findAny();
     }
 
     /**
@@ -374,6 +400,7 @@ public abstract class NodeBase implements INode {
                 forward = forwardNext;
                 forwardNext = new HashMap<>();
                 combinePossibilities();
+                prepareOutputDistributionAdjustments();
             }
             if (!backwardNext.isEmpty()) {
                 /*
@@ -385,6 +412,16 @@ public abstract class NodeBase implements INode {
             }
         }
 
+    }
+
+    /**
+     * Use the outcomes to prepare weighted adjustments to the outcome distribution
+     */
+    private void prepareOutputDistributionAdjustments() {
+        for (Outcome o : outcomes) {
+            // weigh the outcomes by their probability of occurring
+            outputAdjuster.prepareAdjustment(o.probability, new double[] { o.activatedValue });
+        }
     }
 
     /**
@@ -588,10 +625,10 @@ public abstract class NodeBase implements INode {
             // get the arcs corresponding to this bit string
             ArrayList<Arc> arcs = binStrToArcList(binStr);
 
-            // Seperate the arcs into their distributions and activation functions
-            ArrayList<Filter> distributions = arcs.stream()
-                    .map(arc -> arc.probDist)
-                    .collect(Collectors.toCollection(ArrayList<Filter>::new));
+            // Get the distributions of output values from the incoming nodes
+            ArrayList<BackwardsSamplingDistribution> distributions = arcs.stream()
+                    .map(arc -> arc.sending.getOutputDistribution())
+                    .collect(Collectors.toCollection(ArrayList<BackwardsSamplingDistribution>::new));
 
             ArrayList<ActivationFunction> activators = arcs.stream()
                     .map(arc -> arc.sending.getActivationFunction())
@@ -650,9 +687,15 @@ public abstract class NodeBase implements INode {
     }
 
     @Override
-    public void applyParameterUpdate() {
+    public void applyDistributionUpdate() {
+        outputAdjuster.applyAdjustments();
+        chanceAdjuster.applyAdjustments();
+    }
+
+    @Override
+    public void applyFilterUpdate() {
         for (Arc connection : outgoing) {
-            connection.probDist.applyAdjustments();
+            connection.filterAdjuster.applyAdjustments();
         }
     }
 
@@ -663,9 +706,10 @@ public abstract class NodeBase implements INode {
     public void sendErrorsBackwards(ArrayList<Outcome> outcomesAtTime, int timestep) {
 
         for (Outcome outcome : outcomesAtTime) {
-            if (outcome.errorOfOutcome.nonZero() & outcome.probability > 0) {
+            if (outcome.probability > 0) {
                 sendErrorsBackwards(outcome, timestep);
-                sendBackwardsSample(outcome);
+                // sendBackwardsSample(outcome);
+                adjustProbabilitiesForOutcome(outcome);
             }
         }
     }
@@ -677,7 +721,9 @@ public abstract class NodeBase implements INode {
         double[] weightsOfNodes = getWeights(binary_string);
 
         for (int i = 0; i < weightsOfNodes.length; i++) {
-            outcomeAtTime.sourceOutcomes[i].errorOfOutcome.add(error_derivative * weightsOfNodes[i],
+            Outcome so = outcomeAtTime.sourceOutcomes[i];
+            so.passRate.add(outcomeAtTime.passRate.getAverage(), outcomeAtTime.probability);
+            so.errorOfOutcome.add(error_derivative * weightsOfNodes[i],
                     outcomeAtTime.probability);
 
             // apply error as new point for the distribution
@@ -702,16 +748,38 @@ public abstract class NodeBase implements INode {
 
         // Send the backward signals
         ArrayList<Arc> arcs = binStrToArcList(backwardsBinStr);
-        for(double[] sample_n : sample){
+        for (double[] sample_n : sample) {
             for (int i = 0; i < arcs.size(); i++) {
-            Arc arc_i = arcs.get(i);
-                //double sample_inverse = arc_i.recieving.getActivationFunction().inverse(sample_i);
+                Arc arc_i = arcs.get(i);
+                // double sample_inverse =
+                // arc_i.recieving.getActivationFunction().inverse(sample_i);
                 assert Double.isFinite(sample_n[i]);
+
+                // TODO: fix backwards filter training
                 // System.out.println(sample_i);
-                arc_i.probDist.prepareWeightedReinforcement(sample_n[i], 1/sample[i].length); // prepare to reinforce the distribution
-                // arc_i.probDist.prepareReinforcement(sample_n[i], Math.min(1/(outcomeAtTime.probability*sample[i].length), Math.sqrt(arc_i.probDist.getNumberOfPointsInDistribution())));
+
+                // arc_i.filter.prepareWeightedReinforcement(sample_n[i], 1/sample[i].length);
+                // // prepare to reinforce the distribution
+                // arc_i.probDist.prepareReinforcement(sample_n[i],
+                // Math.min(1/(outcomeAtTime.probability*sample[i].length),
+                // Math.sqrt(arc_i.probDist.getNumberOfPointsInDistribution())));
             }
         }
+    }
+
+    private void adjustProbabilitiesForOutcome(Outcome outcome) {
+        double pass_rate = outcome.passRate.getAverage();
+
+        // Add another point for the net firing chance distribution
+        chanceAdjuster.prepareAdjustment(outcome.probability, new double[]{pass_rate});
+
+        // Reinforce the filter with the pass rate for each point
+        for (int i = 0; i < outcome.sourceNodes.length; i++) {
+            INode sourceNode = outcome.sourceNodes[i];
+            Arc arc = getIncomingConnectionFrom(sourceNode).get(); // should be guaranteed to exist
+            arc.filterAdjuster.prepareAdjustment(new double[]{outcome.sourceOutcomes[i].activatedValue, pass_rate});
+        }
+
     }
 
     public int mappedIDComparator(Signal s1, Signal s2) {

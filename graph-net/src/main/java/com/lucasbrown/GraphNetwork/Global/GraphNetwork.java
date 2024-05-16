@@ -10,13 +10,16 @@ import java.util.Map.Entry;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
-import com.lucasbrown.GraphNetwork.Distributions.Filter;
 import com.lucasbrown.GraphNetwork.Local.Arc;
 import com.lucasbrown.GraphNetwork.Local.Nodes.IInputNode;
 import com.lucasbrown.GraphNetwork.Local.Nodes.INode;
 import com.lucasbrown.GraphNetwork.Local.Nodes.IOutputNode;
 import com.lucasbrown.GraphNetwork.Local.Nodes.InputNode;
 import com.lucasbrown.GraphNetwork.Local.Nodes.OutputNode;
+import com.lucasbrown.NetworkTraining.DataSetTraining.IExpectationAdjuster;
+import com.lucasbrown.NetworkTraining.DataSetTraining.IFilter;
+import com.lucasbrown.NetworkTraining.DataSetTraining.ITrainableDistribution;
+import com.lucasbrown.NetworkTraining.DataSetTraining.NormalBetaFilter;
 
 /**
  * A neural network using a probabalistic directed graph representation.
@@ -133,16 +136,11 @@ public class GraphNetwork {
      */
 
     public Arc addNewConnection(INode transmittingNode, INode recievingNode,
-            Filter transferFunction) {
-        // boolean doesConnectionExist =
-        // transmittingNode.DoesContainConnection(recievingNode);
-        // if(!doesConnectionExist)
-        // {
-        Arc connection = new Arc(transmittingNode, recievingNode, transferFunction);
+            IFilter transferFunction, IExpectationAdjuster filterAdjuster) {
+        
+        Arc connection = new Arc(transmittingNode, recievingNode, transferFunction, filterAdjuster);
         transmittingNode.addOutgoingConnection(connection);
         recievingNode.addIncomingConnection(connection);
-        // }
-        // return doesConnectionExist;
         return connection;
     }
 

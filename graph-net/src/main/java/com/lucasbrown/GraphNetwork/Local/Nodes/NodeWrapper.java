@@ -3,7 +3,6 @@ package com.lucasbrown.GraphNetwork.Local.Nodes;
 import java.security.InvalidAlgorithmParameterException;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
 
@@ -12,6 +11,8 @@ import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
 import com.lucasbrown.GraphNetwork.Local.Arc;
 import com.lucasbrown.GraphNetwork.Local.Outcome;
 import com.lucasbrown.GraphNetwork.Local.Signal;
+import com.lucasbrown.NetworkTraining.DataSetTraining.BackwardsSamplingDistribution;
+import com.lucasbrown.NetworkTraining.DataSetTraining.ITrainableDistribution;
 
 public class NodeWrapper implements INode {
 
@@ -51,6 +52,16 @@ public class NodeWrapper implements INode {
         return wrappingNode.getActivationFunction();
     }
 
+    @Override
+    public BackwardsSamplingDistribution getOutputDistribution() {
+        return wrappingNode.getOutputDistribution();
+    }
+
+    @Override
+    public ITrainableDistribution getSignalChanceDistribution() {
+        return wrappingNode.getSignalChanceDistribution();
+    }
+
     /**
      * 
      * @param node
@@ -59,18 +70,6 @@ public class NodeWrapper implements INode {
     @Override
     public boolean doesContainConnection(INode node) {
         return wrappingNode.doesContainConnection(node);
-    }
-
-    /**
-     * Get the arc associated with the transfer from this node to the given
-     * recieving node
-     * 
-     * @param recievingNode
-     * @return The arc if present, otherwise null
-     */
-    @Override
-    public Arc getArc(INode recievingNode) {
-        return wrappingNode.getArc(recievingNode);
     }
 
     /**
@@ -109,6 +108,11 @@ public class NodeWrapper implements INode {
     @Override
     public Optional<Arc> getOutgoingConnectionTo(INode recievingNode) {
         return wrappingNode.getOutgoingConnectionTo(recievingNode);
+    }
+
+    @Override
+    public Optional<Arc> getIncomingConnectionFrom(INode sendingNode) {
+        return wrappingNode.getIncomingConnectionFrom(sendingNode);
     }
 
     /**
@@ -182,8 +186,13 @@ public class NodeWrapper implements INode {
     }
 
     @Override
-    public void applyParameterUpdate() {
-        wrappingNode.applyParameterUpdate();
+    public void applyDistributionUpdate() {
+        wrappingNode.applyDistributionUpdate();
+    }
+
+    @Override
+    public void applyFilterUpdate() {
+        wrappingNode.applyFilterUpdate();
     }
 
     @Override
@@ -217,6 +226,5 @@ public class NodeWrapper implements INode {
             return false;
         return INode.areNodesEqual(this, (INode) o);
     }
-
 
 }

@@ -3,7 +3,6 @@ package com.lucasbrown.GraphNetwork.Local.Nodes;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.List;
 
 import com.lucasbrown.GraphNetwork.Global.GraphNetwork;
@@ -12,7 +11,8 @@ import com.lucasbrown.GraphNetwork.Local.Arc;
 import com.lucasbrown.GraphNetwork.Local.Outcome;
 import com.lucasbrown.GraphNetwork.Local.Signal;
 import com.lucasbrown.NetworkTraining.ApproximationTools.ArrayTools;
-import com.lucasbrown.NetworkTraining.ApproximationTools.WeightedAverage;
+import com.lucasbrown.NetworkTraining.DataSetTraining.BackwardsSamplingDistribution;
+import com.lucasbrown.NetworkTraining.DataSetTraining.ITrainableDistribution;
 
 /**
  * A node within a graph neural network.
@@ -28,17 +28,9 @@ public class SimpleNode extends NodeBase {
     private double bias_gradient;
     private double[] weights_gradient;
 
-    /**
-     * The binary string representation of the incoming arcs being sent a backwards
-     * signal
-     */
-
-    public SimpleNode(final ActivationFunction activationFunction){
-        this(null, activationFunction);
-    }
-
-    public SimpleNode(final GraphNetwork network, final ActivationFunction activationFunction) {
-        super(network, activationFunction);
+    public SimpleNode(final GraphNetwork network, final ActivationFunction activationFunction,
+            BackwardsSamplingDistribution outputDistribution, ITrainableDistribution signalChanceDistribution) {
+        super(network, activationFunction, outputDistribution, signalChanceDistribution);
         weights = new double[0];
         bias = rng.nextGaussian();
         bias_gradient = 0;
@@ -65,7 +57,7 @@ public class SimpleNode extends NodeBase {
         weights[weights.length - 1] = rng.nextGaussian();
         weights_gradient = new double[weights.length];
         // for (int i = 0; i < weights_delta.length; i++) {
-        //     weights_delta[i] = new double();
+        // weights_delta[i] = new double();
         // }
     }
 
@@ -75,10 +67,10 @@ public class SimpleNode extends NodeBase {
     }
 
     @Override
-    public double getBias(int bitStr){
+    public double getBias(int bitStr) {
         return bias;
     }
-    
+
     /**
      * Compute the merged signal strength of a set of incoming signals
      * 
@@ -92,8 +84,8 @@ public class SimpleNode extends NodeBase {
 
         double strength = bias;
         double[] weights_of_signals = getWeights(binary_string);
-         
-        for(int i = 0; i < weights_of_signals.length; i++){
+
+        for (int i = 0; i < weights_of_signals.length; i++) {
             strength += sortedSignals.get(i).getOutputStrength() * weights_of_signals[i];
         }
 
@@ -105,34 +97,33 @@ public class SimpleNode extends NodeBase {
         computeGradient(allOutcomes);
         applyGradient(epsilon);
     }
-    
-    private void computeGradient(List<ArrayList<Outcome>> allOutcomes){
+
+    private void computeGradient(List<ArrayList<Outcome>> allOutcomes) {
         // for all time steps
         for (ArrayList<Outcome> outcomesAtTime : allOutcomes) {
-            
-            // Compute the probability volume of this timestep 
+
+            // Compute the probability volume of this timestep
             double probabilityVolume = 0;
-            for(Outcome outcome : outcomesAtTime){
+            for (Outcome outcome : outcomesAtTime) {
                 probabilityVolume += outcome.probability;
             }
 
             // if zero volume, move on to next set
-            if(probabilityVolume == 0){
+            if (probabilityVolume == 0) {
                 continue;
             }
 
             // add error to the gradient
-            for(Outcome outcome : outcomesAtTime){
+            for (Outcome outcome : outcomesAtTime) {
                 int key = outcome.binary_string;
 
-                double error = outcome.errorOfOutcome.getProdSum()/probabilityVolume;
+                double error = outcome.errorOfOutcome.getProdSum() / probabilityVolume;
                 assert Double.isFinite(error);
                 bias_gradient += error;
 
                 int i = 0;
                 while (key > 0) {
-                    if((key & 0b1) == 1)
-                    {
+                    if ((key & 0b1) == 1) {
                         weights_gradient[i] += error * outcome.sourceOutcomes[i].activatedValue;
                         i++;
                     }
@@ -141,7 +132,7 @@ public class SimpleNode extends NodeBase {
             }
         }
 
-        // divide all gradients by the number of non-empty timesteps 
+        // divide all gradients by the number of non-empty timesteps
         int T = allOutcomes.size();
         bias_gradient /= T;
 
@@ -150,7 +141,7 @@ public class SimpleNode extends NodeBase {
         }
     }
 
-    private void applyGradient(double epsilon){
+    private void applyGradient(double epsilon) {
         bias -= bias_gradient * epsilon;
         bias_gradient = 0;
 
@@ -177,15 +168,6 @@ public class SimpleNode extends NodeBase {
          * }
          */
 
-    }
-    
-    
-    public static InputNode asInputNode(ActivationFunction activator){
-        return new InputNode(new SimpleNode(activator));
-    }
-    
-    public static OutputNode asOutputNode(ActivationFunction activator){
-        return new OutputNode(new SimpleNode(activator));
     }
 
 }

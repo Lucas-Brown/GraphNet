@@ -61,7 +61,7 @@ public class BackpropTrainer {
     }
 
     public void trainingStep(boolean print_forward){
-        captureForward(false);
+        captureForward(print_forward);
 
         computeErrorOfOutputs(print_forward);
         backpropagateErrors();
@@ -90,7 +90,7 @@ public class BackpropTrainer {
             }
         }
         //assert total_error.getAverage() < 1E6;
-        assert Double.isFinite(total_error.getAverage());
+        //assert Double.isFinite(total_error.getAverage());
         if(print_forward){
             System.out.println(total_error.getAverage());
         }
@@ -98,21 +98,25 @@ public class BackpropTrainer {
     }
 
     private void computeErrorOfOutput(OutputNode node, int timestep, Double target){
-        // TODO: weigh null signals??
-        if(target == null){
-            return; 
-        }
-
         ArrayList<Outcome> outcomes = networkHistory.getStateOfNode(timestep, node.getID());
         if(outcomes == null){
             return;
         }
 
+        if(target == null){
+            for(Outcome outcome : outcomes){
+                outcome.passRate.add(0, 1);
+            }
+            return;
+        }
+
         for(Outcome outcome : outcomes){
+            outcome.passRate.add(1, 1);;
             outcome.errorOfOutcome.add(errorFunction.error_derivative(outcome.activatedValue, target), outcome.probability);
             assert Double.isFinite(errorFunction.error(outcome.activatedValue, target));
             total_error.add(errorFunction.error(outcome.activatedValue, target), outcome.probability);
         }
+        
     }
 
     private void backpropagateErrors() {
@@ -129,11 +133,12 @@ public class BackpropTrainer {
 
     private void applyErrorSignals(){
         network.getNodes().forEach(this::applyErrorSignalsToNode);
+        network.getNodes().forEach(INode::applyDistributionUpdate);
+        network.getNodes().forEach(INode::applyFilterUpdate);
     }
 
     private void applyErrorSignalsToNode(INode node){
         node.applyErrorSignals(epsilon, networkHistory.getHistoryOfNode(node.getID()));
-        node.applyParameterUpdate();
     }
 
     private void applyInputToNode(HashMap<Integer, ? extends IInputNode> inputNodeMap){

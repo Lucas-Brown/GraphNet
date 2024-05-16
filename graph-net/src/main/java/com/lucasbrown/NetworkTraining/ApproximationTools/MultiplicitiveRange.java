@@ -35,6 +35,12 @@ public class MultiplicitiveRange extends Range {
 
     @Override
     protected double getFloatingIndex(double x) {
+        if (x == lowerBound) {
+            return values[0];
+        } else if (x == upperBound) {
+            return values[values.length - 1];
+        }
+
         // find the equivalent floating index of the value
         int n0 = (int) (Math.log(x / lowerBound) * (n_divisions - 1) / (growthRate * (upperBound - lowerBound)));
 

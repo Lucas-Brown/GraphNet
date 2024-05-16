@@ -1,6 +1,7 @@
 package com.lucasbrown.GraphNetwork.Local;
 
 import com.lucasbrown.GraphNetwork.Local.Nodes.INode;
+import com.lucasbrown.NetworkTraining.ApproximationTools.PassFailCounter;
 import com.lucasbrown.NetworkTraining.ApproximationTools.WeightedAverage;
 
 public class Outcome {
@@ -10,8 +11,12 @@ public class Outcome {
     public double probability;
     public INode[] sourceNodes;
     public int[] sourceKeys;
-
     public Outcome[] sourceOutcomes;
+    
+    /**
+     * Accumulates the number of pass/fails for this signal. 
+     */
+    public WeightedAverage passRate = new WeightedAverage();
     public WeightedAverage errorOfOutcome = new WeightedAverage();
 
     @Override 

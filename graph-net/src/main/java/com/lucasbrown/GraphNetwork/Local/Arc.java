@@ -1,7 +1,8 @@
 package com.lucasbrown.GraphNetwork.Local;
 
-import com.lucasbrown.GraphNetwork.Distributions.Filter;
 import com.lucasbrown.GraphNetwork.Local.Nodes.INode;
+import com.lucasbrown.NetworkTraining.DataSetTraining.IExpectationAdjuster;
+import com.lucasbrown.NetworkTraining.DataSetTraining.IFilter;
 
 /**
  * A one-way connection between a sending node and a recieving node.
@@ -18,20 +19,23 @@ public class Arc {
      * INode transfer function for determining probability and strength of signal
      * forwarding
      */
-    public final Filter probDist;
+    public IFilter filter;
+
+    public IExpectationAdjuster filterAdjuster;
 
     public Arc(final INode sending, final INode recieving,
-            final Filter transferFunc) {
+            final IFilter filter, IExpectationAdjuster filterAdjuster) {
         this.sending = sending;
         this.recieving = recieving;
-        this.probDist = transferFunc;
+        this.filter = filter;
+        this.filterAdjuster = filterAdjuster;
     }
 
-    public int getSendingID(){
+    public int getSendingID() {
         return sending.getID();
     }
 
-    public int getRecievingID(){
+    public int getRecievingID() {
         return recieving.getID();
     }
 
@@ -45,14 +49,13 @@ public class Arc {
      * @param strength The strength of the signal to send
      * @return the signal or null if no signal was sent
      */
-    /* 
-    Signal sendInferenceSignal(double strength, double probability) {
-        Signal signal = new Signal(sending, recieving, strength, probability);
-        recieving.recieveInferenceSignal(signal);
-        return signal;
-    }
-    */
-
+    /*
+     * Signal sendInferenceSignal(double strength, double probability) {
+     * Signal signal = new Signal(sending, recieving, strength, probability);
+     * recieving.recieveInferenceSignal(signal);
+     * return signal;
+     * }
+     */
 
     /**
      * Send an forward signal from the sending node to the recieving node
@@ -61,7 +64,7 @@ public class Arc {
      * @return the signal or null if no signal was sent
      */
     public Signal sendForwardSignal(Outcome sourceOutcome) {
-        Signal signal = new Signal(sending, recieving, sourceOutcome, probDist.sendChance(sourceOutcome.netValue));
+        Signal signal = new Signal(sending, recieving, sourceOutcome, filter.getChanceToSend(sourceOutcome.netValue));
         recieving.recieveForwardSignal(signal);
         return signal;
     }
@@ -72,24 +75,23 @@ public class Arc {
      * @param strength The strength of the signal to send
      * @return the signal or null if no signal was sent
      */
-    /* 
-    Signal sendBackwardSignal(double strength, double probability) {
-        // sending and recieving have reversed meanings here
-        Signal signal = new Signal(recieving, sending, strength, probability);
-        sending.recieveBackwardSignal(signal);
-        return signal;
-    }
-    */
+    /*
+     * Signal sendBackwardSignal(double strength, double probability) {
+     * // sending and recieving have reversed meanings here
+     * Signal signal = new Signal(recieving, sending, strength, probability);
+     * sending.recieveBackwardSignal(signal);
+     * return signal;
+     * }
+     */
 
-    
     /**
      * Randomly selects whether the signalStrength passes through the filter
+     * 
      * @param signalStrength
-     * @return 
+     * @return
      */
     public boolean rollFilter(double signalStrength) {
-        return probDist.shouldSend(signalStrength);
+        return filter.shouldSend(signalStrength);
     }
-
 
 }

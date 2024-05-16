@@ -22,6 +22,7 @@ public class BetaDistributionAdjuster implements Function, IExpectationAdjuster 
 
     public BetaDistributionAdjuster(BetaDistribution distribution) {
         this.distribution = distribution;
+        newPoints = new ArrayList<>();
     }
 
     public double getAlpha(){
@@ -61,7 +62,7 @@ public class BetaDistributionAdjuster implements Function, IExpectationAdjuster 
     }
 
     @Override
-    public void prepareAdjustment(double weight, double... newPoint) {
+    public void prepareAdjustment(double weight, double[] newPoint) {
         if(newPoint.length > 1){
             throw new InvalidParameterException("This distribution only accepts a single degree of input. ");
         }
@@ -69,7 +70,7 @@ public class BetaDistributionAdjuster implements Function, IExpectationAdjuster 
     }
 
     @Override
-    public void prepareAdjustment(double... newData) {
+    public void prepareAdjustment(double[] newData) {
         prepareAdjustment(1, newData);
     }
 
@@ -93,6 +94,7 @@ public class BetaDistributionAdjuster implements Function, IExpectationAdjuster 
         N += newPoints.stream().mapToDouble(wp -> wp.weight).sum();
 
         newPoints.clear();
+        distribution.applyAdjustments(this);
     }
 
     private void variableTransform(double[] vec) {

@@ -2,12 +2,6 @@ package com.lucasbrown.NetworkTraining.DataSetTraining;
 
 import java.security.InvalidParameterException;
 import java.util.ArrayList;
-import java.util.List;
-
-import jsat.linear.DenseVector;
-import jsat.linear.Vec;
-import jsat.math.Function;
-import jsat.math.optimization.NelderMead;
 
 public class NormalDistributionAdjuster implements IExpectationAdjuster {
 
@@ -19,6 +13,7 @@ public class NormalDistributionAdjuster implements IExpectationAdjuster {
 
     public NormalDistributionAdjuster(NormalDistribution distribution) {
         this.distribution = distribution;
+        newPoints = new ArrayList<WeightedDouble>();
     }
 
     public double getMean(){
@@ -30,14 +25,11 @@ public class NormalDistributionAdjuster implements IExpectationAdjuster {
     }
 
     public void prepareAdjustment(double weight, double value) {
-        if (value < 0 || value > 1) {
-            throw new InvalidParameterException("The beta distribution is bounded between 0 and 1");
-        }
         newPoints.add(new WeightedDouble(weight, value));
     }
 
     @Override
-    public void prepareAdjustment(double weight, double... newPoint) {
+    public void prepareAdjustment(double weight, double[] newPoint) {
         if(newPoint.length > 1){
             throw new InvalidParameterException("This distribution only accepts a single degree of input. ");
         }
@@ -45,7 +37,7 @@ public class NormalDistributionAdjuster implements IExpectationAdjuster {
     }
 
     @Override
-    public void prepareAdjustment(double... newData) {
+    public void prepareAdjustment(double[] newData) {
         prepareAdjustment(1, newData);
     }
 
@@ -67,10 +59,12 @@ public class NormalDistributionAdjuster implements IExpectationAdjuster {
         variance *= N;
         variance += newPoints.stream().mapToDouble(wp -> wp.weight*(wp.value - mean_updated)*(wp.value - mean_updated)).sum();
         variance /= N_updated;
+        variance = Math.sqrt(variance);
 
         mean = mean_updated;
         N = N_updated;
         newPoints.clear();
+        distribution.applyAdjustments(this);
     }
 
 

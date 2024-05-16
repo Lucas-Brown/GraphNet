@@ -8,10 +8,12 @@ import java.util.stream.DoubleStream;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
-import com.lucasbrown.GraphNetwork.Distributions.Filter;
 import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
 import com.lucasbrown.NetworkTraining.ApproximationTools.DoubleFunction;
 import com.lucasbrown.NetworkTraining.ApproximationTools.IntegralTransformations;
+import com.lucasbrown.NetworkTraining.DataSetTraining.BackwardsSamplingDistribution;
+import com.lucasbrown.NetworkTraining.DataSetTraining.IFilter;
+import com.lucasbrown.NetworkTraining.DataSetTraining.ITrainableDistribution;
 
 import jsat.math.integration.Romberg;
 import jsat.distributions.multivariate.NormalM;
@@ -24,7 +26,7 @@ public class FilterDistributionConvolution {
 
     private final Random rng = new Random();
 
-    private ArrayList<? extends Filter> activationDistributions;
+    private ArrayList<? extends BackwardsSamplingDistribution> activationDistributions;
     private ArrayList<? extends ActivationFunction> activators;
     private double[] weights;
     private List<IConvolution> distributions;
@@ -33,7 +35,7 @@ public class FilterDistributionConvolution {
     private int[] dependentIndices;
     private int[] independentIndices;
 
-    public FilterDistributionConvolution(ArrayList<? extends Filter> activationDistributions,
+    public FilterDistributionConvolution(ArrayList<? extends BackwardsSamplingDistribution> activationDistributions,
             ArrayList<? extends ActivationFunction> activators, double[] weights) {
         this.activationDistributions = activationDistributions;
         this.activators = activators;
@@ -111,7 +113,7 @@ public class FilterDistributionConvolution {
 
         for (int i = 0; i < independentIndices.length; i++) {
             int idx = independentIndices[i];
-            Filter dist = activationDistributions.get(idx);
+            BackwardsSamplingDistribution dist = activationDistributions.get(idx);
 
             for (int n = 0; n < count; n++) {
                 independent_samples[n][i] = dist.sample();

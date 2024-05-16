@@ -1,5 +1,6 @@
 package com.lucasbrown.NetworkTraining.DataSetTraining;
 
+import java.util.Random;
 import java.util.function.DoubleUnaryOperator;
 
 import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
@@ -10,10 +11,17 @@ import com.lucasbrown.NetworkTraining.ApproximationTools.Convolution.IConvolutio
 
 import jsat.math.integration.Trapezoidal;
 
-public abstract class NodeOutputDistribution implements ITrainableDistribution {
+public abstract class BackwardsSamplingDistribution implements ITrainableDistribution {
     
+    protected Random rng;
     private static final int TRAP_COUNT = 100;
-    
+
+    public BackwardsSamplingDistribution(Random random){
+        rng = random;
+    }
+
+    public abstract double sample();
+
     /**
      * Get the mean value of a distribution whose underlying data has undergone the
      * transformation of the activator

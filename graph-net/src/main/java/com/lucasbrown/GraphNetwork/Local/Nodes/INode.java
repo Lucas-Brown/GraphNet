@@ -12,6 +12,8 @@ import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
 import com.lucasbrown.GraphNetwork.Local.Arc;
 import com.lucasbrown.GraphNetwork.Local.Outcome;
 import com.lucasbrown.GraphNetwork.Local.Signal;
+import com.lucasbrown.NetworkTraining.DataSetTraining.BackwardsSamplingDistribution;
+import com.lucasbrown.NetworkTraining.DataSetTraining.ITrainableDistribution;
 
 public interface INode extends Comparable<INode> {
 
@@ -21,27 +23,22 @@ public interface INode extends Comparable<INode> {
 
     public abstract void setName(String name);
 
-    public abstract void setParentNetwork(GraphNetwork network); 
+    public abstract void setParentNetwork(GraphNetwork network);
 
-    public abstract GraphNetwork getParentNetwork(); 
+    public abstract GraphNetwork getParentNetwork();
 
     public abstract ActivationFunction getActivationFunction();
 
+    public abstract BackwardsSamplingDistribution getOutputDistribution();
+
+    public abstract ITrainableDistribution getSignalChanceDistribution();
+ 
     /**
      * 
      * @param node
      * @return whether this node is connected to the provided node
      */
     public abstract boolean doesContainConnection(INode node);
-
-    /**
-     * Get the arc associated with the transfer from this node to the given
-     * recieving node
-     * 
-     * @param recievingNode
-     * @return The arc if present, otherwise null
-     */
-    public abstract Arc getArc(INode recievingNode);
 
     /**
      * Add an incoming connection to the node
@@ -63,7 +60,24 @@ public interface INode extends Comparable<INode> {
 
     public abstract Collection<Arc> getAllOutgoingConnections();
 
+    /**
+     * Get the arc associated with the transfer from this node to the given
+     * recieving node
+     * 
+     * @param recievingNode
+     * @return The arc if present, otherwise null
+     */
     public abstract Optional<Arc> getOutgoingConnectionTo(INode recievingNode);
+
+    /**
+     * Get the arc associated with the transfer from the given sending node to this
+     * node
+     * 
+     * 
+     * @param recievingNode
+     * @return The arc if present, otherwise null
+     */
+    public abstract Optional<Arc> getIncomingConnectionFrom(INode sendingNode);
 
     /**
      * Notify this node of a new incoming forward signal
@@ -92,7 +106,7 @@ public interface INode extends Comparable<INode> {
      * @return
      */
     public abstract boolean hasValidForwardSignal();
-    
+
     /**
      * Get whether the current forward signal is set and valid
      * 
@@ -128,15 +142,17 @@ public interface INode extends Comparable<INode> {
 
     public abstract void applyErrorSignals(double epsilon, List<ArrayList<Outcome>> allOutcomes);
 
-    public abstract void applyParameterUpdate();
+    public abstract void applyDistributionUpdate();
+
+    public abstract void applyFilterUpdate();
 
     public abstract void clearSignals();
 
-    public static int CompareNodes(INode n1, INode n2){
+    public static int CompareNodes(INode n1, INode n2) {
         return n1.getID() - n2.getID();
     }
 
-    public static boolean areNodesEqual(INode n1, INode n2){
-            return n1.getID() == n2.getID();
+    public static boolean areNodesEqual(INode n1, INode n2) {
+        return n1.getID() == n2.getID();
     }
 }

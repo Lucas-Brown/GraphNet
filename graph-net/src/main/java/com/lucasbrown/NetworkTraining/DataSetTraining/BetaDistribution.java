@@ -1,5 +1,8 @@
 package com.lucasbrown.NetworkTraining.DataSetTraining;
 
+import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
+import com.lucasbrown.NetworkTraining.ApproximationTools.Convolution.IConvolution;
+
 public class BetaDistribution implements ITrainableDistribution{
 
     private double alpha, beta, N;
@@ -59,6 +62,17 @@ public class BetaDistribution implements ITrainableDistribution{
 
     public static double densityOfPoint(double x, double alpha, double beta){
         return Math.pow(x, alpha - 1)*Math.pow(1-x, beta - 1)/normalizationConstant(alpha, beta);
+    }
+
+    @Override
+    public IExpectationAdjuster getDefaulAdjuster() {
+        return new BetaDistributionAdjuster(this);
+    }
+
+    @Override
+    public IConvolution toConvolution(ActivationFunction activator, double weight) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'toConvolution'");
     }
 
 

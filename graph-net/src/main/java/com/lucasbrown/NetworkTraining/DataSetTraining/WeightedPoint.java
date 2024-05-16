@@ -8,4 +8,10 @@ public class WeightedPoint<T> {
         this.weight = weight;
         this.value = value;
     }
+
+    
+    @Override
+    public String toString(){
+        return "weight: " + Double.toString(weight) + "\tb: " + value.toString();
+    }
 }

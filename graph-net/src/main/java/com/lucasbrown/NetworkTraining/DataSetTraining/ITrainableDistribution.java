@@ -1,11 +1,18 @@
 package com.lucasbrown.NetworkTraining.DataSetTraining;
 
+import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
+import com.lucasbrown.NetworkTraining.ApproximationTools.Convolution.IConvolution;
+
 public interface ITrainableDistribution {
     
-    public abstract double getProbabilityDensity(double... x);
-    public abstract double getNumberOfPointsInDistribution();
-    public abstract double getNormalizationConstant();
+    public double getProbabilityDensity(double... x);
+    public double getNumberOfPointsInDistribution();
+    public double getNormalizationConstant();
 
-    public abstract void applyAdjustments(IExpectationAdjuster adjuster);
+    public void applyAdjustments(IExpectationAdjuster adjuster);
+    public IConvolution toConvolution(ActivationFunction activator, double weight);
+
+    public IExpectationAdjuster getDefaulAdjuster();
+
 
 }

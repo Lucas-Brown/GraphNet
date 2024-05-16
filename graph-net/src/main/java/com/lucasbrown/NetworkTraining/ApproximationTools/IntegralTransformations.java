@@ -66,11 +66,15 @@ public class IntegralTransformations {
     }
 
     public static double expInvLogTransform(DoubleUnaryOperator func, double t) {
-        if(Math.abs(t) <= 1E-15){
+        double abs_t = Math.abs(t);
+        if(abs_t <= 1E-15 || (abs_t - 1) <= 0.03){
             return 0;
         }
-        double absLog = Math.log(Math.abs(t));
+        double absLog = Math.log(abs_t);
         double x = Math.exp(t/absLog);
-        return func.applyAsDouble(x) * x * (absLog - 1)/(absLog*absLog);
+        if(x == 0) return 0;
+        double result = func.applyAsDouble(x) * x * (absLog - 1)/(absLog*absLog);
+        assert Double.isFinite(result); 
+        return result;
     }
 }

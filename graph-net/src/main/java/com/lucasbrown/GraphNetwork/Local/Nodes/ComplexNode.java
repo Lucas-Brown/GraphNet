@@ -3,10 +3,7 @@ package com.lucasbrown.GraphNetwork.Local.Nodes;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Random;
 import java.util.stream.IntStream;
 
 import com.lucasbrown.GraphNetwork.Global.GraphNetwork;
@@ -14,6 +11,8 @@ import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
 import com.lucasbrown.GraphNetwork.Local.Arc;
 import com.lucasbrown.GraphNetwork.Local.Outcome;
 import com.lucasbrown.GraphNetwork.Local.Signal;
+import com.lucasbrown.NetworkTraining.DataSetTraining.BackwardsSamplingDistribution;
+import com.lucasbrown.NetworkTraining.DataSetTraining.ITrainableDistribution;
 
 /**
  * A node within a graph neural network.
@@ -36,12 +35,9 @@ public class ComplexNode extends NodeBase {
     private double[] bias_gradient;
     private double[][] weights_gradient;
 
-    public ComplexNode(final ActivationFunction activationFunction){
-        this(null, activationFunction);
-    }
-
-    public ComplexNode(final GraphNetwork network, final ActivationFunction activationFunction) {
-        super(network, activationFunction);
+    public ComplexNode(final GraphNetwork network, final ActivationFunction activationFunction,
+            BackwardsSamplingDistribution outputDistribution, ITrainableDistribution signalChanceDistribution) {
+        super(network, activationFunction, outputDistribution, signalChanceDistribution);
         weights = new double[1][1];
         biases = new double[1];
         weights[0] = new double[0];
@@ -101,10 +97,10 @@ public class ComplexNode extends NodeBase {
     }
 
     @Override
-    public double getBias(int bitStr){
+    public double getBias(int bitStr) {
         return biases[bitStr];
     }
-    
+
     /**
      * Compute the merged signal strength of a set of incoming signals
      * 
@@ -133,27 +129,27 @@ public class ComplexNode extends NodeBase {
         applyGradient(epsilon);
     }
 
-    private void computeGradient(List<ArrayList<Outcome>> allOutcomes){
+    private void computeGradient(List<ArrayList<Outcome>> allOutcomes) {
 
         // for all time steps
         for (ArrayList<Outcome> outcomesAtTime : allOutcomes) {
-            
-            // Compute the probability volume of this timestep 
+
+            // Compute the probability volume of this timestep
             double probabilityVolume = 0;
-            for(Outcome outcome : outcomesAtTime){
+            for (Outcome outcome : outcomesAtTime) {
                 probabilityVolume += outcome.probability;
             }
 
             // if zero volume, move on to next set
-            if(probabilityVolume == 0){
+            if (probabilityVolume == 0) {
                 continue;
             }
 
             // add error to the gradient
-            for(Outcome outcome : outcomesAtTime){
+            for (Outcome outcome : outcomesAtTime) {
                 int key = outcome.binary_string;
 
-                double error = outcome.errorOfOutcome.getProdSum()/probabilityVolume;
+                double error = outcome.errorOfOutcome.getProdSum() / probabilityVolume;
                 assert Double.isFinite(error);
                 bias_gradient[key] += error;
 
@@ -163,9 +159,9 @@ public class ComplexNode extends NodeBase {
             }
         }
 
-        // divide all gradients by the number of non-empty timesteps 
+        // divide all gradients by the number of non-empty timesteps
         int T = allOutcomes.size();
-        for(int key = 1; key < getIncomingPowerSetSize(); key++){
+        for (int key = 1; key < getIncomingPowerSetSize(); key++) {
             bias_gradient[key] /= T;
 
             for (int i = 0; i < weights[key].length; i++) {
@@ -174,7 +170,7 @@ public class ComplexNode extends NodeBase {
         }
     }
 
-    private void applyGradient(double epsilon){
+    private void applyGradient(double epsilon) {
         for (int key = 1; key < biases.length; key++) {
             biases[key] -= bias_gradient[key] * epsilon;
             bias_gradient[key] = 0;
@@ -204,12 +200,4 @@ public class ComplexNode extends NodeBase {
          */
 
     }
-
-    public static InputNode asInputNode(ActivationFunction activator){
-        return new InputNode(new ComplexNode(activator));
-    }
-    
-    public static OutputNode asOutputNode(ActivationFunction activator){
-        return new OutputNode(new ComplexNode(activator));
-    } 
 }

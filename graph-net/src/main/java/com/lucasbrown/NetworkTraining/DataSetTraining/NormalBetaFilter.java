@@ -2,6 +2,9 @@ package com.lucasbrown.NetworkTraining.DataSetTraining;
 
 import java.util.Random;
 
+import com.lucasbrown.NetworkTraining.ApproximationTools.Convolution.IConvolution;
+import com.lucasbrown.NetworkTraining.ApproximationTools.Convolution.LinearNormalConvolution;
+
 public class NormalBetaFilter implements IFilter{
 
     private final Random rng;
