@@ -57,6 +57,7 @@ public class NormalDistribution extends BackwardsSamplingDistribution{
         double[] params = adjuster.getUpdatedParameters();
         mean = params[0];
         variance = params[1];
+        N = params[2];
     }
 
 

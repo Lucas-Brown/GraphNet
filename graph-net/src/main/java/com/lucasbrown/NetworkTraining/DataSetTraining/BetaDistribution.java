@@ -53,7 +53,8 @@ public class BetaDistribution implements ITrainableDistribution{
     public void applyAdjustments(IExpectationAdjuster adjuster) {
         double[] params = adjuster.getUpdatedParameters();
         alpha = params[0];
-        alpha = params[1];
+        beta = params[1];
+        N = params[2];
     }
 
     public static double normalizationConstant(double alpha, double beta){

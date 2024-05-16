@@ -14,20 +14,21 @@ public class NormalBetaFilterAdjuster2 extends NormalBetaFilterAdjuster {
     @Override
     public double getExpectedValueOfLogLikelihood(double shift, double scale) {
         double variance_x = nodeDistribution.getVariance();
-        final double w = (mean - nodeDistribution.getMean() - shift) / (root_2 * variance_x);
-        final double root_eta = variance_x / (scale * variance);
+        final double w = (mean - nodeDistribution.getMean() + shift) / (root_2 * scale * variance);
+        double eta = scale * variance / variance_x;
+        eta *= eta;
         double alpha = arcDistribution.getAlpha();
         double beta = arcDistribution.getBeta();
 
-        double A = getA(w, root_eta, variance_x);
-        double B = getB(w, root_eta, variance_x);
+        double A = getA(w, eta, variance_x);
+        double B = getB(w, eta, variance_x);
 
         return root_2*scale*variance * (A * alpha + B * beta) / (alpha + beta);
     }
 
 
     public double getA(double w, double eta, double sigma_x) {
-        return (Math.log(2*Math.PI*sigma_x*sigma_x) + 1/eta + 2*w*w + 1)/(2 * Math.sqrt(2*eta*sigma_x*sigma_x));
+        return -(Math.log(2*Math.PI*sigma_x*sigma_x) + 1/eta + 2*w*w + 1)/(2 * Math.sqrt(2*eta*sigma_x*sigma_x));
     }
 
     /**
@@ -40,7 +41,6 @@ public class NormalBetaFilterAdjuster2 extends NormalBetaFilterAdjuster {
         double delta;
         int n = 2;
         do{
-            assert n < 10000: "uh oh...";
             double n_eta = n * eta;
             double denom = n_eta + n - 1;
             double exponent = (n_eta/denom - 1)*n_eta*w*w;

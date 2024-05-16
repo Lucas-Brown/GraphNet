@@ -118,7 +118,7 @@ public class BetaDistributionAdjuster implements Function, IExpectationAdjuster 
 
     @Override
     public double[] getUpdatedParameters() {
-        return new double[]{alpha, beta};
+        return new double[]{alpha, beta, N};
     }
 
 }

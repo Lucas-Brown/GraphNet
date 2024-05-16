@@ -5,16 +5,22 @@ import com.lucasbrown.GraphNetwork.Distributions.OpenFilter;
 import com.lucasbrown.GraphNetwork.Global.BackpropTrainer;
 import com.lucasbrown.GraphNetwork.Global.GraphNetwork;
 import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
+import com.lucasbrown.GraphNetwork.Local.Arc;
 import com.lucasbrown.GraphNetwork.Local.Nodes.ComplexNode;
 import com.lucasbrown.GraphNetwork.Local.Nodes.InputNode;
 import com.lucasbrown.GraphNetwork.Local.Nodes.OutputNode;
+import com.lucasbrown.GraphNetwork.Local.Nodes.SimpleNode;
 import com.lucasbrown.NetworkTraining.ApproximationTools.ErrorFunction;
+import com.lucasbrown.NetworkTraining.DataSetTraining.BetaDistribution;
+import com.lucasbrown.NetworkTraining.DataSetTraining.NormalBetaFilter;
+import com.lucasbrown.NetworkTraining.DataSetTraining.NormalBetaFilterAdjuster2;
+import com.lucasbrown.NetworkTraining.DataSetTraining.NormalDistribution;
 
 public class LinearDataBackpropTraining {
     
     private static int counter = 0;
 
-    private int N = 10;
+    private int N = 25;
     private Double[][] inputData;
     private Double[][] outputData;
 
@@ -30,7 +36,7 @@ public class LinearDataBackpropTraining {
     {
         outputData = new Double[N][1];
         for (int i = 0; i < N; i++) {
-            outputData[i] = new Double[]{Double.valueOf(i)};
+            outputData[(i + 2) % N] = new Double[]{Double.valueOf(i)};
         }
     } 
 
@@ -41,28 +47,44 @@ public class LinearDataBackpropTraining {
 
         GraphNetwork net = new GraphNetwork();
 
-        InputNode in = ComplexNode.asInputNode(ActivationFunction.LINEAR);
-        //INode hidden = net.createHiddenNode(ActivationFunction.LINEAR);
-        OutputNode out = ComplexNode.asOutputNode(ActivationFunction.LINEAR);
+        SimpleNode s_in = new SimpleNode(net, ActivationFunction.LINEAR, new NormalDistribution(0, 1),
+                new BetaDistribution(1, 1, 10));
+        SimpleNode hidden = new SimpleNode(net, ActivationFunction.LINEAR, new NormalDistribution(0.5, 1),
+                new BetaDistribution(1, 1, 10));
+
+        InputNode in = new InputNode(s_in);
+
+        SimpleNode s_out = new SimpleNode(net, ActivationFunction.LINEAR, new NormalDistribution(0, 1),
+                new BetaDistribution(1, 1, 10));
+        OutputNode out = new OutputNode(s_out);
 
         in.setName("Input");
-        //hidden.setName("Hidden");
+        hidden.setName("Hidden");
         out.setName("Output");
 
         net.addNodeToNetwork(in);
+        net.addNodeToNetwork(hidden);
         net.addNodeToNetwork(out);
 
-        //net.addNewConnection(in, hidden, new BellCurveDistribution(0, 1));
-        //net.addNewConnection(hidden, out, new BellCurveDistribution(-1, 1));
-        net.addNewConnection(in, out, new BellCurveFilter(-1, 1));
+        NormalBetaFilter b1 = new NormalBetaFilter(0, 1);
+        NormalBetaFilter b2 = new NormalBetaFilter(0, 1);
+        Arc a1 = net.addNewConnection(in, hidden, b1, new NormalBetaFilterAdjuster2(b1, (NormalDistribution) in.getOutputDistribution(), (BetaDistribution) in.getSignalChanceDistribution()));
+        Arc a2 = net.addNewConnection(hidden, out, b2, new NormalBetaFilterAdjuster2(b2, (NormalDistribution) hidden.getOutputDistribution(), (BetaDistribution) hidden.getSignalChanceDistribution()));
+        // Arc a3 = net.addNewConnection(in3, out, new BellCurveDistribution(0, 1, 10,
+        // 100));
+
+        // net.addNewConnection(in1, out, new OpenFilter());
+        // net.addNewConnection(in2, out, new OpenFilter());
+        // net.addNewConnection(in3, out, new OpenFilter());
 
         BackpropTrainer bt = new BackpropTrainer(net, new ErrorFunction.MeanSquaredError());
+        bt.epsilon = 0.01;
 
         bt.setTrainingData(linear.inputData, linear.outputData);
-        bt.trainNetwork(10000, 100);
 
+        bt.trainNetwork(10000, 100);
         net.deactivateAll();
-        net.setInputOperation(nodeMap -> nodeMap.values().iterator().next().acceptUserForwardSignal(linear.inputData[counter++][0]));
+        net.setInputOperation(nodeMap -> BackpropTrainer.applyInputToNode(nodeMap, linear.inputData, counter++));
         for (int i = 0; i < linear.inputData.length; i++) {
             net.trainingStep();
             System.out.println(net);

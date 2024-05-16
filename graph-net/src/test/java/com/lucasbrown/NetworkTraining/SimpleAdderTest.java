@@ -31,7 +31,7 @@ public class SimpleAdderTest {
     private void initializeInputData() {
         inputData = new Double[N][1];
         for (int i = 0; i < N; i++) {
-            inputData[i] = new Double[] { doubleOrNothing(), doubleOrNothing() };
+            inputData[i] = new Double[] { doubleOrNothing(), doubleOrNothing(), doubleOrNothing() };
             // if(inputData[i][0] == null & inputData[i][1] == null & inputData[i][2] ==
             // null){
             // i--;
@@ -68,9 +68,12 @@ public class SimpleAdderTest {
                 new BetaDistribution(1, 1, 10));
         SimpleNode s_in_2 = new SimpleNode(net, ActivationFunction.LINEAR, new NormalDistribution(0.5, 1),
                 new BetaDistribution(1, 1, 10));
+        SimpleNode s_in_3 = new SimpleNode(net, ActivationFunction.LINEAR, new NormalDistribution(0.5, 1),
+                        new BetaDistribution(1, 1, 10));
 
         InputNode in1 = new InputNode(s_in_1);
         InputNode in2 = new InputNode(s_in_2);
+        InputNode in3 = new InputNode(s_in_3);
 
         SimpleNode s_out = new SimpleNode(net, ActivationFunction.LINEAR, new NormalDistribution(0, 1),
                 new BetaDistribution(1, 1, 10));
@@ -78,18 +81,20 @@ public class SimpleAdderTest {
 
         in1.setName("Input 1");
         in2.setName("Input 2");
-        // in3.setName("Input 3");
+        in3.setName("Input 3");
         out.setName("Output");
 
         net.addNodeToNetwork(in1);
         net.addNodeToNetwork(in2);
-        // net.addNodeToNetwork(in3);
+        net.addNodeToNetwork(in3);
         net.addNodeToNetwork(out);
 
         NormalBetaFilter b1 = new NormalBetaFilter(0, 1);
         NormalBetaFilter b2 = new NormalBetaFilter(0, 1);
+        NormalBetaFilter b3 = new NormalBetaFilter(0, 1);
         Arc a1 = net.addNewConnection(in1, out, b1, new NormalBetaFilterAdjuster2(b1, (NormalDistribution) in1.getOutputDistribution(), (BetaDistribution) in1.getSignalChanceDistribution()));
         Arc a2 = net.addNewConnection(in2, out, b2, new NormalBetaFilterAdjuster2(b2, (NormalDistribution) in2.getOutputDistribution(), (BetaDistribution) in2.getSignalChanceDistribution()));
+        Arc a3 = net.addNewConnection(in3, out, b3, new NormalBetaFilterAdjuster2(b3, (NormalDistribution) in3.getOutputDistribution(), (BetaDistribution) in3.getSignalChanceDistribution()));
         // Arc a3 = net.addNewConnection(in3, out, new BellCurveDistribution(0, 1, 10,
         // 100));
 
@@ -98,11 +103,11 @@ public class SimpleAdderTest {
         // net.addNewConnection(in3, out, new OpenFilter());
 
         BackpropTrainer bt = new BackpropTrainer(net, new ErrorFunction.MeanSquaredError());
-        bt.epsilon = 0.01;
+        bt.epsilon = 0.1;
 
         bt.setTrainingData(adder.inputData, adder.outputData);
 
-        bt.trainNetwork(10000, 5);
+        bt.trainNetwork(10000, 100);
         net.deactivateAll();
         net.setInputOperation(nodeMap -> BackpropTrainer.applyInputToNode(nodeMap, adder.inputData, counter++));
         for (int i = 0; i < adder.inputData.length; i++) {

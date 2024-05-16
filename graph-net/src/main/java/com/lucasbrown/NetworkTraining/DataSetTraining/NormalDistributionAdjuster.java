@@ -70,7 +70,7 @@ public class NormalDistributionAdjuster implements IExpectationAdjuster {
 
     @Override
     public double[] getUpdatedParameters() {
-        return new double[]{mean, variance};
+        return new double[]{mean, variance, N};
     }
 
 }
