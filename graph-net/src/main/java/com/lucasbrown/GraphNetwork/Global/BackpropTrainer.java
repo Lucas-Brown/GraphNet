@@ -111,7 +111,7 @@ public class BackpropTrainer {
         }
 
         for(Outcome outcome : outcomes){
-            outcome.passRate.add(1, 1);;
+            outcome.passRate.add(1, 1);
             outcome.errorOfOutcome.add(errorFunction.error_derivative(outcome.activatedValue, target), outcome.probability);
             assert Double.isFinite(errorFunction.error(outcome.activatedValue, target));
             total_error.add(errorFunction.error(outcome.activatedValue, target), outcome.probability);

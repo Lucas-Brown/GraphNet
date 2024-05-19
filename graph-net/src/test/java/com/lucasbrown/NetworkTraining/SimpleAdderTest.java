@@ -103,7 +103,7 @@ public class SimpleAdderTest {
         // net.addNewConnection(in3, out, new OpenFilter());
 
         BackpropTrainer bt = new BackpropTrainer(net, new ErrorFunction.MeanSquaredError());
-        bt.epsilon = 0.1;
+        bt.epsilon = 1;
 
         bt.setTrainingData(adder.inputData, adder.outputData);
 

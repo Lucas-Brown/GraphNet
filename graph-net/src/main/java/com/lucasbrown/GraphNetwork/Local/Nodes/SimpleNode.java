@@ -99,13 +99,22 @@ public class SimpleNode extends NodeBase {
     }
 
     private void computeGradient(List<ArrayList<Outcome>> allOutcomes) {
+        int T = 0;
+
         // for all time steps
         for (ArrayList<Outcome> outcomesAtTime : allOutcomes) {
-
+            
             // Compute the probability volume of this timestep
             double probabilityVolume = 0;
+            boolean atLeastOnePass = true;
             for (Outcome outcome : outcomesAtTime) {
                 probabilityVolume += outcome.probability;
+                atLeastOnePass &= outcome.passRate.nonZero();
+            }
+
+            // at least one outcome must have a chance to pass through 
+            if(!atLeastOnePass){
+                continue;
             }
 
             // if zero volume, move on to next set
@@ -113,9 +122,17 @@ public class SimpleNode extends NodeBase {
                 continue;
             }
 
+            // Increase the number of non-zero timesteps
+            T++;
+
             // add error to the gradient
             for (Outcome outcome : outcomesAtTime) {
+                if(!outcome.passRate.nonZero()){
+                    continue;
+                }
+                
                 int key = outcome.binary_string;
+
 
                 double error = outcome.errorOfOutcome.getProdSum() / probabilityVolume;
                 assert Double.isFinite(error);
@@ -132,8 +149,10 @@ public class SimpleNode extends NodeBase {
             }
         }
 
+        // test for approximate error
+        //double foo = allOutcomes.stream().flatMap(outcomeList -> outcomeList.stream()).mapToDouble(outcome -> outcome.errorOfOutcome.getProdSum()).average().getAsDouble();
+
         // divide all gradients by the number of non-empty timesteps
-        int T = allOutcomes.size();
         bias_gradient /= T;
 
         for (int i = 0; i < weights.length; i++) {

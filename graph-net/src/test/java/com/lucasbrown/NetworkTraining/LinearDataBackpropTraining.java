@@ -1,12 +1,9 @@
 package com.lucasbrown.NetworkTraining;
 
-import com.lucasbrown.GraphNetwork.Distributions.BellCurveFilter;
-import com.lucasbrown.GraphNetwork.Distributions.OpenFilter;
 import com.lucasbrown.GraphNetwork.Global.BackpropTrainer;
 import com.lucasbrown.GraphNetwork.Global.GraphNetwork;
 import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
 import com.lucasbrown.GraphNetwork.Local.Arc;
-import com.lucasbrown.GraphNetwork.Local.Nodes.ComplexNode;
 import com.lucasbrown.GraphNetwork.Local.Nodes.InputNode;
 import com.lucasbrown.GraphNetwork.Local.Nodes.OutputNode;
 import com.lucasbrown.GraphNetwork.Local.Nodes.SimpleNode;
@@ -15,6 +12,7 @@ import com.lucasbrown.NetworkTraining.DataSetTraining.BetaDistribution;
 import com.lucasbrown.NetworkTraining.DataSetTraining.NormalBetaFilter;
 import com.lucasbrown.NetworkTraining.DataSetTraining.NormalBetaFilterAdjuster2;
 import com.lucasbrown.NetworkTraining.DataSetTraining.NormalDistribution;
+import com.lucasbrown.NetworkTraining.DataSetTraining.OpenFilter;
 
 public class LinearDataBackpropTraining {
     
@@ -28,7 +26,7 @@ public class LinearDataBackpropTraining {
     {
         inputData = new Double[N][1];
         for (int i = 0; i < N; i++) {
-            inputData[i] = new Double[]{Double.valueOf(i)};
+            inputData[i] = new Double[]{Double.valueOf(i)/N};
         }
     } 
 
@@ -70,15 +68,13 @@ public class LinearDataBackpropTraining {
         NormalBetaFilter b2 = new NormalBetaFilter(0, 1);
         Arc a1 = net.addNewConnection(in, hidden, b1, new NormalBetaFilterAdjuster2(b1, (NormalDistribution) in.getOutputDistribution(), (BetaDistribution) in.getSignalChanceDistribution()));
         Arc a2 = net.addNewConnection(hidden, out, b2, new NormalBetaFilterAdjuster2(b2, (NormalDistribution) hidden.getOutputDistribution(), (BetaDistribution) hidden.getSignalChanceDistribution()));
-        // Arc a3 = net.addNewConnection(in3, out, new BellCurveDistribution(0, 1, 10,
-        // 100));
+        
 
-        // net.addNewConnection(in1, out, new OpenFilter());
-        // net.addNewConnection(in2, out, new OpenFilter());
-        // net.addNewConnection(in3, out, new OpenFilter());
+        // net.addNewConnection(in, hidden, new OpenFilter(), null);
+        // net.addNewConnection(hidden, out, new OpenFilter(), null);
 
         BackpropTrainer bt = new BackpropTrainer(net, new ErrorFunction.MeanSquaredError());
-        bt.epsilon = 0.01;
+        bt.epsilon = 0.1;
 
         bt.setTrainingData(linear.inputData, linear.outputData);
 

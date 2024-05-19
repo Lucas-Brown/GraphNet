@@ -64,7 +64,7 @@ public class Arc {
      * @return the signal or null if no signal was sent
      */
     public Signal sendForwardSignal(Outcome sourceOutcome) {
-        Signal signal = new Signal(sending, recieving, sourceOutcome, filter.getChanceToSend(sourceOutcome.netValue));
+        Signal signal = new Signal(sending, recieving, sourceOutcome, sourceOutcome.probability*filter.getChanceToSend(sourceOutcome.netValue));
         recieving.recieveForwardSignal(signal);
         return signal;
     }

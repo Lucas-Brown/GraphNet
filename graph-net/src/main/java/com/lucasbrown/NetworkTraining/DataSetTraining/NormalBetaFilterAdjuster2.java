@@ -50,9 +50,12 @@ public class NormalBetaFilterAdjuster2 extends NormalBetaFilterAdjuster {
             delta /= n - 1;
             sum += delta;
             n++;
+            assert Double.isFinite(delta);
+            assert n < 100000;
         }while(delta > ACCURACY);
 
         return -sum;
     }
+
 
 }

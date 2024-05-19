@@ -695,7 +695,9 @@ public abstract class NodeBase implements INode {
     @Override
     public void applyFilterUpdate() {
         for (Arc connection : outgoing) {
-            connection.filterAdjuster.applyAdjustments();
+            if(connection.filterAdjuster != null){
+                connection.filterAdjuster.applyAdjustments();
+            }
         }
     }
 
@@ -768,6 +770,9 @@ public abstract class NodeBase implements INode {
     }
 
     private void adjustProbabilitiesForOutcome(Outcome outcome) {
+        if(!outcome.passRate.nonZero()){
+            return;
+        }
         double pass_rate = outcome.passRate.getAverage();
 
         // Add another point for the net firing chance distribution
@@ -776,8 +781,11 @@ public abstract class NodeBase implements INode {
         // Reinforce the filter with the pass rate for each point
         for (int i = 0; i < outcome.sourceNodes.length; i++) {
             INode sourceNode = outcome.sourceNodes[i];
+            double error_derivative = outcome.errorOfOutcome.getAverage();
             Arc arc = getIncomingConnectionFrom(sourceNode).get(); // should be guaranteed to exist
-            arc.filterAdjuster.prepareAdjustment(new double[]{outcome.sourceOutcomes[i].activatedValue, pass_rate});
+            if(arc.filterAdjuster != null){
+                arc.filterAdjuster.prepareAdjustment(new double[]{outcome.sourceOutcomes[i].activatedValue - error_derivative, pass_rate});
+            }
         }
 
     }
