@@ -4,18 +4,20 @@ import java.util.Objects;
 import java.util.Random;
 import java.util.stream.Stream;
 
+import com.lucasbrown.GraphNetwork.Global.ArcBuilder;
 import com.lucasbrown.GraphNetwork.Global.BackpropTrainer;
 import com.lucasbrown.GraphNetwork.Global.GraphNetwork;
+import com.lucasbrown.GraphNetwork.Global.NodeBuilder;
 import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
 import com.lucasbrown.GraphNetwork.Local.Arc;
 import com.lucasbrown.GraphNetwork.Local.Nodes.InputNode;
+import com.lucasbrown.GraphNetwork.Local.Nodes.NodeBase;
 import com.lucasbrown.GraphNetwork.Local.Nodes.OutputNode;
 import com.lucasbrown.GraphNetwork.Local.Nodes.SimpleNode;
 import com.lucasbrown.NetworkTraining.ApproximationTools.ErrorFunction;
 import com.lucasbrown.NetworkTraining.DataSetTraining.BetaDistribution;
 import com.lucasbrown.NetworkTraining.DataSetTraining.NormalBetaFilter;
 import com.lucasbrown.NetworkTraining.DataSetTraining.NormalBetaFilterAdjuster;
-import com.lucasbrown.NetworkTraining.DataSetTraining.NormalBetaFilterAdjuster2;
 import com.lucasbrown.NetworkTraining.DataSetTraining.NormalDistribution;
 
 public class SimpleAdderTest {
@@ -64,43 +66,34 @@ public class SimpleAdderTest {
 
         GraphNetwork net = new GraphNetwork();
 
-        SimpleNode s_in_1 = new SimpleNode(net, ActivationFunction.LINEAR, new NormalDistribution(0, 1),
-                new BetaDistribution(1, 1, 10));
-        SimpleNode s_in_2 = new SimpleNode(net, ActivationFunction.LINEAR, new NormalDistribution(0.5, 1),
-                new BetaDistribution(1, 1, 10));
-        SimpleNode s_in_3 = new SimpleNode(net, ActivationFunction.LINEAR, new NormalDistribution(0.5, 1),
-                        new BetaDistribution(1, 1, 10));
+        NodeBuilder nodeBuilder = new NodeBuilder(net);
 
-        InputNode in1 = new InputNode(s_in_1);
-        InputNode in2 = new InputNode(s_in_2);
-        InputNode in3 = new InputNode(s_in_3);
+        nodeBuilder.setActivationFunction(ActivationFunction.LINEAR);
+        nodeBuilder.setNodeClass(SimpleNode.class);
+        nodeBuilder.setOutputDistSupplier(NormalDistribution::getStandardNormalDistribution);
+        nodeBuilder.setProbabilityDistSupplier(BetaDistribution::getUniformBetaDistribution);
+        nodeBuilder.setAsInputNode();
 
-        SimpleNode s_out = new SimpleNode(net, ActivationFunction.LINEAR, new NormalDistribution(0, 1),
-                new BetaDistribution(1, 1, 10));
-        OutputNode out = new OutputNode(s_out);
+        InputNode in1 = (InputNode) nodeBuilder.build();
+        InputNode in2 = (InputNode) nodeBuilder.build();
+        InputNode in3 = (InputNode) nodeBuilder.build();
+
+        nodeBuilder.setAsOutputNode();
+
+        OutputNode out = (OutputNode) nodeBuilder.build();
 
         in1.setName("Input 1");
         in2.setName("Input 2");
         in3.setName("Input 3");
         out.setName("Output");
 
-        net.addNodeToNetwork(in1);
-        net.addNodeToNetwork(in2);
-        net.addNodeToNetwork(in3);
-        net.addNodeToNetwork(out);
+        ArcBuilder arcBuilder = new ArcBuilder(net);
+        arcBuilder.setFilterSupplier(NormalBetaFilter::getStandardNormalBetaFilter);
+        arcBuilder.setFilterAdjusterSupplier(NormalBetaFilterAdjuster::new);
 
-        NormalBetaFilter b1 = new NormalBetaFilter(0, 1);
-        NormalBetaFilter b2 = new NormalBetaFilter(0, 1);
-        NormalBetaFilter b3 = new NormalBetaFilter(0, 1);
-        Arc a1 = net.addNewConnection(in1, out, b1, new NormalBetaFilterAdjuster2(b1, (NormalDistribution) in1.getOutputDistribution(), (BetaDistribution) in1.getSignalChanceDistribution()));
-        Arc a2 = net.addNewConnection(in2, out, b2, new NormalBetaFilterAdjuster2(b2, (NormalDistribution) in2.getOutputDistribution(), (BetaDistribution) in2.getSignalChanceDistribution()));
-        Arc a3 = net.addNewConnection(in3, out, b3, new NormalBetaFilterAdjuster2(b3, (NormalDistribution) in3.getOutputDistribution(), (BetaDistribution) in3.getSignalChanceDistribution()));
-        // Arc a3 = net.addNewConnection(in3, out, new BellCurveDistribution(0, 1, 10,
-        // 100));
-
-        // net.addNewConnection(in1, out, new OpenFilter());
-        // net.addNewConnection(in2, out, new OpenFilter());
-        // net.addNewConnection(in3, out, new OpenFilter());
+        arcBuilder.build(in1, out);
+        arcBuilder.build(in2, out);
+        arcBuilder.build(in3, out);
 
         BackpropTrainer bt = new BackpropTrainer(net, new ErrorFunction.MeanSquaredError());
         bt.epsilon = 1;

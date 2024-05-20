@@ -12,6 +12,7 @@ import com.lucasbrown.GraphNetwork.Local.Outcome;
 import com.lucasbrown.GraphNetwork.Local.Signal;
 import com.lucasbrown.NetworkTraining.ApproximationTools.ArrayTools;
 import com.lucasbrown.NetworkTraining.DataSetTraining.BackwardsSamplingDistribution;
+import com.lucasbrown.NetworkTraining.DataSetTraining.IExpectationAdjuster;
 import com.lucasbrown.NetworkTraining.DataSetTraining.ITrainableDistribution;
 
 /**
@@ -29,8 +30,9 @@ public class SimpleNode extends NodeBase {
     private double[] weights_gradient;
 
     public SimpleNode(final GraphNetwork network, final ActivationFunction activationFunction,
-            BackwardsSamplingDistribution outputDistribution, ITrainableDistribution signalChanceDistribution) {
-        super(network, activationFunction, outputDistribution, signalChanceDistribution);
+        ITrainableDistribution outputDistribution, IExpectationAdjuster outputAdjuster, 
+        ITrainableDistribution signalChanceDistribution, IExpectationAdjuster chanceAdjuster) {
+        super(network, activationFunction, outputDistribution, outputAdjuster, signalChanceDistribution, chanceAdjuster);
         weights = new double[0];
         bias = rng.nextGaussian();
         bias_gradient = 0;

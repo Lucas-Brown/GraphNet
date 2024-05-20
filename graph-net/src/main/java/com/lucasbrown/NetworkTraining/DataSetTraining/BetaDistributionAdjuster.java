@@ -20,6 +20,10 @@ public class BetaDistributionAdjuster implements Function, IExpectationAdjuster 
 
     private ArrayList<WeightedDouble> newPoints;
 
+    public BetaDistributionAdjuster(ITrainableDistribution distribution) {
+        this((BetaDistribution) distribution);
+    }
+
     public BetaDistributionAdjuster(BetaDistribution distribution) {
         this.distribution = distribution;
         newPoints = new ArrayList<>();

@@ -1,6 +1,7 @@
 package com.lucasbrown.NetworkTraining.DataSetTraining;
 
 import java.util.Random;
+import java.util.function.Function;
 
 import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
 import com.lucasbrown.NetworkTraining.ApproximationTools.Convolution.IConvolution;
@@ -75,6 +76,12 @@ public class NormalDistribution extends BackwardsSamplingDistribution{
         return rng.nextGaussian()*variance + mean;
     }
 
+    @Override
+    public Function<ITrainableDistribution, IExpectationAdjuster> getDefaulAdjuster() {
+        return NormalDistributionAdjuster::new;
+    }
+
+
     public static double normalizationConstant(double variance){
         return Math.sqrt(2*Math.PI*variance*variance);
     }
@@ -84,10 +91,9 @@ public class NormalDistribution extends BackwardsSamplingDistribution{
         return Math.exp(-u*u/2)/normalizationConstant(variance);
     }
 
-    @Override
-    public IExpectationAdjuster getDefaulAdjuster() {
-        return new NormalDistributionAdjuster(this);
+    public static NormalDistribution getStandardNormalDistribution()
+    {
+        return new NormalDistribution(0, 1);
     }
-
 
 }

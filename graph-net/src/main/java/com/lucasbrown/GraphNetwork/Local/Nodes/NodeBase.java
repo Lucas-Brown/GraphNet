@@ -66,7 +66,7 @@ public abstract class NodeBase implements INode {
     /**
      * The distribution of outputs produced by this node
      */
-    protected BackwardsSamplingDistribution outputDistribution;
+    protected ITrainableDistribution outputDistribution;
 
     /**
      * An objects which adjusts the parameters of outputDistribution given new data
@@ -112,14 +112,14 @@ public abstract class NodeBase implements INode {
     protected boolean hasValidForwardSignal;
 
     public NodeBase(GraphNetwork network, final ActivationFunction activationFunction,
-            BackwardsSamplingDistribution outputDistribution,
+        ITrainableDistribution outputDistribution,
             ITrainableDistribution signalChanceDistribution) {
-        this(network, activationFunction, outputDistribution, outputDistribution.getDefaulAdjuster(),
-                signalChanceDistribution, signalChanceDistribution.getDefaulAdjuster());
+        this(network, activationFunction, outputDistribution, outputDistribution.getDefaulAdjuster().apply(outputDistribution),
+                signalChanceDistribution, signalChanceDistribution.getDefaulAdjuster().apply(signalChanceDistribution));
     }
 
     public NodeBase(GraphNetwork network, final ActivationFunction activationFunction,
-            BackwardsSamplingDistribution outputDistribution, IExpectationAdjuster outputAdjuster,
+        ITrainableDistribution outputDistribution, IExpectationAdjuster outputAdjuster,
             ITrainableDistribution signalChanceDistribution, IExpectationAdjuster chanceAdjuster) {
         id = ID_COUNTER++;
         name = "INode " + id;
@@ -176,7 +176,7 @@ public abstract class NodeBase implements INode {
     }
 
     @Override
-    public BackwardsSamplingDistribution getOutputDistribution() {
+    public ITrainableDistribution getOutputDistribution() {
         return outputDistribution;
     }
 
@@ -616,6 +616,7 @@ public abstract class NodeBase implements INode {
     // reinforce// the distribution
     // }
 
+    /*
     public FilterDistributionConvolution[] getReverseOutcomes() {
         // Loop over all possible incoming signal combinations and record the value
         // of their convolution
@@ -658,6 +659,7 @@ public abstract class NodeBase implements INode {
         }
         return densityWeights;
     }
+    */
 
     /**
      * Select an outcome each with a given weight
@@ -737,6 +739,7 @@ public abstract class NodeBase implements INode {
 
     }
 
+    /* 
     private void sendBackwardsSample(Outcome outcomeAtTime) {
         double activatedValue = outcomeAtTime.netValue - outcomeAtTime.errorOfOutcome.getAverage();
 
@@ -768,6 +771,7 @@ public abstract class NodeBase implements INode {
             }
         }
     }
+    */
 
     private void adjustProbabilitiesForOutcome(Outcome outcome) {
         if(!outcome.passRate.nonZero()){
@@ -784,7 +788,8 @@ public abstract class NodeBase implements INode {
             double error_derivative = outcome.errorOfOutcome.getAverage();
             Arc arc = getIncomingConnectionFrom(sourceNode).get(); // should be guaranteed to exist
             if(arc.filterAdjuster != null){
-                arc.filterAdjuster.prepareAdjustment(new double[]{outcome.sourceOutcomes[i].activatedValue - error_derivative, pass_rate});
+                double shifted_value = outcome.sourceOutcomes[i].activatedValue - error_derivative;
+                arc.filterAdjuster.prepareAdjustment(new double[]{shifted_value, pass_rate, outputDistribution.getProbabilityDensity(shifted_value)});
             }
         }
 

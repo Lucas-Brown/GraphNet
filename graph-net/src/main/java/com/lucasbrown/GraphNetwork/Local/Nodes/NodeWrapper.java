@@ -53,7 +53,7 @@ public class NodeWrapper implements INode {
     }
 
     @Override
-    public BackwardsSamplingDistribution getOutputDistribution() {
+    public ITrainableDistribution getOutputDistribution() {
         return wrappingNode.getOutputDistribution();
     }
 

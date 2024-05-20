@@ -2,9 +2,6 @@ package com.lucasbrown.NetworkTraining.DataSetTraining;
 
 import java.util.Random;
 
-import com.lucasbrown.NetworkTraining.ApproximationTools.Convolution.IConvolution;
-import com.lucasbrown.NetworkTraining.ApproximationTools.Convolution.LinearNormalConvolution;
-
 public class NormalBetaFilter implements IFilter{
 
     private final Random rng;
@@ -59,6 +56,11 @@ public class NormalBetaFilter implements IFilter{
     public static double likelihood(double x, double mean, double variance){
         double w = (x-mean)/variance;
         return Math.exp(-w*w/2);
+    }
+
+    public static NormalBetaFilter getStandardNormalBetaFilter()
+    {
+        return new NormalBetaFilter(0, 1);
     }
 
     

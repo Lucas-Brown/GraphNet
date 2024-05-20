@@ -18,8 +18,6 @@ import com.lucasbrown.GraphNetwork.Local.Nodes.InputNode;
 import com.lucasbrown.GraphNetwork.Local.Nodes.OutputNode;
 import com.lucasbrown.NetworkTraining.DataSetTraining.IExpectationAdjuster;
 import com.lucasbrown.NetworkTraining.DataSetTraining.IFilter;
-import com.lucasbrown.NetworkTraining.DataSetTraining.ITrainableDistribution;
-import com.lucasbrown.NetworkTraining.DataSetTraining.NormalBetaFilter;
 
 /**
  * A neural network using a probabalistic directed graph representation.

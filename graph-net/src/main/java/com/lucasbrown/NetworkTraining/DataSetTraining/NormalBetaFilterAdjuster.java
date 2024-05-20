@@ -35,8 +35,8 @@ public class NormalBetaFilterAdjuster implements IExpectationAdjuster, Function 
 
     // Constants for optimization and numerical accuracy
     private static final double TOLLERANCE = 1E-6; // Tolerance for convergence in optimization
-    private static final int TRAPZ_STEPS = 1000; // Number of steps for numerical integration
     private static final int NM_ITTERATION_LIMIT = 1000; // Max iterations for Nelder-Mead optimization
+    private static double ACCURACY = 1E-12;
 
     // Precomputed mathematical constants for efficiency
     protected static final double root_pi = Math.sqrt(Math.PI);
@@ -52,39 +52,18 @@ public class NormalBetaFilterAdjuster implements IExpectationAdjuster, Function 
     // Data points to be used for adjustment
     private ArrayList<WeightedPoint<FilterPoint>> adjustementPoints;
 
-    // Range and resolution for precomputed expected likelihood values
-    private static final double w_domain = 5; // Range for relative shift 'w'
-    private static final int w_divisions = 1000; // Number of divisions for 'w'
-    private static final double eta_domain = 5; // Range for relative scale 'eta'
-    private static final int eta_divisions = 1000; // Number of divisions for 'eta'
-
-    // Precomputed table of expected likelihood values for different shifts and
-    // scales
-    private static LinearInterpolation2D expectationMap;
-
-    // Flag to indicate if the expectation map is initialized
-    private static boolean is_map_initialized = false;
-
-    // Indicates whether to use the precomputed expectation map
-    private final boolean is_using_map;
+    public NormalBetaFilterAdjuster(IFilter filter, ITrainableDistribution nodeDistribution,
+            ITrainableDistribution arcDistribution) {
+        this((NormalBetaFilter) filter, (NormalDistribution) nodeDistribution, (BetaDistribution) arcDistribution);
+    }
 
     public NormalBetaFilterAdjuster(NormalBetaFilter filter, NormalDistribution nodeDistribution,
-            BetaDistribution arcDistribution, boolean use_map) {
+            BetaDistribution arcDistribution) {
         this.filter = filter;
         this.nodeDistribution = nodeDistribution;
         this.arcDistribution = arcDistribution;
-        is_using_map = use_map;
 
         adjustementPoints = new ArrayList<>();
-
-        if (is_using_map & !is_map_initialized) {
-            Range w_range = new LinearRange(-w_domain, w_domain, w_divisions, true, true);
-            Range eta_range = new MultiplicitiveRange(1 / eta_domain, eta_domain, eta_divisions, true, true);
-
-            expectationMap = new LinearInterpolation2D(w_range, eta_range,
-                    NormalBetaFilterAdjuster::computeC, true);
-            is_map_initialized = true;
-        }
     }
 
     /**
@@ -98,7 +77,7 @@ public class NormalBetaFilterAdjuster implements IExpectationAdjuster, Function 
      */
     @Override
     public void prepareAdjustment(double weight, double[] newData) {
-        prepareAdjustment(weight, newData[0], newData[1]);
+        prepareAdjustment(weight, newData[0], newData[1], newData[2]);
     }
 
     /**
@@ -109,9 +88,10 @@ public class NormalBetaFilterAdjuster implements IExpectationAdjuster, Function 
      * @param weight The weight to assign to the new data point.
      * @param x      The x value of the data point.
      * @param b      The beta observation (0 to 1) of the data point.
+     * @param prob   The probability density of this point being selected
      */
-    public void prepareAdjustment(double weight, double x, double b) {
-        adjustementPoints.add(new WeightedPoint<FilterPoint>(weight, new FilterPoint(x, b)));
+    public void prepareAdjustment(double weight, double x, double b, double prob) {
+        adjustementPoints.add(new WeightedPoint<FilterPoint>(weight, new FilterPoint(x, b, prob)));
     }
 
     /**
@@ -251,7 +231,8 @@ public class NormalBetaFilterAdjuster implements IExpectationAdjuster, Function 
      * @return The weighted log-likelihood of the data point.
      */
     public double getWeightedLogLikelihoodOfPoint(WeightedPoint<FilterPoint> point, double shift, double scale) {
-        return point.weight * getLogLikelihoodOfPoint(point.value.x, point.value.b, shift, scale);
+        FilterPoint fp = point.value;
+        return point.weight * getLogLikelihoodOfPoint(fp.x, fp.b, fp.prob, shift, scale);
     }
 
     /**
@@ -261,15 +242,16 @@ public class NormalBetaFilterAdjuster implements IExpectationAdjuster, Function 
      * specific observation.
      *
      * @param x     The observed value of the node.
-     * @param b     The observed beta value (success or failure: 1 or 0).
+     * @param b     The observed beta value (success or failure: 1 to 0).
+     * @param prob  The probability density.
      * @param shift The shift applied to the mean of the filter.
      * @param scale The scaling factor applied to the variance of the filter.
      * @return The log-likelihood of observing this data point.
      */
-    public double getLogLikelihoodOfPoint(double x, double b, double shift, double scale) {
+    public double getLogLikelihoodOfPoint(double x, double b, double prob, double shift, double scale) {
         // Calculate the full likelihood of observing x given the adjusted filter
         // parameters
-        double full_send = NormalBetaFilter.likelihood(x, mean + shift, scale * variance);
+        double full_send = prob*NormalBetaFilter.likelihood(x, mean + shift, scale * variance);
 
         // Handle different cases of the beta observation (b):
         if (b == 1) {
@@ -294,109 +276,50 @@ public class NormalBetaFilterAdjuster implements IExpectationAdjuster, Function 
      * @param scale The scaling factor applied to the variance of the filter.
      * @return The expected value of the log-likelihood.
      */
-    public double getExpectedValueOfLogLikelihood(double shift, double scale) {
-        // Calculate intermediate values based on the distributions and adjustments
-        double variance_x = nodeDistribution.getVariance();
-        final double w = (mean - nodeDistribution.getMean() - shift) / (root_2 * variance_x);
-        final double root_eta = variance_x / (scale * variance);
-        double alpha = arcDistribution.getAlpha();
-        double beta = arcDistribution.getBeta();
-
-        // Calculate terms C and M used in the expected log-likelihood formula
-        double C = getC(w, root_eta);
-        double M = getM(w, root_eta);
-
-        // Return the expected log-likelihood based on C, M, alpha, and beta
-        return (M * alpha + C * beta) / (alpha + beta);
-    }
-
-    /**
-     * Calculates the M term used in the expected log-likelihood calculation.
-     *
-     * @param w        The relative shift.
-     * @param root_eta The square root of the relative scale.
-     * @return The value of M.
-     */
-    public double getM(double w, double root_eta) {
-        return root_eta * root_eta * root_pi * (1 + 2 * w * w) / 2;
-    }
-
-    /**
-     * Gets the pre-computed or calculated C term used in the expected
-     * log-likelihood calculation.
-     *
-     * @param w        The relative shift.
-     * @param root_eta The square root of the relative scale.
-     * @return The value of C.
-     */
-    public double getC(double w, double root_eta) {
-        if (is_using_map) {
-            // Use pre-computed value if available
-            return expectationMap.interpolate(w, root_eta);
-        } else {
-            // Otherwise, compute it on the fly
-            return computeC(w, root_eta);
-        }
-    }
-
-    /**
-     * Computes the C term used in the expected log-likelihood calculation.
-     * This involves numerical integration (trapezoidal rule) of a function.
-     *
-     * @param w        The relative shift.
-     * @param root_eta The square root of the relative scale.
-     * @return The value of C.
-     */
-    public final static double computeC(double w, double root_eta) {
-        // Define the integrand function for the C calculation
-        DoubleFunction integrand = new DoubleFunction((double t) -> finiteIntegrand(t, w, root_eta));
-
-        // Perform numerical integration using the trapezoidal rule
-        return Trapezoidal.trapz(integrand, -1, 1, TRAPZ_STEPS);
-    }
-
-    /**
-     * Returns the evaluation of the C-constant integrand.
-     * 
-     * @param x        The evaluation point
-     * @param w        The relative shift
-     * @param root_eta the square root of the relative scale
-     * @return The integrand evaluation at x
-     */
-    public static final double CIntegrand(double x, double w, double root_eta) {
-        // Collapse the integral from (-inf, inf) to [0, inf) by reflecting the function
-        // onto itself.
-        double left_shift = x / root_eta + w;
-        double right_shift = x / root_eta - w;
-
-        // Likelihood of x
-        double left = Math.exp(-left_shift * left_shift);
-        double right = Math.exp(-right_shift * right_shift);
-        double result = left + right;
-
-        // Expectation weight for x
-        // approximation has less than a 0.1% error.
-        if (x < 0.1) {
-            result *= 2 * Math.log(x);
-        } else {
-            result *= Math.log(1 - Math.exp(-x * x));
-        }
-        assert Double.isFinite(result);
-        return result;
-    }
-
-    /**
-     * Transforms the bounds of the integrand from [0, -inf) to [-1, 1] using a
-     * specialized transformation x = e^(t/ln|t|)
-     * 
-     * @param t        The evaluation point between -1 and 1
-     * @param w        The relative shift
-     * @param root_eta The square root of the relative scale
-     * @return the integrand evaluated at x = e^(t/ln|t|)
-     */
-    public static double finiteIntegrand(double t, double w, double root_eta) {
-        return IntegralTransformations.expInvLogTransform(x -> CIntegrand(x, w, root_eta), t);
-    }
+     public double getExpectedValueOfLogLikelihood(double shift, double scale) {
+         double variance_x = nodeDistribution.getVariance();
+         final double w = (mean - nodeDistribution.getMean() + shift) / (root_2 * scale * variance);
+         double eta = scale * variance / variance_x;
+         eta *= eta;
+         double alpha = arcDistribution.getAlpha();
+         double beta = arcDistribution.getBeta();
+ 
+         double A = getA(w, eta, variance_x);
+         double B = getB(w, eta, variance_x);
+ 
+         return root_2*scale*variance * (A * alpha + B * beta) / (alpha + beta);
+     }
+ 
+ 
+     public double getA(double w, double eta, double sigma_x) {
+         return -(Math.log(2*Math.PI*sigma_x*sigma_x) + 1/eta + 2*w*w + 1)/(2 * Math.sqrt(2*eta*sigma_x*sigma_x));
+     }
+ 
+     /**
+      * Compute the integral: \int_{-\infty}^{\infty}\ln\left(1-\frac{1}{\sqrt{2\pi\sigma_{x}^{2}}}e^{-\eta\left(x+w\right)^{2}}e^{-x^{2}}\right)\frac{1}{\sqrt{2\pi\sigma_{x}^{2}}}e^{-\eta\left(x+w\right)^{2}}dx
+      * Using a finite series approximation: -\sum_{n=2}^{N+1}\frac{1}{n-1}\left(\frac{1}{\sqrt{2\pi\sigma_{x}^{2}}}\right)^{n}e^{-\left(1-\frac{\eta n}{\eta n+n-1}\right)\eta nw^{2}}\sqrt{\frac{\pi}{\eta n+n-1}}
+      */
+     public double getB(double w, double eta, double sigma_x) {
+ 
+         double sum = 0;
+         double delta;
+         int n = 2;
+         do{
+             double n_eta = n * eta;
+             double denom = n_eta + n - 1;
+             double exponent = (n_eta/denom - 1)*n_eta*w*w;
+             delta = Math.exp(exponent);
+             delta *= Math.pow(root_2pi*sigma_x, -n);
+             delta *= Math.sqrt(Math.PI / denom);
+             delta /= n - 1;
+             sum += delta;
+             n++;
+             assert Double.isFinite(delta);
+             assert n < 100000;
+         }while(delta > ACCURACY);
+ 
+         return -sum;
+     }
 
     /**
      * A point pair object for the x-value and success rate
@@ -409,20 +332,25 @@ public class NormalBetaFilterAdjuster implements IExpectationAdjuster, Function 
         // The success rate
         public double b;
 
+        // The probability density that this point was generated 
+        public double prob;
+
         /**
          * Constructs a filter point from a x value and success rate pair
          * 
          * @param x The x-value
          * @param b The success rate
+         * @param b The probability density
          */
-        public FilterPoint(double x, double b) {
+        public FilterPoint(double x, double b, double prob) {
             this.x = x;
             this.b = b;
+            this.prob = prob;
         }
 
         @Override
         public String toString() {
-            return "value: " + Double.toString(x) + "\tb: " + Double.toString(b);
+            return "value: " + Double.toString(x) + "\tb: " + Double.toString(b) + "\tprobability: " + Double.toString(prob);
         }
     }
 

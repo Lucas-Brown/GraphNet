@@ -1,11 +1,17 @@
 package com.lucasbrown.NetworkTraining.DataSetTraining;
 
+import java.util.function.Function;
+
 import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
 import com.lucasbrown.NetworkTraining.ApproximationTools.Convolution.IConvolution;
 
 public class BetaDistribution implements ITrainableDistribution{
 
     private double alpha, beta, N;
+
+    public BetaDistribution(double alpha, double beta){
+        this(alpha, beta, 10);
+    }
 
     public BetaDistribution(double alpha, double beta, double N){
         this.alpha = alpha;
@@ -66,14 +72,19 @@ public class BetaDistribution implements ITrainableDistribution{
     }
 
     @Override
-    public IExpectationAdjuster getDefaulAdjuster() {
-        return new BetaDistributionAdjuster(this);
+    public Function<ITrainableDistribution, IExpectationAdjuster> getDefaulAdjuster() {
+        return BetaDistributionAdjuster::new;
     }
 
     @Override
     public IConvolution toConvolution(ActivationFunction activator, double weight) {
         // TODO Auto-generated method stub
         throw new UnsupportedOperationException("Unimplemented method 'toConvolution'");
+    }
+
+    public static BetaDistribution getUniformBetaDistribution()
+    {
+        return new BetaDistribution(1, 1);
     }
 
 

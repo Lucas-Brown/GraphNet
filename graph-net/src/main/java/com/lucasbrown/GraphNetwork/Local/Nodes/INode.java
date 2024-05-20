@@ -29,7 +29,7 @@ public interface INode extends Comparable<INode> {
 
     public abstract ActivationFunction getActivationFunction();
 
-    public abstract BackwardsSamplingDistribution getOutputDistribution();
+    public abstract ITrainableDistribution getOutputDistribution();
 
     public abstract ITrainableDistribution getSignalChanceDistribution();
  

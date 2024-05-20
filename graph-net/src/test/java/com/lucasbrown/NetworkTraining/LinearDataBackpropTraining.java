@@ -66,8 +66,8 @@ public class LinearDataBackpropTraining {
 
         NormalBetaFilter b1 = new NormalBetaFilter(0, 1);
         NormalBetaFilter b2 = new NormalBetaFilter(0, 1);
-        Arc a1 = net.addNewConnection(in, hidden, b1, new NormalBetaFilterAdjuster2(b1, (NormalDistribution) in.getOutputDistribution(), (BetaDistribution) in.getSignalChanceDistribution()));
-        Arc a2 = net.addNewConnection(hidden, out, b2, new NormalBetaFilterAdjuster2(b2, (NormalDistribution) hidden.getOutputDistribution(), (BetaDistribution) hidden.getSignalChanceDistribution()));
+        Arc a1 = net.addNewConnection(in, hidden, b1, new NormalBetaFilterAdjuster2(b1, (NormalDistribution) in.getOutputDistribution(), (BetaDistribution) hidden.getSignalChanceDistribution()));
+        Arc a2 = net.addNewConnection(hidden, out, b2, new NormalBetaFilterAdjuster2(b2, (NormalDistribution) hidden.getOutputDistribution(), (BetaDistribution) out.getSignalChanceDistribution()));
         
 
         // net.addNewConnection(in, hidden, new OpenFilter(), null);

@@ -11,6 +11,10 @@ public class NormalDistributionAdjuster implements IExpectationAdjuster {
 
     private ArrayList<WeightedDouble> newPoints;
 
+    public NormalDistributionAdjuster(ITrainableDistribution distribution) {
+        this((NormalDistribution) distribution);
+    }
+
     public NormalDistributionAdjuster(NormalDistribution distribution) {
         this.distribution = distribution;
         newPoints = new ArrayList<WeightedDouble>();
