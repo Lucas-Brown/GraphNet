@@ -1,13 +1,19 @@
 package com.lucasbrown.NetworkTraining;
 
-import com.lucasbrown.GraphNetwork.Distributions.OpenFilter;
+import com.lucasbrown.GraphNetwork.Global.ArcBuilder;
 import com.lucasbrown.GraphNetwork.Global.BackpropTrainer;
 import com.lucasbrown.GraphNetwork.Global.GraphNetwork;
+import com.lucasbrown.GraphNetwork.Global.NodeBuilder;
 import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
+import com.lucasbrown.GraphNetwork.Local.Nodes.INode;
 import com.lucasbrown.GraphNetwork.Local.Nodes.InputNode;
 import com.lucasbrown.GraphNetwork.Local.Nodes.OutputNode;
 import com.lucasbrown.GraphNetwork.Local.Nodes.SimpleNode;
 import com.lucasbrown.NetworkTraining.ApproximationTools.ErrorFunction;
+import com.lucasbrown.NetworkTraining.DataSetTraining.BetaDistribution;
+import com.lucasbrown.NetworkTraining.DataSetTraining.NormalBetaFilter;
+import com.lucasbrown.NetworkTraining.DataSetTraining.NormalBetaFilterAdjuster;
+import com.lucasbrown.NetworkTraining.DataSetTraining.NormalDistribution;
 
 public class FibonacciNetworkTest {
 
@@ -19,7 +25,8 @@ public class FibonacciNetworkTest {
     private void initializeInputData() {
         inputData = new Double[N][1];
         inputData[0] = new Double[]{0d};
-        for(int i = 1; i < N; i++){
+        inputData[1] = new Double[]{1d};
+        for(int i = 2; i < N; i++){
             inputData[i] = new Double[]{null}; 
         }
     }
@@ -52,27 +59,43 @@ public class FibonacciNetworkTest {
 
         GraphNetwork net = new GraphNetwork();
 
-        InputNode in = SimpleNode.asInputNode(ActivationFunction.LINEAR);
-        SimpleNode hidden = new SimpleNode(ActivationFunction.LINEAR); 
-        OutputNode out = SimpleNode.asOutputNode(ActivationFunction.LINEAR);
+        NodeBuilder nodeBuilder = new NodeBuilder(net);
+
+        nodeBuilder.setActivationFunction(ActivationFunction.LINEAR);
+        nodeBuilder.setNodeClass(SimpleNode.class);
+        nodeBuilder.setOutputDistSupplier(NormalDistribution::getStandardNormalDistribution);
+        nodeBuilder.setProbabilityDistSupplier(BetaDistribution::getUniformBetaDistribution);
+
+        nodeBuilder.setAsInputNode();
+        InputNode in = (InputNode) nodeBuilder.build();
+
+        nodeBuilder.setAsHiddenNode();
+        INode hidden1 = nodeBuilder.build();
+        INode hidden2 = nodeBuilder.build();
+
+        nodeBuilder.setAsOutputNode();
+        OutputNode out = (OutputNode) nodeBuilder.build();
 
         in.setName("Input");
-        hidden.setName("Hidden");
+        hidden1.setName("Hidden 1");
+        hidden2.setName("Hidden 2");
         out.setName("Output");
 
-        net.addNodeToNetwork(in);
-        net.addNodeToNetwork(hidden);
-        net.addNodeToNetwork(out);
+        ArcBuilder arcBuilder = new ArcBuilder(net);
+        arcBuilder.setFilterSupplier(NormalBetaFilter::getStandardNormalBetaFilter);
+        arcBuilder.setFilterAdjusterSupplier(NormalBetaFilterAdjuster::new);
 
-        net.addNewConnection(in, hidden, new OpenFilter());
-        net.addNewConnection(hidden, hidden, new OpenFilter());
-        net.addNewConnection(hidden, out, new OpenFilter());
+        arcBuilder.build(in, hidden1);
+        arcBuilder.build(hidden1, hidden2);
+        arcBuilder.build(hidden2, hidden1);
+        arcBuilder.build(hidden1, out);
+
 
         BackpropTrainer bt = new BackpropTrainer(net, new ErrorFunction.MeanSquaredError());
-        bt.epsilon = 0.0001;
+        bt.epsilon = 0.001;
 
         bt.setTrainingData(fibNet.inputData, fibNet.outputData);
-        bt.trainNetwork(500000, 10000);
+        bt.trainNetwork(10000, 1);
 
         net.deactivateAll();
         net.setInputOperation(nodeMap -> BackpropTrainer.applyInputToNode(nodeMap, fibNet.inputData, counter++));

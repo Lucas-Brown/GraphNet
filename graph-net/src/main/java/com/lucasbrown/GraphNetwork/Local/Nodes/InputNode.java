@@ -72,7 +72,7 @@ public class InputNode extends NodeWrapper implements IInputNode {
     }
 
     @Override 
-    public void sendErrorsBackwards(ArrayList<Outcome> outcomesAtTime, int timestep){
+    public void sendErrorsBackwards(Outcome outcomeAtTime){
         // since this is an input node, there's nothing to send an error to
     }
     

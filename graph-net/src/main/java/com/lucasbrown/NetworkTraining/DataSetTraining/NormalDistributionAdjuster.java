@@ -3,6 +3,8 @@ package com.lucasbrown.NetworkTraining.DataSetTraining;
 import java.security.InvalidParameterException;
 import java.util.ArrayList;
 
+import com.lucasbrown.GraphNetwork.Global.GraphNetwork;
+
 public class NormalDistributionAdjuster implements IExpectationAdjuster {
 
     private double mean, variance, N;
@@ -66,7 +68,7 @@ public class NormalDistributionAdjuster implements IExpectationAdjuster {
         variance = Math.sqrt(variance);
 
         mean = mean_updated;
-        N = N_updated;
+        N = Math.min(N_updated, GraphNetwork.N_MAX);
         newPoints.clear();
         distribution.applyAdjustments(this);
     }

@@ -3,6 +3,7 @@ package com.lucasbrown.NetworkTraining.DataSetTraining;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.lucasbrown.GraphNetwork.Global.GraphNetwork;
 import com.lucasbrown.NetworkTraining.ApproximationTools.DoubleFunction;
 import com.lucasbrown.NetworkTraining.ApproximationTools.IntegralTransformations;
 import com.lucasbrown.NetworkTraining.ApproximationTools.LinearInterpolation2D;
@@ -124,9 +125,9 @@ public class NormalBetaFilterAdjuster implements IExpectationAdjuster, Function 
         List<Vec> init_points = new ArrayList<>(3); // Initial points for the optimization
 
         // Define three initial points around (0, 0)
-        init_points.add(new DenseVector(new double[] { -0.2, -0.2 }));
-        init_points.add(new DenseVector(new double[] { 0.2, -0.2 }));
-        init_points.add(new DenseVector(new double[] { 0, 0.2 }));
+        init_points.add(new DenseVector(new double[] { -0.5, -0.5 }));
+        init_points.add(new DenseVector(new double[] { 0.5, -0.5 }));
+        init_points.add(new DenseVector(new double[] { 0, 0.5 }));
 
         // Optimize the function (negative log-likelihood) to find the best shift and
         // scale
@@ -138,6 +139,7 @@ public class NormalBetaFilterAdjuster implements IExpectationAdjuster, Function 
 
         // Update the sample size (N) based on the weights of the new data points
         N += adjustementPoints.stream().mapToDouble(point -> point.weight).sum();
+        N = Math.min(N, GraphNetwork.N_MAX);
         adjustementPoints.clear(); // Clear the accumulated data points
 
         // Apply the adjustments to the filter
@@ -276,50 +278,63 @@ public class NormalBetaFilterAdjuster implements IExpectationAdjuster, Function 
      * @param scale The scaling factor applied to the variance of the filter.
      * @return The expected value of the log-likelihood.
      */
-     public double getExpectedValueOfLogLikelihood(double shift, double scale) {
-         double variance_x = nodeDistribution.getVariance();
-         final double w = (mean - nodeDistribution.getMean() + shift) / (root_2 * scale * variance);
-         double eta = scale * variance / variance_x;
-         eta *= eta;
-         double alpha = arcDistribution.getAlpha();
-         double beta = arcDistribution.getBeta();
- 
-         double A = getA(w, eta, variance_x);
-         double B = getB(w, eta, variance_x);
- 
-         return root_2*scale*variance * (A * alpha + B * beta) / (alpha + beta);
-     }
- 
- 
-     public double getA(double w, double eta, double sigma_x) {
-         return -(Math.log(2*Math.PI*sigma_x*sigma_x) + 1/eta + 2*w*w + 1)/(2 * Math.sqrt(2*eta*sigma_x*sigma_x));
-     }
- 
-     /**
-      * Compute the integral: \int_{-\infty}^{\infty}\ln\left(1-\frac{1}{\sqrt{2\pi\sigma_{x}^{2}}}e^{-\eta\left(x+w\right)^{2}}e^{-x^{2}}\right)\frac{1}{\sqrt{2\pi\sigma_{x}^{2}}}e^{-\eta\left(x+w\right)^{2}}dx
-      * Using a finite series approximation: -\sum_{n=2}^{N+1}\frac{1}{n-1}\left(\frac{1}{\sqrt{2\pi\sigma_{x}^{2}}}\right)^{n}e^{-\left(1-\frac{\eta n}{\eta n+n-1}\right)\eta nw^{2}}\sqrt{\frac{\pi}{\eta n+n-1}}
-      */
-     public double getB(double w, double eta, double sigma_x) {
- 
-         double sum = 0;
-         double delta;
-         int n = 2;
-         do{
-             double n_eta = n * eta;
-             double denom = n_eta + n - 1;
-             double exponent = (n_eta/denom - 1)*n_eta*w*w;
-             delta = Math.exp(exponent);
-             delta *= Math.pow(root_2pi*sigma_x, -n);
-             delta *= Math.sqrt(Math.PI / denom);
-             delta /= n - 1;
-             sum += delta;
-             n++;
-             assert Double.isFinite(delta);
-             assert n < 100000;
-         }while(delta > ACCURACY);
- 
-         return -sum;
-     }
+    public double getExpectedValueOfLogLikelihood(double shift, double scale) {
+        double variance_x = nodeDistribution.getVariance();
+        final double w = (mean - nodeDistribution.getMean() + shift) / (root_2 * variance_x);
+        double eta = variance_x / (scale * variance);
+        eta *= eta;
+        double alpha = arcDistribution.getAlpha();
+        double beta = arcDistribution.getBeta();
+
+        double A = getA(w, eta, variance_x);
+        double B = getB(w, eta, variance_x);
+
+        return (A * alpha + B * beta) / (alpha + beta);
+    }
+
+    /**
+     * Solution to the integral:
+     * \frac{1}{\sqrt{\pi}}\int_{-\infty}^{\infty}\ln\left(\frac{1}{\sqrt{2\pi\sigma_{x}^{2}}}e^{-x^{2}}e^{-\eta\left(x-w\right)^{2}}\right)e^{-x^{2}}dx
+     * 
+     * @param w
+     * @param eta
+     * @param sigma_x
+     * @param mu
+     * @param mu_x
+     * @param sigma
+     * @return
+     */
+    public double getA(double w, double eta, double sigma_x) {
+        return -(1 + eta + 2 * w * w * eta + Math.log(2 * Math.PI * sigma_x * sigma_x)) / 2;
+    }
+
+    /**
+     * Compute the integral:
+     * \frac{1}{\sqrt{\pi}}\int_{-\infty}^{\infty}\ln\left(1-\frac{1}{\sqrt{2\pi\sigma_{x}^{2}}}e^{-x^{2}}e^{-\eta\left(x-w\right)^{2}}\right)e^{-x^{2}}dx
+     * Using a finite series approximation: -\sum_{n=1}^{N}\frac{e^{-\frac{\left(n+1\right)n\eta w^{2}}{1+n+n\eta}}}{n\sqrt{1+n+n\eta}\left(2\pi\sigma_{x}^{2}\right)^{\frac{n}{2}}}
+     */
+    public double getB(double w, double eta, double sigma_x) {
+        double w2 = w * w;
+        double prod_term = root_2pi*sigma_x;
+        double prod_pow = 1;
+
+        double sum = 0;
+        double delta;
+        int n = 1;
+        do {
+            prod_pow *= prod_term;
+            double n_eta = n*eta;
+            double denom = 1+n+n_eta;
+            delta = Math.exp(-(n+1)*n_eta*w2/denom);
+            delta /= Math.sqrt(denom);
+            delta /= prod_pow;
+            sum += delta;
+            assert Double.isFinite(delta);
+            assert n < 100000;
+        } while (delta > ACCURACY);
+
+        return -sum;
+    }
 
     /**
      * A point pair object for the x-value and success rate
@@ -332,7 +347,7 @@ public class NormalBetaFilterAdjuster implements IExpectationAdjuster, Function 
         // The success rate
         public double b;
 
-        // The probability density that this point was generated 
+        // The probability density that this point was generated
         public double prob;
 
         /**
@@ -350,7 +365,8 @@ public class NormalBetaFilterAdjuster implements IExpectationAdjuster, Function 
 
         @Override
         public String toString() {
-            return "value: " + Double.toString(x) + "\tb: " + Double.toString(b) + "\tprobability: " + Double.toString(prob);
+            return "value: " + Double.toString(x) + "\tb: " + Double.toString(b) + "\tprobability: "
+                    + Double.toString(prob);
         }
     }
 

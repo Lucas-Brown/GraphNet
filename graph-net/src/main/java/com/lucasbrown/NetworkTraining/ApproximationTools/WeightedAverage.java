@@ -22,7 +22,7 @@ public class WeightedAverage {
         return prodSum / weightSum;
     }
 
-    public boolean nonZero(){
+    public boolean hasValues(){
         return weightSum != 0;
     }
 

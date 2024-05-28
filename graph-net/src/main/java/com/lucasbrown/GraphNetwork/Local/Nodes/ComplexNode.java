@@ -12,6 +12,7 @@ import com.lucasbrown.GraphNetwork.Local.Arc;
 import com.lucasbrown.GraphNetwork.Local.Outcome;
 import com.lucasbrown.GraphNetwork.Local.Signal;
 import com.lucasbrown.NetworkTraining.DataSetTraining.BackwardsSamplingDistribution;
+import com.lucasbrown.NetworkTraining.DataSetTraining.IExpectationAdjuster;
 import com.lucasbrown.NetworkTraining.DataSetTraining.ITrainableDistribution;
 
 /**
@@ -36,8 +37,9 @@ public class ComplexNode extends NodeBase {
     private double[][] weights_gradient;
 
     public ComplexNode(final GraphNetwork network, final ActivationFunction activationFunction,
-            BackwardsSamplingDistribution outputDistribution, ITrainableDistribution signalChanceDistribution) {
-        super(network, activationFunction, outputDistribution, signalChanceDistribution);
+        ITrainableDistribution outputDistribution, IExpectationAdjuster outputAdjuster, 
+        ITrainableDistribution signalChanceDistribution, IExpectationAdjuster chanceAdjuster) {
+        super(network, activationFunction, outputDistribution, outputAdjuster, signalChanceDistribution, chanceAdjuster);
         weights = new double[1][1];
         biases = new double[1];
         weights[0] = new double[0];
@@ -131,14 +133,26 @@ public class ComplexNode extends NodeBase {
 
     private void computeGradient(List<ArrayList<Outcome>> allOutcomes) {
 
+        int T = 0;
+
         // for all time steps
         for (ArrayList<Outcome> outcomesAtTime : allOutcomes) {
 
             // Compute the probability volume of this timestep
             double probabilityVolume = 0;
+            boolean atLeastOnePass = true;
             for (Outcome outcome : outcomesAtTime) {
                 probabilityVolume += outcome.probability;
+                atLeastOnePass &= outcome.passRate.hasValues();
             }
+
+            // at least one outcome must have a chance to pass through 
+            if(!atLeastOnePass){
+                continue;
+            }
+
+            // Increase the number of non-zero timesteps
+            T++;
 
             // if zero volume, move on to next set
             if (probabilityVolume == 0) {
@@ -160,7 +174,6 @@ public class ComplexNode extends NodeBase {
         }
 
         // divide all gradients by the number of non-empty timesteps
-        int T = allOutcomes.size();
         for (int key = 1; key < getIncomingPowerSetSize(); key++) {
             bias_gradient[key] /= T;
 

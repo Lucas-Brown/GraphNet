@@ -17,7 +17,7 @@ public class NodeBuilder {
 
     private final GraphNetwork network;
 
-    private Class<? extends INode> node_class;
+    private NodeConstructor nodeConstructor;
     private ActivationFunction activationFunction;
     private boolean is_input;
     private boolean is_output;
@@ -34,8 +34,8 @@ public class NodeBuilder {
         this.network = network;
     }
 
-    public void setNodeClass(Class<? extends INode> node_class) {
-        this.node_class = node_class;
+    public void setNodeConstructor(NodeConstructor nodeConstructor) {
+        this.nodeConstructor = nodeConstructor;
     }
 
     public void setActivationFunction(ActivationFunction activationFunction) {
@@ -76,7 +76,7 @@ public class NodeBuilder {
     }
 
     public boolean isReadyToBuild() {
-        return node_class != null & activationFunction != null & outputDistributionSupplier != null
+        return nodeConstructor != null & activationFunction != null & outputDistributionSupplier != null
                 & probabilityDistributionSupplier != null;
     }
 
@@ -117,19 +117,9 @@ public class NodeBuilder {
             probabilityDistributionAdjusterSupplier = probabilityDistribution.getDefaulAdjuster();
         }
 
-        Constructor<? extends INode> ctor;
-        INode node;
-        try {
-            ctor = node_class.getConstructor(GraphNetwork.class, ActivationFunction.class, ITrainableDistribution.class,
-                    IExpectationAdjuster.class, ITrainableDistribution.class, IExpectationAdjuster.class);
-            node = ctor.newInstance(network, activationFunction, outputDistribution,
-                    outputDistributionAdjusterSupplier.apply(outputDistribution), probabilityDistribution,
-                    probabilityDistributionAdjusterSupplier.apply(probabilityDistribution));
-        } catch (NoSuchMethodException | SecurityException | InstantiationException | IllegalAccessException
-                | IllegalArgumentException | InvocationTargetException e) {
-            buildFailureException = e;
-            return null;
-        }
+        INode node = nodeConstructor.apply(network, activationFunction, outputDistribution,
+        outputDistributionAdjusterSupplier.apply(outputDistribution), probabilityDistribution,
+        probabilityDistributionAdjusterSupplier.apply(probabilityDistribution));
 
         if (is_input) {
             node = new InputNode(node);
@@ -153,4 +143,14 @@ public class NodeBuilder {
         return Stream.generate(this::build).limit(copies).toArray(INode[]::new);
     }
 
+
+    
+    // Shorter name for the quad-function in this context
+    @FunctionalInterface
+    public static interface NodeConstructor {
+
+        public abstract INode apply(GraphNetwork network, final ActivationFunction activationFunction,
+        ITrainableDistribution outputDistribution, IExpectationAdjuster outputAdjuster,
+            ITrainableDistribution signalChanceDistribution, IExpectationAdjuster chanceAdjuster);
+    }
 }

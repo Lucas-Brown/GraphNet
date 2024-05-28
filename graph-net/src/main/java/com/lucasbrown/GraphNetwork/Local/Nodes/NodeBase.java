@@ -400,7 +400,6 @@ public abstract class NodeBase implements INode {
                 forward = forwardNext;
                 forwardNext = new HashMap<>();
                 combinePossibilities();
-                prepareOutputDistributionAdjustments();
             }
             if (!backwardNext.isEmpty()) {
                 /*
@@ -417,10 +416,11 @@ public abstract class NodeBase implements INode {
     /**
      * Use the outcomes to prepare weighted adjustments to the outcome distribution
      */
-    private void prepareOutputDistributionAdjustments() {
-        for (Outcome o : outcomes) {
+    public void prepareOutputDistributionAdjustments(ArrayList<Outcome> allOutcomes) {
+        for (Outcome o : allOutcomes) {
             // weigh the outcomes by their probability of occurring
-            outputAdjuster.prepareAdjustment(o.probability, new double[] { o.activatedValue });
+            double error = o.errorOfOutcome.hasValues() ? o.errorOfOutcome.getAverage() : 0;
+            outputAdjuster.prepareAdjustment(o.probability, new double[] { o.activatedValue - error});
         }
     }
 
@@ -434,8 +434,11 @@ public abstract class NodeBase implements INode {
         outcomes = signalPowerSet.stream()
                 .filter(set -> !set.u.isEmpty()) // remove the null set
                 .map(this::signalSetToOutcome)
-                .filter(outcome -> outcome.probability > 0)
+                //.filter(outcome -> outcome.probability > 0)
                 .collect(Collectors.toCollection(ArrayList::new));
+        if(outcomes.isEmpty()){
+            System.out.println();
+        }
     }
 
     /**
@@ -667,6 +670,7 @@ public abstract class NodeBase implements INode {
      * @param densityWeights
      * @return
      */
+    /*
     public int selectReverseOutcome(double[] densityWeights) {
         // get the sum of all weights
         double total = 0;
@@ -687,6 +691,7 @@ public abstract class NodeBase implements INode {
         }
         return -1; // This should never happen
     }
+    */
 
     @Override
     public void applyDistributionUpdate() {
@@ -707,26 +712,22 @@ public abstract class NodeBase implements INode {
         return outcomes;
     }
 
-    public void sendErrorsBackwards(ArrayList<Outcome> outcomesAtTime, int timestep) {
 
-        for (Outcome outcome : outcomesAtTime) {
-            if (outcome.probability > 0) {
-                sendErrorsBackwards(outcome, timestep);
-                // sendBackwardsSample(outcome);
-                adjustProbabilitiesForOutcome(outcome);
-            }
-        }
-    }
-
-    private void sendErrorsBackwards(Outcome outcomeAtTime, int timestep) {
+    @Override
+    public void sendErrorsBackwards(Outcome outcomeAtTime) {
         int binary_string = outcomeAtTime.binary_string;
         double error_derivative = activationFunction.derivative(outcomeAtTime.netValue)
                 * outcomeAtTime.errorOfOutcome.getProdSum();
         double[] weightsOfNodes = getWeights(binary_string);
 
         for (int i = 0; i < weightsOfNodes.length; i++) {
+            if(!outcomeAtTime.passRate.hasValues()){
+                continue;
+            }
             Outcome so = outcomeAtTime.sourceOutcomes[i];
-            so.passRate.add(outcomeAtTime.passRate.getAverage(), outcomeAtTime.probability);
+            double pass_avg = outcomeAtTime.passRate.getAverage();
+            assert Double.isFinite(pass_avg);
+            so.passRate.add(pass_avg, outcomeAtTime.probability);
             so.errorOfOutcome.add(error_derivative * weightsOfNodes[i],
                     outcomeAtTime.probability);
 
@@ -773,8 +774,9 @@ public abstract class NodeBase implements INode {
     }
     */
 
-    private void adjustProbabilitiesForOutcome(Outcome outcome) {
-        if(!outcome.passRate.nonZero()){
+    @Override
+    public void adjustProbabilitiesForOutcome(Outcome outcome) {
+        if(!outcome.passRate.hasValues() || outcome.probability == 0){
             return;
         }
         double pass_rate = outcome.passRate.getAverage();
@@ -789,7 +791,9 @@ public abstract class NodeBase implements INode {
             Arc arc = getIncomingConnectionFrom(sourceNode).get(); // should be guaranteed to exist
             if(arc.filterAdjuster != null){
                 double shifted_value = outcome.sourceOutcomes[i].activatedValue - error_derivative;
-                arc.filterAdjuster.prepareAdjustment(new double[]{shifted_value, pass_rate, outputDistribution.getProbabilityDensity(shifted_value)});
+                assert Double.isFinite(shifted_value);
+                double prob = outcome.sourceOutcomes[i].probability;
+                arc.filterAdjuster.prepareAdjustment(prob, new double[]{shifted_value, pass_rate, outputDistribution.getProbabilityDensity(shifted_value)});
             }
         }
 
@@ -815,7 +819,7 @@ public abstract class NodeBase implements INode {
     @Override
     public String toString() {
         return name + ": " + outcomes.stream()
-                .filter(outcome -> outcome.probability > 0)
+                //.filter(outcome -> outcome.probability > 0)
                 .sorted(Outcome::descendingProbabilitiesComparator)
                 .toList()
                 .toString();

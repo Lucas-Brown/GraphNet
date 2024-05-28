@@ -4,13 +4,10 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map.Entry;
-import java.util.Objects;
-import java.util.stream.Stream;
 
 import com.lucasbrown.GraphNetwork.Local.Outcome;
 import com.lucasbrown.GraphNetwork.Local.Nodes.IInputNode;
 import com.lucasbrown.GraphNetwork.Local.Nodes.INode;
-import com.lucasbrown.GraphNetwork.Local.Nodes.IOutputNode;
 import com.lucasbrown.GraphNetwork.Local.Nodes.InputNode;
 import com.lucasbrown.GraphNetwork.Local.Nodes.OutputNode;
 import com.lucasbrown.NetworkTraining.History;
@@ -90,7 +87,7 @@ public class BackpropTrainer {
             }
         }
         //assert total_error.getAverage() < 1E6;
-        //assert Double.isFinite(total_error.getAverage());
+        assert Double.isFinite(total_error.getAverage());
         if(print_forward){
             System.out.println(total_error.getAverage());
         }
@@ -121,14 +118,19 @@ public class BackpropTrainer {
 
     private void backpropagateErrors() {
         ArrayList<INode> nodes = network.getNodes();
-        while(timestep > 0){
+        while(timestep >= 0){
             HashMap<Integer, ArrayList<Outcome>> state = networkHistory.getStateAtTimestep(timestep);
             for(Entry<Integer, ArrayList<Outcome>> e : state.entrySet()){
-                INode node = nodes.get(e.getKey());
-                node.sendErrorsBackwards(e.getValue(), timestep);
+                updateNodeForTimestep(nodes.get(e.getKey()), e.getValue());
             }
             timestep--;
         }
+    }
+
+    private void updateNodeForTimestep(INode node, ArrayList<Outcome> outcomesAtTIme){
+        node.prepareOutputDistributionAdjustments(outcomesAtTIme);
+        outcomesAtTIme.forEach(node::sendErrorsBackwards);
+        outcomesAtTIme.forEach(node::adjustProbabilitiesForOutcome);
     }
 
     private void applyErrorSignals(){

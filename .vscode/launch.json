@@ -6,30 +6,23 @@
     "configurations": [
         {
             "type": "java",
+            "name": "RepeaterTest",
+            "request": "launch",
+            "mainClass": "com.lucasbrown.NetworkTraining.RepeaterTest",
+            "projectName": "graph-net",
+            "vmArgs": "-enableassertions"
+        },
+        {
+            "type": "java",
             "name": "FibonacciNetworkTest",
             "request": "launch",
             "mainClass": "com.lucasbrown.NetworkTraining.FibonacciNetworkTest",
-            "projectName": "graph-net"
-        },
-        {
-            "type": "java",
-            "name": "SimpleAdderTest",
-            "request": "launch",
-            "mainClass": "com.lucasbrown.NetworkTraining.SimpleAdderTest",
             "projectName": "graph-net",
             "vmArgs": "-enableassertions"
         },
         {
             "type": "java",
-            "name": "ComplexAdderTest",
-            "request": "launch",
-            "mainClass": "com.lucasbrown.NetworkTraining.ComplexAdderTest",
-            "projectName": "graph-net",
-            "vmArgs": "-enableassertions"
-        },
-        {
-            "type": "java",
-            "name": "SimpleAdderTest",
+            "name": "AdderTest",
             "request": "launch",
             "mainClass": "com.lucasbrown.NetworkTraining.AdderTest",
             "projectName": "graph-net",

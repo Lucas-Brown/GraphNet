@@ -11,7 +11,6 @@ import com.lucasbrown.GraphNetwork.Local.Arc;
 import com.lucasbrown.GraphNetwork.Local.Outcome;
 import com.lucasbrown.GraphNetwork.Local.Signal;
 import com.lucasbrown.NetworkTraining.ApproximationTools.ArrayTools;
-import com.lucasbrown.NetworkTraining.DataSetTraining.BackwardsSamplingDistribution;
 import com.lucasbrown.NetworkTraining.DataSetTraining.IExpectationAdjuster;
 import com.lucasbrown.NetworkTraining.DataSetTraining.ITrainableDistribution;
 
@@ -91,6 +90,7 @@ public class SimpleNode extends NodeBase {
             strength += sortedSignals.get(i).getOutputStrength() * weights_of_signals[i];
         }
 
+        assert Double.isFinite(strength); 
         return strength;
     }
 
@@ -111,7 +111,7 @@ public class SimpleNode extends NodeBase {
             boolean atLeastOnePass = true;
             for (Outcome outcome : outcomesAtTime) {
                 probabilityVolume += outcome.probability;
-                atLeastOnePass &= outcome.passRate.nonZero();
+                atLeastOnePass &= outcome.passRate.hasValues();
             }
 
             // at least one outcome must have a chance to pass through 
@@ -119,17 +119,17 @@ public class SimpleNode extends NodeBase {
                 continue;
             }
 
+            // Increase the number of non-zero timesteps
+            T++;
+
             // if zero volume, move on to next set
             if (probabilityVolume == 0) {
                 continue;
             }
 
-            // Increase the number of non-zero timesteps
-            T++;
-
             // add error to the gradient
             for (Outcome outcome : outcomesAtTime) {
-                if(!outcome.passRate.nonZero()){
+                if(!outcome.passRate.hasValues()){
                     continue;
                 }
                 
@@ -149,16 +149,20 @@ public class SimpleNode extends NodeBase {
                     key = key >> 0b1;
                 }
             }
-        }
+        }//:D heehee ~ Jess hi :) i love you 
+        
+        assert T > 0;
 
         // test for approximate error
         //double foo = allOutcomes.stream().flatMap(outcomeList -> outcomeList.stream()).mapToDouble(outcome -> outcome.errorOfOutcome.getProdSum()).average().getAsDouble();
 
         // divide all gradients by the number of non-empty timesteps
         bias_gradient /= T;
+        assert Double.isFinite(bias_gradient);
 
         for (int i = 0; i < weights.length; i++) {
             weights_gradient[i] /= T;
+            assert Double.isFinite(weights_gradient[i]);
         }
     }
 

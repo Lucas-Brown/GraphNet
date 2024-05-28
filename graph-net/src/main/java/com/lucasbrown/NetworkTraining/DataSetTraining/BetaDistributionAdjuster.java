@@ -4,6 +4,8 @@ import java.security.InvalidParameterException;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.lucasbrown.GraphNetwork.Global.GraphNetwork;
+
 import jsat.linear.DenseVector;
 import jsat.linear.Vec;
 import jsat.math.Function;
@@ -80,6 +82,15 @@ public class BetaDistributionAdjuster implements Function, IExpectationAdjuster 
 
     @Override
     public void applyAdjustments() {
+        
+        double N_points = WeightedDouble.getWeightSum(newPoints);
+        if(N_points == 0){
+            newPoints.clear();
+            return; // make no changes
+        }
+
+        newPoints.forEach(wd -> wd.value = BetaDistribution.betaDataTransformation(wd.value, N_points));
+
         alpha = distribution.getAlpha();
         beta = distribution.getBeta();
         N = distribution.getNumberOfPointsInDistribution();
@@ -95,7 +106,8 @@ public class BetaDistributionAdjuster implements Function, IExpectationAdjuster 
         variableTransform(solution);
         alpha *= solution[0];
         beta *= solution[1];
-        N += newPoints.stream().mapToDouble(wp -> wp.weight).sum();
+        N += N_points;
+        N = Math.min(N, GraphNetwork.N_MAX);
 
         newPoints.clear();
         distribution.applyAdjustments(this);
@@ -107,7 +119,7 @@ public class BetaDistributionAdjuster implements Function, IExpectationAdjuster 
         }
     }
 
-    private double logLikelihoodExpectationOfDistribution(double lambda_alpha, double lambda_beta) {
+    protected double logLikelihoodExpectationOfDistribution(double lambda_alpha, double lambda_beta) {
         return Math.log(BetaDistribution.normalizationConstant(alpha + lambda_alpha - 1, beta + lambda_beta - 1) /
                 (BetaDistribution.normalizationConstant(alpha, beta)
                         * BetaDistribution.normalizationConstant(lambda_alpha, lambda_beta)));
@@ -115,6 +127,7 @@ public class BetaDistributionAdjuster implements Function, IExpectationAdjuster 
 
     private double logLikelihoodOfPoints(double lambda_alpha, double lambda_beta){
         return newPoints.stream()
+            .filter(wp -> wp.weight > 0)
             .mapToDouble(wp -> wp.weight*BetaDistribution.densityOfPoint(wp.value, lambda_alpha, lambda_beta))
             .map(Math::log)
             .sum();

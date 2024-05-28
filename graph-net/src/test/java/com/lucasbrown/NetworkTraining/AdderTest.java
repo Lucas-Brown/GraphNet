@@ -10,17 +10,26 @@ import com.lucasbrown.GraphNetwork.Global.GraphNetwork;
 import com.lucasbrown.GraphNetwork.Global.NodeBuilder;
 import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
 import com.lucasbrown.GraphNetwork.Local.Arc;
+import com.lucasbrown.GraphNetwork.Local.Nodes.ComplexNode;
 import com.lucasbrown.GraphNetwork.Local.Nodes.InputNode;
 import com.lucasbrown.GraphNetwork.Local.Nodes.NodeBase;
 import com.lucasbrown.GraphNetwork.Local.Nodes.OutputNode;
 import com.lucasbrown.GraphNetwork.Local.Nodes.SimpleNode;
 import com.lucasbrown.NetworkTraining.ApproximationTools.ErrorFunction;
 import com.lucasbrown.NetworkTraining.DataSetTraining.BetaDistribution;
+import com.lucasbrown.NetworkTraining.DataSetTraining.BetaDistributionAdjuster2;
+import com.lucasbrown.NetworkTraining.DataSetTraining.BetaDistributionFromData;
+import com.lucasbrown.NetworkTraining.DataSetTraining.BetaDistributionFromData2;
+import com.lucasbrown.NetworkTraining.DataSetTraining.IExpectationAdjuster;
+import com.lucasbrown.NetworkTraining.DataSetTraining.IFilter;
+import com.lucasbrown.NetworkTraining.DataSetTraining.ITrainableDistribution;
 import com.lucasbrown.NetworkTraining.DataSetTraining.NormalBetaFilter;
 import com.lucasbrown.NetworkTraining.DataSetTraining.NormalBetaFilterAdjuster;
 import com.lucasbrown.NetworkTraining.DataSetTraining.NormalDistribution;
+import com.lucasbrown.NetworkTraining.DataSetTraining.NormalDistributionFromData;
+import com.lucasbrown.NetworkTraining.DataSetTraining.OpenFilter;
 
-public class SimpleAdderTest {
+public class AdderTest {
 
     private static Random rng = new Random();
     private static int counter = 0;
@@ -60,7 +69,7 @@ public class SimpleAdderTest {
     }
 
     public static void main(String[] args) {
-        SimpleAdderTest adder = new SimpleAdderTest();
+        AdderTest adder = new AdderTest();
         adder.initializeInputData();
         adder.initializeOutputData();
 
@@ -69,9 +78,12 @@ public class SimpleAdderTest {
         NodeBuilder nodeBuilder = new NodeBuilder(net);
 
         nodeBuilder.setActivationFunction(ActivationFunction.LINEAR);
-        nodeBuilder.setNodeClass(SimpleNode.class);
+        nodeBuilder.setNodeConstructor(ComplexNode::new);
         nodeBuilder.setOutputDistSupplier(NormalDistribution::getStandardNormalDistribution);
+        // nodeBuilder.setOutputDistAdjusterSupplier(NormalDistributionFromData::new);
         nodeBuilder.setProbabilityDistSupplier(BetaDistribution::getUniformBetaDistribution);
+        nodeBuilder.setProbabilityDistAdjusterSupplier(BetaDistributionFromData::new);
+
         nodeBuilder.setAsInputNode();
 
         InputNode in1 = (InputNode) nodeBuilder.build();
@@ -88,6 +100,8 @@ public class SimpleAdderTest {
         out.setName("Output");
 
         ArcBuilder arcBuilder = new ArcBuilder(net);
+        // arcBuilder.setFilterSupplier(OpenFilter::new);
+        // arcBuilder.setFilterAdjusterSupplier((IFilter filter, ITrainableDistribution dist1, ITrainableDistribution dist2) -> (IExpectationAdjuster) null);
         arcBuilder.setFilterSupplier(NormalBetaFilter::getStandardNormalBetaFilter);
         arcBuilder.setFilterAdjusterSupplier(NormalBetaFilterAdjuster::new);
 

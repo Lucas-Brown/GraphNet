@@ -12,6 +12,7 @@ import com.lucasbrown.GraphNetwork.Local.Arc;
 import com.lucasbrown.GraphNetwork.Local.Outcome;
 import com.lucasbrown.GraphNetwork.Local.Signal;
 import com.lucasbrown.NetworkTraining.DataSetTraining.BackwardsSamplingDistribution;
+import com.lucasbrown.NetworkTraining.DataSetTraining.IExpectationAdjuster;
 import com.lucasbrown.NetworkTraining.DataSetTraining.ITrainableDistribution;
 
 public class NodeWrapper implements INode {
@@ -181,8 +182,18 @@ public class NodeWrapper implements INode {
     }
 
     @Override
-    public void sendErrorsBackwards(ArrayList<Outcome> outcomesAtTime, int timestep) {
-        wrappingNode.sendErrorsBackwards(outcomesAtTime, timestep);
+    public void prepareOutputDistributionAdjustments(ArrayList<Outcome> allOutcomes) {
+        wrappingNode.prepareOutputDistributionAdjustments(allOutcomes);
+    }
+
+    @Override
+    public void sendErrorsBackwards(Outcome outcomeAtTime) {
+        wrappingNode.sendErrorsBackwards(outcomeAtTime);
+    }
+
+    @Override
+    public void adjustProbabilitiesForOutcome(Outcome outcome){
+        wrappingNode.adjustProbabilitiesForOutcome(outcome);
     }
 
     @Override

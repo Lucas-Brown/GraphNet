@@ -138,7 +138,11 @@ public interface INode extends Comparable<INode> {
 
     public abstract ArrayList<Outcome> getState();
 
-    public abstract void sendErrorsBackwards(ArrayList<Outcome> outcomesAtTime, int timestep);
+    public abstract void prepareOutputDistributionAdjustments(ArrayList<Outcome> allOutcomes);
+
+    public abstract void sendErrorsBackwards(Outcome outcome);
+
+    public abstract void adjustProbabilitiesForOutcome(Outcome outcome);
 
     public abstract void applyErrorSignals(double epsilon, List<ArrayList<Outcome>> allOutcomes);
 
