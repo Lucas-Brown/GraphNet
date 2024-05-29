@@ -82,7 +82,7 @@ public class AdderTest {
         nodeBuilder.setOutputDistSupplier(NormalDistribution::getStandardNormalDistribution);
         // nodeBuilder.setOutputDistAdjusterSupplier(NormalDistributionFromData::new);
         nodeBuilder.setProbabilityDistSupplier(BetaDistribution::getUniformBetaDistribution);
-        nodeBuilder.setProbabilityDistAdjusterSupplier(BetaDistributionFromData::new);
+        nodeBuilder.setProbabilityDistAdjusterSupplier(BetaDistributionAdjuster2::new);
 
         nodeBuilder.setAsInputNode();
 

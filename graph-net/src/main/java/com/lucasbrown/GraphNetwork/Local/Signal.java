@@ -41,8 +41,16 @@ public class Signal{
         return sourceOutcome.activatedValue;
     }
     
-    public double getProbability() {
+    public double getTotalProbability() {
         return sourceOutcome.probability * firingProbability;
+    }
+
+    public double getFiringProbability() {
+        return firingProbability;
+    }
+
+    public double getSourceProbability() {
+        return firingProbability;
     }
 
     public static int compareSendingNodeIDs(Signal s1, Signal s2){

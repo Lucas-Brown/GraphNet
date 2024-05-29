@@ -31,6 +31,9 @@ import com.lucasbrown.NetworkTraining.DataSetTraining.ITrainableDistribution;
  */
 public abstract class NodeBase implements INode {
 
+    // TODO: remove hard-coded value
+    private static double ZERO_THRESHOLD = 1E-12;
+
     protected final Random rng = new Random();
 
     /**
@@ -112,14 +115,15 @@ public abstract class NodeBase implements INode {
     protected boolean hasValidForwardSignal;
 
     public NodeBase(GraphNetwork network, final ActivationFunction activationFunction,
-        ITrainableDistribution outputDistribution,
+            ITrainableDistribution outputDistribution,
             ITrainableDistribution signalChanceDistribution) {
-        this(network, activationFunction, outputDistribution, outputDistribution.getDefaulAdjuster().apply(outputDistribution),
+        this(network, activationFunction, outputDistribution,
+                outputDistribution.getDefaulAdjuster().apply(outputDistribution),
                 signalChanceDistribution, signalChanceDistribution.getDefaulAdjuster().apply(signalChanceDistribution));
     }
 
     public NodeBase(GraphNetwork network, final ActivationFunction activationFunction,
-        ITrainableDistribution outputDistribution, IExpectationAdjuster outputAdjuster,
+            ITrainableDistribution outputDistribution, IExpectationAdjuster outputAdjuster,
             ITrainableDistribution signalChanceDistribution, IExpectationAdjuster chanceAdjuster) {
         id = ID_COUNTER++;
         name = "INode " + id;
@@ -420,7 +424,7 @@ public abstract class NodeBase implements INode {
         for (Outcome o : allOutcomes) {
             // weigh the outcomes by their probability of occurring
             double error = o.errorOfOutcome.hasValues() ? o.errorOfOutcome.getAverage() : 0;
-            outputAdjuster.prepareAdjustment(o.probability, new double[] { o.activatedValue - error});
+            outputAdjuster.prepareAdjustment(o.probability, new double[] { o.activatedValue - error });
         }
     }
 
@@ -434,9 +438,13 @@ public abstract class NodeBase implements INode {
         outcomes = signalPowerSet.stream()
                 .filter(set -> !set.u.isEmpty()) // remove the null set
                 .map(this::signalSetToOutcome)
-                //.filter(outcome -> outcome.probability > 0)
+                .filter(outcome -> outcome.probability > ZERO_THRESHOLD)
                 .collect(Collectors.toCollection(ArrayList::new));
-        if(outcomes.isEmpty()){
+
+        assert outcomes.stream().mapToDouble(outcome -> outcome.probability).sum() <= 1
+                : "Sum of all outcome probabilities must be equal to or less than 1. \nProbability sum = "
+                        + outcomes.stream().mapToDouble(outcome -> outcome.probability).sum();
+        if (outcomes.isEmpty()) {
             System.out.println();
         }
     }
@@ -474,10 +482,11 @@ public abstract class NodeBase implements INode {
     private double getProbabilityOfSignalSet(Collection<Signal> signalSet, Collection<Signal> allSendingSignals) {
         double probability = 1;
         for (Signal s : allSendingSignals) {
+            probability *= s.getSourceProbability();
             if (signalSet.contains(s)) {
-                probability *= s.getProbability();
+                probability *= s.getFiringProbability();
             } else {
-                probability *= 1 - s.getProbability();
+                probability *= 1 - s.getFiringProbability();
             }
         }
         return probability;
@@ -620,49 +629,53 @@ public abstract class NodeBase implements INode {
     // }
 
     /*
-    public FilterDistributionConvolution[] getReverseOutcomes() {
-        // Loop over all possible incoming signal combinations and record the value
-        // of their convolution
-        int n_choices = 0b1 << incoming.size();
-        FilterDistributionConvolution[] convolutions = new FilterDistributionConvolution[n_choices - 1];
-        for (int binStr = 1; binStr < n_choices; binStr++) {
-            // get the arcs corresponding to this bit string
-            ArrayList<Arc> arcs = binStrToArcList(binStr);
-
-            // Get the distributions of output values from the incoming nodes
-            ArrayList<BackwardsSamplingDistribution> distributions = arcs.stream()
-                    .map(arc -> arc.sending.getOutputDistribution())
-                    .collect(Collectors.toCollection(ArrayList<BackwardsSamplingDistribution>::new));
-
-            ArrayList<ActivationFunction> activators = arcs.stream()
-                    .map(arc -> arc.sending.getActivationFunction())
-                    .collect(Collectors.toCollection(ArrayList<ActivationFunction>::new));
-
-            // Get the weights of the corresponding arcs
-            double[] weights = getWeights(binStr);
-
-            // Get the probability density
-            convolutions[binStr - 1] = new FilterDistributionConvolution(distributions, activators,
-                    weights);
-        }
-
-        return convolutions;
-    }
-
-    public double[] evaluateConvolutions(FilterDistributionConvolution[] convolutions, double activatedValue) {
-        double[] densityWeights = new double[convolutions.length];
-        for (int binStr = 1; binStr <= convolutions.length; binStr++) {
-            // Shift the signal strength by the bias
-            double shiftedStrength = activatedValue - getBias(binStr);
-
-            densityWeights[binStr - 1] = convolutions[binStr -
-                    1].convolve(shiftedStrength);
-            assert Double.isFinite(densityWeights[binStr - 1]);
-            assert densityWeights[binStr - 1] >= 0;
-        }
-        return densityWeights;
-    }
-    */
+     * public FilterDistributionConvolution[] getReverseOutcomes() {
+     * // Loop over all possible incoming signal combinations and record the value
+     * // of their convolution
+     * int n_choices = 0b1 << incoming.size();
+     * FilterDistributionConvolution[] convolutions = new
+     * FilterDistributionConvolution[n_choices - 1];
+     * for (int binStr = 1; binStr < n_choices; binStr++) {
+     * // get the arcs corresponding to this bit string
+     * ArrayList<Arc> arcs = binStrToArcList(binStr);
+     * 
+     * // Get the distributions of output values from the incoming nodes
+     * ArrayList<BackwardsSamplingDistribution> distributions = arcs.stream()
+     * .map(arc -> arc.sending.getOutputDistribution())
+     * .collect(Collectors.toCollection(ArrayList<BackwardsSamplingDistribution>::
+     * new));
+     * 
+     * ArrayList<ActivationFunction> activators = arcs.stream()
+     * .map(arc -> arc.sending.getActivationFunction())
+     * .collect(Collectors.toCollection(ArrayList<ActivationFunction>::new));
+     * 
+     * // Get the weights of the corresponding arcs
+     * double[] weights = getWeights(binStr);
+     * 
+     * // Get the probability density
+     * convolutions[binStr - 1] = new FilterDistributionConvolution(distributions,
+     * activators,
+     * weights);
+     * }
+     * 
+     * return convolutions;
+     * }
+     * 
+     * public double[] evaluateConvolutions(FilterDistributionConvolution[]
+     * convolutions, double activatedValue) {
+     * double[] densityWeights = new double[convolutions.length];
+     * for (int binStr = 1; binStr <= convolutions.length; binStr++) {
+     * // Shift the signal strength by the bias
+     * double shiftedStrength = activatedValue - getBias(binStr);
+     * 
+     * densityWeights[binStr - 1] = convolutions[binStr -
+     * 1].convolve(shiftedStrength);
+     * assert Double.isFinite(densityWeights[binStr - 1]);
+     * assert densityWeights[binStr - 1] >= 0;
+     * }
+     * return densityWeights;
+     * }
+     */
 
     /**
      * Select an outcome each with a given weight
@@ -671,27 +684,27 @@ public abstract class NodeBase implements INode {
      * @return
      */
     /*
-    public int selectReverseOutcome(double[] densityWeights) {
-        // get the sum of all weights
-        double total = 0;
-        for (double d : densityWeights) {
-            total += d;
-        }
-
-        // Roll a number between 0 and the total
-        double roll = rng.nextDouble() * total;
-
-        // Select the first index whose partial sum is over the roll
-        double sum = 0;
-        for (int i = 0; i < densityWeights.length; i++) {
-            sum += densityWeights[i];
-            if (sum >= roll) {
-                return i;
-            }
-        }
-        return -1; // This should never happen
-    }
-    */
+     * public int selectReverseOutcome(double[] densityWeights) {
+     * // get the sum of all weights
+     * double total = 0;
+     * for (double d : densityWeights) {
+     * total += d;
+     * }
+     * 
+     * // Roll a number between 0 and the total
+     * double roll = rng.nextDouble() * total;
+     * 
+     * // Select the first index whose partial sum is over the roll
+     * double sum = 0;
+     * for (int i = 0; i < densityWeights.length; i++) {
+     * sum += densityWeights[i];
+     * if (sum >= roll) {
+     * return i;
+     * }
+     * }
+     * return -1; // This should never happen
+     * }
+     */
 
     @Override
     public void applyDistributionUpdate() {
@@ -702,7 +715,7 @@ public abstract class NodeBase implements INode {
     @Override
     public void applyFilterUpdate() {
         for (Arc connection : outgoing) {
-            if(connection.filterAdjuster != null){
+            if (connection.filterAdjuster != null) {
                 connection.filterAdjuster.applyAdjustments();
             }
         }
@@ -712,7 +725,6 @@ public abstract class NodeBase implements INode {
         return outcomes;
     }
 
-
     @Override
     public void sendErrorsBackwards(Outcome outcomeAtTime) {
         int binary_string = outcomeAtTime.binary_string;
@@ -721,7 +733,7 @@ public abstract class NodeBase implements INode {
         double[] weightsOfNodes = getWeights(binary_string);
 
         for (int i = 0; i < weightsOfNodes.length; i++) {
-            if(!outcomeAtTime.passRate.hasValues()){
+            if (!outcomeAtTime.passRate.hasValues()) {
                 continue;
             }
             Outcome so = outcomeAtTime.sourceOutcomes[i];
@@ -740,60 +752,72 @@ public abstract class NodeBase implements INode {
 
     }
 
-    /* 
-    private void sendBackwardsSample(Outcome outcomeAtTime) {
-        double activatedValue = outcomeAtTime.netValue - outcomeAtTime.errorOfOutcome.getAverage();
-
-        // Select the backward signal combination
-        FilterDistributionConvolution[] convolutions = getReverseOutcomes();
-        double[] densityWeights = evaluateConvolutions(convolutions, activatedValue);
-        int backwardsBinStr = selectReverseOutcome(densityWeights) + 1;
-
-        // Sample signal strengths from the selected distribution
-        double[][] sample = convolutions[backwardsBinStr - 1].sample(activatedValue - getBias(backwardsBinStr), 10);
-
-        // Send the backward signals
-        ArrayList<Arc> arcs = binStrToArcList(backwardsBinStr);
-        for (double[] sample_n : sample) {
-            for (int i = 0; i < arcs.size(); i++) {
-                Arc arc_i = arcs.get(i);
-                // double sample_inverse =
-                // arc_i.recieving.getActivationFunction().inverse(sample_i);
-                assert Double.isFinite(sample_n[i]);
-
-                // TODO: fix backwards filter training
-                // System.out.println(sample_i);
-
-                // arc_i.filter.prepareWeightedReinforcement(sample_n[i], 1/sample[i].length);
-                // // prepare to reinforce the distribution
-                // arc_i.probDist.prepareReinforcement(sample_n[i],
-                // Math.min(1/(outcomeAtTime.probability*sample[i].length),
-                // Math.sqrt(arc_i.probDist.getNumberOfPointsInDistribution())));
-            }
-        }
-    }
-    */
+    /*
+     * private void sendBackwardsSample(Outcome outcomeAtTime) {
+     * double activatedValue = outcomeAtTime.netValue -
+     * outcomeAtTime.errorOfOutcome.getAverage();
+     * 
+     * // Select the backward signal combination
+     * FilterDistributionConvolution[] convolutions = getReverseOutcomes();
+     * double[] densityWeights = evaluateConvolutions(convolutions, activatedValue);
+     * int backwardsBinStr = selectReverseOutcome(densityWeights) + 1;
+     * 
+     * // Sample signal strengths from the selected distribution
+     * double[][] sample = convolutions[backwardsBinStr - 1].sample(activatedValue -
+     * getBias(backwardsBinStr), 10);
+     * 
+     * // Send the backward signals
+     * ArrayList<Arc> arcs = binStrToArcList(backwardsBinStr);
+     * for (double[] sample_n : sample) {
+     * for (int i = 0; i < arcs.size(); i++) {
+     * Arc arc_i = arcs.get(i);
+     * // double sample_inverse =
+     * // arc_i.recieving.getActivationFunction().inverse(sample_i);
+     * assert Double.isFinite(sample_n[i]);
+     * 
+     * // TODO: fix backwards filter training
+     * // System.out.println(sample_i);
+     * 
+     * // arc_i.filter.prepareWeightedReinforcement(sample_n[i],
+     * 1/sample[i].length);
+     * // // prepare to reinforce the distribution
+     * // arc_i.probDist.prepareReinforcement(sample_n[i],
+     * // Math.min(1/(outcomeAtTime.probability*sample[i].length),
+     * // Math.sqrt(arc_i.probDist.getNumberOfPointsInDistribution())));
+     * }
+     * }
+     * }
+     */
 
     @Override
     public void adjustProbabilitiesForOutcome(Outcome outcome) {
-        if(!outcome.passRate.hasValues() || outcome.probability == 0){
+        if (!outcome.passRate.hasValues() || outcome.probability == 0) {
             return;
         }
         double pass_rate = outcome.passRate.getAverage();
 
         // Add another point for the net firing chance distribution
-        chanceAdjuster.prepareAdjustment(outcome.probability, new double[]{pass_rate});
+        chanceAdjuster.prepareAdjustment(outcome.probability, new double[] { pass_rate });
 
         // Reinforce the filter with the pass rate for each point
         for (int i = 0; i < outcome.sourceNodes.length; i++) {
             INode sourceNode = outcome.sourceNodes[i];
+
             double error_derivative = outcome.errorOfOutcome.getAverage();
             Arc arc = getIncomingConnectionFrom(sourceNode).get(); // should be guaranteed to exist
-            if(arc.filterAdjuster != null){
+
+            // if the error is not defined and the pass rate is 0, then zero error should be
+            // expected
+            if (Double.isNaN(error_derivative) && pass_rate == 0) {
+                error_derivative = 0;
+            }
+            assert !Double.isNaN(error_derivative);
+
+            if (arc.filterAdjuster != null) {
                 double shifted_value = outcome.sourceOutcomes[i].activatedValue - error_derivative;
-                assert Double.isFinite(shifted_value);
                 double prob = outcome.sourceOutcomes[i].probability;
-                arc.filterAdjuster.prepareAdjustment(prob, new double[]{shifted_value, pass_rate, outputDistribution.getProbabilityDensity(shifted_value)});
+                arc.filterAdjuster.prepareAdjustment(prob, new double[] { shifted_value, pass_rate,
+                        outputDistribution.getProbabilityDensity(shifted_value) });
             }
         }
 
@@ -819,7 +843,7 @@ public abstract class NodeBase implements INode {
     @Override
     public String toString() {
         return name + ": " + outcomes.stream()
-                //.filter(outcome -> outcome.probability > 0)
+                // .filter(outcome -> outcome.probability > 0)
                 .sorted(Outcome::descendingProbabilitiesComparator)
                 .toList()
                 .toString();

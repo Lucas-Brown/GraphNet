@@ -13,6 +13,7 @@ import com.lucasbrown.GraphNetwork.Local.Nodes.OutputNode;
 import com.lucasbrown.GraphNetwork.Local.Nodes.SimpleNode;
 import com.lucasbrown.NetworkTraining.ApproximationTools.ErrorFunction;
 import com.lucasbrown.NetworkTraining.DataSetTraining.BetaDistribution;
+import com.lucasbrown.NetworkTraining.DataSetTraining.BetaDistributionAdjuster2;
 import com.lucasbrown.NetworkTraining.DataSetTraining.BetaDistributionFromData;
 import com.lucasbrown.NetworkTraining.DataSetTraining.IExpectationAdjuster;
 import com.lucasbrown.NetworkTraining.DataSetTraining.IFilter;
@@ -60,9 +61,9 @@ public class RepeaterTest {
         nodeBuilder.setActivationFunction(ActivationFunction.LINEAR);
         nodeBuilder.setNodeConstructor(ComplexNode::new);
         nodeBuilder.setOutputDistSupplier(NormalDistribution::getStandardNormalDistribution);
-        nodeBuilder.setOutputDistAdjusterSupplier(NormalDistributionFromData::new);
+        // nodeBuilder.setOutputDistAdjusterSupplier(NormalDistributionFromData::new);
         nodeBuilder.setProbabilityDistSupplier(BetaDistribution::getUniformBetaDistribution);
-        nodeBuilder.setProbabilityDistAdjusterSupplier(BetaDistributionFromData::new);
+        nodeBuilder.setProbabilityDistAdjusterSupplier(BetaDistributionAdjuster2::new);
 
         nodeBuilder.setAsInputNode();
         InputNode in = (InputNode) nodeBuilder.build();

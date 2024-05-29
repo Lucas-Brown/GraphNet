@@ -2,16 +2,12 @@ package com.lucasbrown.NetworkTraining.DataSetTraining;
 
 import java.security.InvalidParameterException;
 import java.util.ArrayList;
-import java.util.List;
 
 import com.lucasbrown.GraphNetwork.Global.GraphNetwork;
 
-import jsat.linear.DenseVector;
-import jsat.linear.Vec;
-import jsat.math.Function;
-import jsat.math.optimization.NelderMead;
-
 public class BetaDistributionAdjuster2 implements IExpectationAdjuster {
+
+    private final double alpha_prior, beta_prior, v_prior;
 
     private double alpha, beta, N;
 
@@ -26,6 +22,9 @@ public class BetaDistributionAdjuster2 implements IExpectationAdjuster {
     public BetaDistributionAdjuster2(BetaDistribution distribution) {
         this.distribution = distribution;
         newPoints = new ArrayList<>();
+        alpha_prior = distribution.getAlpha();
+        beta_prior = distribution.getBeta();
+        v_prior = alpha_prior + beta_prior;
     }
 
     public double getAlpha(){
@@ -73,8 +72,8 @@ public class BetaDistributionAdjuster2 implements IExpectationAdjuster {
 
         N = distribution.getNumberOfPointsInDistribution();
 
-        double mu0 = distribution.getMean();
-        double var2 = distribution.getVariance();
+        double mu0 = alpha_prior / v_prior;
+        double var2 = alpha_prior * beta_prior / (v_prior * v_prior * (v_prior + 1));
         double N_new = N + N_points;
 
         newPoints.forEach(wd -> wd.value = BetaDistribution.betaDataTransformation(wd.value, N_points));
