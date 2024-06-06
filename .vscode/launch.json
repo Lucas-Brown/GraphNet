@@ -6,6 +6,21 @@
     "configurations": [
         {
             "type": "java",
+            "name": "SplitterTest",
+            "request": "launch",
+            "mainClass": "com.lucasbrown.NetworkTraining.SplitterTest",
+            "projectName": "graph-net"
+        },
+        {
+            "type": "java",
+            "name": "AddSubMulTest",
+            "request": "launch",
+            "mainClass": "com.lucasbrown.NetworkTraining.AddSubMulTest",
+            "projectName": "graph-net",
+            "vmArgs": "-enableassertions"
+        },
+        {
+            "type": "java",
             "name": "RepeaterTest",
             "request": "launch",
             "mainClass": "com.lucasbrown.NetworkTraining.RepeaterTest",

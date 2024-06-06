@@ -87,7 +87,7 @@ public class History {
                 sb.append("Node ");
                 sb.append(nodeOutcome.getKey());
                 sb.append(": ");
-                sb.append(nodeOutcome.getValue().toString());
+                sb.append(nodeOutcome.getValue().stream().sorted(Outcome::descendingProbabilitiesComparator).limit(2).toList().toString());
                 sb.append("\n\t");
             }
             sb.append("\n\n");

@@ -15,11 +15,15 @@ import com.lucasbrown.NetworkTraining.ApproximationTools.ErrorFunction;
 import com.lucasbrown.NetworkTraining.DataSetTraining.BetaDistribution;
 import com.lucasbrown.NetworkTraining.DataSetTraining.BetaDistributionAdjuster2;
 import com.lucasbrown.NetworkTraining.DataSetTraining.BetaDistributionFromData;
+import com.lucasbrown.NetworkTraining.DataSetTraining.FlatRateFilter;
+import com.lucasbrown.NetworkTraining.DataSetTraining.FlatRateFilterBetaAdjuster;
 import com.lucasbrown.NetworkTraining.DataSetTraining.IExpectationAdjuster;
 import com.lucasbrown.NetworkTraining.DataSetTraining.IFilter;
 import com.lucasbrown.NetworkTraining.DataSetTraining.ITrainableDistribution;
+import com.lucasbrown.NetworkTraining.DataSetTraining.NoAdjustments;
 import com.lucasbrown.NetworkTraining.DataSetTraining.NormalBetaFilter;
 import com.lucasbrown.NetworkTraining.DataSetTraining.NormalBetaFilterAdjuster;
+import com.lucasbrown.NetworkTraining.DataSetTraining.NormalBetaFilterAdjuster2;
 import com.lucasbrown.NetworkTraining.DataSetTraining.NormalDistribution;
 import com.lucasbrown.NetworkTraining.DataSetTraining.NormalDistributionFromData;
 import com.lucasbrown.NetworkTraining.DataSetTraining.OpenFilter;
@@ -80,9 +84,9 @@ public class RepeaterTest {
 
         ArcBuilder arcBuilder = new ArcBuilder(net);
         arcBuilder.setFilterSupplier(NormalBetaFilter::getStandardNormalBetaFilter);
-        arcBuilder.setFilterAdjusterSupplier(NormalBetaFilterAdjuster::new);
-        // arcBuilder.setFilterSupplier(OpenFilter::new);
-        // arcBuilder.setFilterAdjusterSupplier((IFilter filter, ITrainableDistribution dist1, ITrainableDistribution dist2) -> (IExpectationAdjuster) null);
+        arcBuilder.setFilterAdjusterSupplier(NormalBetaFilterAdjuster2::new);
+        // arcBuilder.setFilterSupplier(() -> new FlatRateFilter(0.999));
+        // arcBuilder.setFilterAdjusterSupplier(NoAdjustments::new);
 
         arcBuilder.build(in, hidden);
         arcBuilder.build(hidden, hidden);
@@ -90,10 +94,10 @@ public class RepeaterTest {
 
 
         BackpropTrainer bt = new BackpropTrainer(net, new ErrorFunction.MeanSquaredError());
-        bt.epsilon = 0.001;
+        bt.epsilon = 0.01;
 
         bt.setTrainingData(repeater.inputData, repeater.outputData);
-        bt.trainNetwork(10000, 1);
+        bt.trainNetwork(100000, 1);
 
         net.deactivateAll();
         net.setInputOperation(nodeMap -> BackpropTrainer.applyInputToNode(nodeMap, repeater.inputData, counter++));

@@ -9,6 +9,7 @@ public class Outcome {
     public double netValue;
     public double activatedValue;
     public double probability;
+    public double[] sourceTransferProbabilities;
     public INode[] sourceNodes;
     public int[] sourceKeys;
     public Outcome[] sourceOutcomes;
@@ -54,6 +55,6 @@ public class Outcome {
     }
 
     public static int descendingProbabilitiesComparator(Outcome o1, Outcome o2){
-        return (int) (o2.probability - o1.probability);
+        return Double.compare(o2.probability, o1.probability);
     }
 }

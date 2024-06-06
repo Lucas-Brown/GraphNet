@@ -10,7 +10,7 @@ import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
 import com.lucasbrown.GraphNetwork.Local.Arc;
 import com.lucasbrown.GraphNetwork.Local.Outcome;
 import com.lucasbrown.GraphNetwork.Local.Signal;
-import com.lucasbrown.NetworkTraining.ApproximationTools.ArrayTools;
+import com.lucasbrown.NetworkTraining.ApproximationTools.IterableTools;
 import com.lucasbrown.NetworkTraining.DataSetTraining.IExpectationAdjuster;
 import com.lucasbrown.NetworkTraining.DataSetTraining.ITrainableDistribution;
 
@@ -64,7 +64,7 @@ public class SimpleNode extends NodeBase {
 
     @Override
     public double[] getWeights(int bitStr) {
-        return ArrayTools.applyMask(weights, bitStr);
+        return IterableTools.applyMask(weights, bitStr);
     }
 
     @Override
@@ -107,11 +107,11 @@ public class SimpleNode extends NodeBase {
         for (ArrayList<Outcome> outcomesAtTime : allOutcomes) {
             
             // Compute the probability volume of this timestep
-            double probabilityVolume = 0;
-            boolean atLeastOnePass = true;
+            double probabilityVolume = 1;
+            boolean atLeastOnePass = false;
             for (Outcome outcome : outcomesAtTime) {
                 probabilityVolume += outcome.probability;
-                atLeastOnePass &= outcome.passRate.hasValues();
+                atLeastOnePass |= outcome.passRate.hasValues();
             }
 
             // at least one outcome must have a chance to pass through 
@@ -129,21 +129,20 @@ public class SimpleNode extends NodeBase {
 
             // add error to the gradient
             for (Outcome outcome : outcomesAtTime) {
-                if(!outcome.passRate.hasValues()){
+                if(!outcome.passRate.hasValues() || outcome.errorOfOutcome.getProdSum() == 0){
                     continue;
                 }
                 
                 int key = outcome.binary_string;
 
-
-                double error = outcome.errorOfOutcome.getProdSum() / probabilityVolume;
+                double error = outcome.probability * outcome.errorOfOutcome.getAverage() / probabilityVolume;
                 assert Double.isFinite(error);
                 bias_gradient += error;
 
                 int i = 0;
                 while (key > 0) {
                     if ((key & 0b1) == 1) {
-                        weights_gradient[i] += error * outcome.sourceOutcomes[i].activatedValue;
+                        weights_gradient[i] += error * outcome.sourceOutcomes[i].netValue;
                         i++;
                     }
                     key = key >> 0b1;
@@ -151,7 +150,11 @@ public class SimpleNode extends NodeBase {
             }
         }//:D heehee ~ Jess hi :) i love you 
         
-        assert T > 0;
+        //assert T > 0;
+
+        if(T == 0){
+            return;
+        }
 
         // test for approximate error
         //double foo = allOutcomes.stream().flatMap(outcomeList -> outcomeList.stream()).mapToDouble(outcome -> outcome.errorOfOutcome.getProdSum()).average().getAsDouble();

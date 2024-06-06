@@ -18,14 +18,15 @@ import com.lucasbrown.NetworkTraining.DataSetTraining.IFilter;
 import com.lucasbrown.NetworkTraining.DataSetTraining.ITrainableDistribution;
 import com.lucasbrown.NetworkTraining.DataSetTraining.NormalBetaFilter;
 import com.lucasbrown.NetworkTraining.DataSetTraining.NormalBetaFilterAdjuster;
+import com.lucasbrown.NetworkTraining.DataSetTraining.NormalBetaFilterAdjuster2;
 import com.lucasbrown.NetworkTraining.DataSetTraining.NormalDistribution;
 import com.lucasbrown.NetworkTraining.DataSetTraining.OpenFilter;
 
 public class FibonacciNetworkTest {
 
     private static int counter = 0;
-    private int offset = 3;
-    private int N = 7;
+    private int offset = 2;
+    private int N = 10;
     private Double[][] inputData;
     private Double[][] outputData;
 
@@ -95,7 +96,7 @@ public class FibonacciNetworkTest {
         // arcBuilder.setFilterSupplier(OpenFilter::new);
         // arcBuilder.setFilterAdjusterSupplier((IFilter filter, ITrainableDistribution dist1, ITrainableDistribution dist2) -> null);
         arcBuilder.setFilterSupplier(NormalBetaFilter::getStandardNormalBetaFilter);
-        arcBuilder.setFilterAdjusterSupplier(NormalBetaFilterAdjuster::new);
+        arcBuilder.setFilterAdjusterSupplier(NormalBetaFilterAdjuster2::new);
 
         arcBuilder.build(in, hidden1);
         arcBuilder.build(hidden1, hidden2);
@@ -105,10 +106,10 @@ public class FibonacciNetworkTest {
 
 
         BackpropTrainer bt = new BackpropTrainer(net, new ErrorFunction.MeanSquaredError());
-        bt.epsilon = 0.01;
+        bt.epsilon = 0.1;
 
         bt.setTrainingData(fibNet.inputData, fibNet.outputData);
-        bt.trainNetwork(100000, 1000);
+        bt.trainNetwork(100000, 10);
 
         net.deactivateAll();
         net.setInputOperation(nodeMap -> BackpropTrainer.applyInputToNode(nodeMap, fibNet.inputData, counter++));

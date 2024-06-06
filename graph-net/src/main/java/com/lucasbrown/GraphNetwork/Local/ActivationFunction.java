@@ -21,6 +21,7 @@ public interface ActivationFunction {
     public abstract double inverseDerivative(double x);
 
     public static final Linear LINEAR = new Linear();
+    public static final RectifiedLinearUnit ReLU = new RectifiedLinearUnit();
     public static final SignedQuadratic SIGNED_QUADRATIC = new SignedQuadratic();
     public static final SignedLogarithmic SIGNED_LOGARITHMIC = new SignedLogarithmic();
 
@@ -47,6 +48,63 @@ public interface ActivationFunction {
         }
 
     }
+
+    
+    static class RectifiedLinearUnit implements ActivationFunction {
+
+        @Override
+        public double activator(double x) {
+            return x < 0 ? 0 : x;
+        }
+
+        @Override
+        public double derivative(double x) {
+            return x < 0 ? 0 : 1;
+        }
+
+        @Override
+        public double inverse(double x) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public double inverseDerivative(double x) {
+            throw new UnsupportedOperationException();
+        }
+
+    }
+
+    
+    public static class LeakyRectifiedLinearUnit implements ActivationFunction {
+
+        private final double alpha;
+
+        public LeakyRectifiedLinearUnit(double alpha){
+            this.alpha = alpha;
+        }
+
+        @Override
+        public double activator(double x) {
+            return x < 0 ? x*alpha : x;
+        }
+
+        @Override
+        public double derivative(double x) {
+            return x < 0 ? alpha : 1;
+        }
+
+        @Override
+        public double inverse(double x) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public double inverseDerivative(double x) {
+            throw new UnsupportedOperationException();
+        }
+
+    }
+
 
     static class SignedQuadratic implements ActivationFunction {
 

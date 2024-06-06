@@ -12,13 +12,13 @@ import com.lucasbrown.GraphNetwork.Local.Nodes.SimpleNode;
 import com.lucasbrown.NetworkTraining.ApproximationTools.ErrorFunction;
 import com.lucasbrown.NetworkTraining.DataSetTraining.BetaDistribution;
 import com.lucasbrown.NetworkTraining.DataSetTraining.BetaDistributionAdjuster;
-import com.lucasbrown.NetworkTraining.DataSetTraining.BetaDistributionAdjuster2;
+import com.lucasbrown.NetworkTraining.DataSetTraining.NoAdjustments;
 import com.lucasbrown.NetworkTraining.DataSetTraining.NormalBetaFilter;
-import com.lucasbrown.NetworkTraining.DataSetTraining.NormalBetaFilterAdjuster;
 import com.lucasbrown.NetworkTraining.DataSetTraining.NormalBetaFilterAdjuster2;
 import com.lucasbrown.NetworkTraining.DataSetTraining.NormalDistribution;
+import com.lucasbrown.NetworkTraining.DataSetTraining.OpenFilter;
 
-public class LinearDataBackpropTraining {
+public class SplitterTest {
     
     private static int counter = 0;
 
@@ -36,16 +36,16 @@ public class LinearDataBackpropTraining {
 
     private void initializeOutputData()
     {
-        outputData = new Double[N][1];
+        outputData = new Double[N][2];
         for (int i = 0; i < N; i++) {
-            outputData[(i + 2) % N] = new Double[]{Double.valueOf(i)};
+            outputData[(i + 1) % N] = new Double[]{Double.valueOf(i), Double.valueOf(2*i - 1)};
         }
     } 
 
     public static void main(String[] args){
-        LinearDataBackpropTraining linear = new LinearDataBackpropTraining();
-        linear.initializeInputData();
-        linear.initializeOutputData();
+        SplitterTest split = new SplitterTest();
+        split.initializeInputData();
+        split.initializeOutputData();
 
         GraphNetwork net = new GraphNetwork();
 
@@ -60,32 +60,32 @@ public class LinearDataBackpropTraining {
         nodeBuilder.setAsInputNode();
         InputNode in = (InputNode) nodeBuilder.build();
 
-        nodeBuilder.setAsHiddenNode();
-        INode hidden = nodeBuilder.build();
-
         nodeBuilder.setAsOutputNode();
-        OutputNode out = (OutputNode) nodeBuilder.build();
+        OutputNode out1 = (OutputNode) nodeBuilder.build();
+        OutputNode out2 = (OutputNode) nodeBuilder.build();
 
         in.setName("Input");
-        hidden.setName("Hidden");
-        out.setName("Output");
+        out1.setName("Output 1");
+        out2.setName("Output 2");
 
         ArcBuilder arcBuilder = new ArcBuilder(net);
+        // arcBuilder.setFilterSupplier(OpenFilter::new);
+        // arcBuilder.setFilterAdjusterSupplier(NoAdjustments::new);
         arcBuilder.setFilterSupplier(NormalBetaFilter::getStandardNormalBetaFilter);
         arcBuilder.setFilterAdjusterSupplier(NormalBetaFilterAdjuster2::new);
 
-        arcBuilder.build(in, hidden);
-        arcBuilder.build(hidden, out);
+        arcBuilder.build(in, out1);
+        arcBuilder.build(in, out2);
 
         BackpropTrainer bt = new BackpropTrainer(net, new ErrorFunction.MeanSquaredError());
         bt.epsilon = 0.1;
 
-        bt.setTrainingData(linear.inputData, linear.outputData);
+        bt.setTrainingData(split.inputData, split.outputData);
 
         bt.trainNetwork(10000, 100);
         net.deactivateAll();
-        net.setInputOperation(nodeMap -> BackpropTrainer.applyInputToNode(nodeMap, linear.inputData, counter++));
-        for (int i = 0; i < linear.inputData.length; i++) {
+        net.setInputOperation(nodeMap -> BackpropTrainer.applyInputToNode(nodeMap, split.inputData, counter++));
+        for (int i = 0; i < split.inputData.length; i++) {
             net.trainingStep();
             System.out.println(net);
         }

@@ -20,7 +20,7 @@ public class NormalBetaFilter implements IFilter{
     }
 
     public NormalBetaFilter(double mean, double variance){
-        this(mean, variance, 10);
+        this(mean, variance, 0);
     }
 
     public double getMean(){

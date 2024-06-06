@@ -140,10 +140,10 @@ public class ComplexNode extends NodeBase {
 
             // Compute the probability volume of this timestep
             double probabilityVolume = 0;
-            boolean atLeastOnePass = true;
+            boolean atLeastOnePass = false;
             for (Outcome outcome : outcomesAtTime) {
                 probabilityVolume += outcome.probability;
-                atLeastOnePass &= outcome.passRate.hasValues();
+                atLeastOnePass |= outcome.passRate.hasValues();
             }
 
             // at least one outcome must have a chance to pass through 
@@ -161,9 +161,13 @@ public class ComplexNode extends NodeBase {
 
             // add error to the gradient
             for (Outcome outcome : outcomesAtTime) {
+                if(!outcome.passRate.hasValues() || outcome.errorOfOutcome.getProdSum() == 0){
+                    continue;
+                }
+                
                 int key = outcome.binary_string;
 
-                double error = outcome.errorOfOutcome.getProdSum() / probabilityVolume;
+                double error = outcome.probability * outcome.errorOfOutcome.getProdSum() / probabilityVolume;
                 assert Double.isFinite(error);
                 bias_gradient[key] += error;
 

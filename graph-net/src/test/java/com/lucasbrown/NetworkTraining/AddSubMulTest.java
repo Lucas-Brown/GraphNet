@@ -11,6 +11,7 @@ import com.lucasbrown.GraphNetwork.Global.NodeBuilder;
 import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
 import com.lucasbrown.GraphNetwork.Local.Arc;
 import com.lucasbrown.GraphNetwork.Local.Nodes.ComplexNode;
+import com.lucasbrown.GraphNetwork.Local.Nodes.INode;
 import com.lucasbrown.GraphNetwork.Local.Nodes.InputNode;
 import com.lucasbrown.GraphNetwork.Local.Nodes.NodeBase;
 import com.lucasbrown.GraphNetwork.Local.Nodes.OutputNode;
@@ -23,27 +24,26 @@ import com.lucasbrown.NetworkTraining.DataSetTraining.BetaDistributionFromData2;
 import com.lucasbrown.NetworkTraining.DataSetTraining.IExpectationAdjuster;
 import com.lucasbrown.NetworkTraining.DataSetTraining.IFilter;
 import com.lucasbrown.NetworkTraining.DataSetTraining.ITrainableDistribution;
+import com.lucasbrown.NetworkTraining.DataSetTraining.NoAdjustments;
 import com.lucasbrown.NetworkTraining.DataSetTraining.NormalBetaFilter;
 import com.lucasbrown.NetworkTraining.DataSetTraining.NormalBetaFilterAdjuster;
-import com.lucasbrown.NetworkTraining.DataSetTraining.NormalBetaFilterAdjuster2;
 import com.lucasbrown.NetworkTraining.DataSetTraining.NormalDistribution;
 import com.lucasbrown.NetworkTraining.DataSetTraining.NormalDistributionFromData;
 import com.lucasbrown.NetworkTraining.DataSetTraining.OpenFilter;
 
-public class AdderTest {
+public class AddSubMulTest {
 
     private static Random rng = new Random();
     private static int counter = 0;
 
     private int N = 100;
-    private Double[][] inputData = new Double[][] { new Double[] { 1d, null, null }, new Double[] { null, null, null },
-            new Double[] { 2d, 1d, 3d } };
-    private Double[][] outputData = new Double[][] { new Double[] { 6d }, new Double[] { 1d }, new Double[] { null } };
+    private Double[][] inputData;
+    private Double[][] outputData;
 
     private void initializeInputData() {
         inputData = new Double[N][1];
         for (int i = 0; i < N; i++) {
-            inputData[i] = new Double[] { doubleOrNothing(), doubleOrNothing(), doubleOrNothing() };
+            inputData[i] = new Double[] { rng.nextGaussian(), rng.nextGaussian()};
             // if(inputData[i][0] == null & inputData[i][1] == null & inputData[i][2] ==
             // null){
             // i--;
@@ -52,34 +52,28 @@ public class AdderTest {
     }
 
     private void initializeOutputData() {
-        outputData = new Double[N][1];
+        outputData = new Double[N][3];
         for (int i = 0; i < N; i++) {
             Double[] data = inputData[i];
-            if (Stream.of(data).allMatch(Objects::isNull)) {
-                outputData[(i + 1) % N] = new Double[] { null };
-            } else {
-                outputData[(i + 1) % N] = new Double[] {
-                        Stream.of(inputData[i]).filter(Objects::nonNull).mapToDouble(d -> d).sum() };
-            }
-
+            outputData[(i + 3) % N] = new Double[]{
+                data[0] + data[1],
+                data[0] - data[1],
+                data[1] - data[0]
+            };
         }
     }
 
-    private Double doubleOrNothing() {
-        return rng.nextBoolean() ? rng.nextGaussian() : null;
-    }
-
     public static void main(String[] args) {
-        AdderTest adder = new AdderTest();
-        adder.initializeInputData();
-        adder.initializeOutputData();
+        AddSubMulTest operator = new AddSubMulTest();
+        operator.initializeInputData();
+        operator.initializeOutputData();
 
         GraphNetwork net = new GraphNetwork();
 
         NodeBuilder nodeBuilder = new NodeBuilder(net);
 
         nodeBuilder.setActivationFunction(ActivationFunction.LINEAR);
-        nodeBuilder.setNodeConstructor(ComplexNode::new);
+        nodeBuilder.setNodeConstructor(SimpleNode::new);
         nodeBuilder.setOutputDistSupplier(NormalDistribution::getStandardNormalDistribution);
         // nodeBuilder.setOutputDistAdjusterSupplier(NormalDistributionFromData::new);
         nodeBuilder.setProbabilityDistSupplier(BetaDistribution::getUniformBetaDistribution);
@@ -89,36 +83,66 @@ public class AdderTest {
 
         InputNode in1 = (InputNode) nodeBuilder.build();
         InputNode in2 = (InputNode) nodeBuilder.build();
-        InputNode in3 = (InputNode) nodeBuilder.build();
+
+        nodeBuilder.setAsHiddenNode();
+
+        INode hidden1_1 = nodeBuilder.build();
+        INode hidden1_2 = nodeBuilder.build();
+        INode hidden1_3 = nodeBuilder.build();
+        INode hidden2_1 = nodeBuilder.build();
+        INode hidden2_2 = nodeBuilder.build();
+        INode hidden2_3 = nodeBuilder.build();
 
         nodeBuilder.setAsOutputNode();
 
-        OutputNode out = (OutputNode) nodeBuilder.build();
-
-        in1.setName("Input 1");
-        in2.setName("Input 2");
-        in3.setName("Input 3");
-        out.setName("Output");
+        OutputNode out1 = (OutputNode) nodeBuilder.build();
+        OutputNode out2 = (OutputNode) nodeBuilder.build();
+        OutputNode out3 = (OutputNode) nodeBuilder.build();
 
         ArcBuilder arcBuilder = new ArcBuilder(net);
-        // arcBuilder.setFilterSupplier(OpenFilter::new);
-        // arcBuilder.setFilterAdjusterSupplier((IFilter filter, ITrainableDistribution dist1, ITrainableDistribution dist2) -> (IExpectationAdjuster) null);
-        arcBuilder.setFilterSupplier(NormalBetaFilter::getStandardNormalBetaFilter);
-        arcBuilder.setFilterAdjusterSupplier(NormalBetaFilterAdjuster2::new);
+        arcBuilder.setFilterSupplier(OpenFilter::new);
+        arcBuilder.setFilterAdjusterSupplier(NoAdjustments::new);
+        // arcBuilder.setFilterSupplier(NormalBetaFilter::getStandardNormalBetaFilter);
+        // arcBuilder.setFilterAdjusterSupplier(NormalBetaFilterAdjuster::new);
 
-        arcBuilder.build(in1, out);
-        arcBuilder.build(in2, out);
-        arcBuilder.build(in3, out);
+        // may need to write a dense layer builder
+        arcBuilder.build(in1, hidden1_1);
+        arcBuilder.build(in1, hidden1_2);
+        arcBuilder.build(in1, hidden1_3);
+        arcBuilder.build(in2, hidden1_1);
+        arcBuilder.build(in2, hidden1_2);
+        arcBuilder.build(in2, hidden1_3);
+
+        arcBuilder.build(hidden1_1, hidden2_1);
+        arcBuilder.build(hidden1_1, hidden2_2);
+        arcBuilder.build(hidden1_1, hidden2_3);
+        arcBuilder.build(hidden1_2, hidden2_1);
+        arcBuilder.build(hidden1_2, hidden2_2);
+        arcBuilder.build(hidden1_2, hidden2_3);
+        arcBuilder.build(hidden1_3, hidden2_1);
+        arcBuilder.build(hidden1_3, hidden2_2);
+        arcBuilder.build(hidden1_3, hidden2_3);
+        
+
+        arcBuilder.build(hidden2_1, out1);
+        arcBuilder.build(hidden2_2, out1);
+        arcBuilder.build(hidden2_3, out1);
+        arcBuilder.build(hidden2_1, out2);
+        arcBuilder.build(hidden2_2, out2);
+        arcBuilder.build(hidden2_3, out2);
+        arcBuilder.build(hidden2_1, out3);
+        arcBuilder.build(hidden2_2, out3);
+        arcBuilder.build(hidden2_3, out3);
 
         BackpropTrainer bt = new BackpropTrainer(net, new ErrorFunction.MeanSquaredError());
-        bt.epsilon = 1;
+        bt.epsilon = 0.01;
 
-        bt.setTrainingData(adder.inputData, adder.outputData);
+        bt.setTrainingData(operator.inputData, operator.outputData);
 
         bt.trainNetwork(10000, 100);
         net.deactivateAll();
-        net.setInputOperation(nodeMap -> BackpropTrainer.applyInputToNode(nodeMap, adder.inputData, counter++));
-        for (int i = 0; i < adder.inputData.length; i++) {
+        net.setInputOperation(nodeMap -> BackpropTrainer.applyInputToNode(nodeMap, operator.inputData, counter++));
+        for (int i = 0; i < operator.inputData.length; i++) {
             net.trainingStep();
             System.out.println(net);
         }

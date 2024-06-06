@@ -33,7 +33,7 @@ public class ArrayToolsTest {
         expected.add(new HashSet<>(List.of(d1, d2)));
         expected.add(new HashSet<>(List.of(d1, d3)));
 
-        HashSet<HashSet<Double>> powProduct = ArrayTools.flatCartesianPowerProduct(setSet);
+        HashSet<HashSet<Double>> powProduct = IterableTools.flatCartesianPowerProduct(setSet);
 
         assertEquals(expected, powProduct);
     }
@@ -53,7 +53,7 @@ public class ArrayToolsTest {
         expected.add(new HashSet<>(List.of(d1, d2, d4)));
         expected.add(new HashSet<>(List.of(d1, d2, d5)));
 
-        HashSet<HashSet<Double>> product = ArrayTools.flatCartesianProduct(setSet);
+        HashSet<HashSet<Double>> product = IterableTools.flatCartesianProduct(setSet);
      
         assertEquals(expected, product);
     }
@@ -73,7 +73,7 @@ public class ArrayToolsTest {
         expected.add(new HashSet<>(List.of(d1, d2)));
         expected.add(new HashSet<>(List.of(d1, d3)));
 
-        HashSet<HashSet<Double>> product = ArrayTools.flatCartesianProduct(set1, set2);
+        HashSet<HashSet<Double>> product = IterableTools.flatCartesianProduct(set1, set2);
      
         assertEquals(expected, product);
     }
@@ -92,7 +92,7 @@ public class ArrayToolsTest {
         truePowerSet.add(new HashSet<>(List.of(d1, d2)));
         truePowerSet.add(new HashSet<>(List.of(d0, d1, d2)));
 
-        HashSet<HashSet<Double>> powerSet = ArrayTools.powerSet(set);
+        HashSet<HashSet<Double>> powerSet = IterableTools.powerSet(set);
 
         assertEquals(truePowerSet, powerSet);
     }

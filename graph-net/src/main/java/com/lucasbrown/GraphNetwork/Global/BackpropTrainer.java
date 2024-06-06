@@ -97,6 +97,13 @@ public class BackpropTrainer {
     private void computeErrorOfOutput(OutputNode node, int timestep, Double target){
         ArrayList<Outcome> outcomes = networkHistory.getStateOfNode(timestep, node.getID());
         if(outcomes == null){
+            // if(target != null){
+            //     Outcome fakeOutcome = new Outcome();
+            //     fakeOutcome.probability = 1;
+            //     fakeOutcome.passRate.add(1, 1);
+            //     fakeOutcome.sourceNodes = new INode[0];
+            //     node.adjustProbabilitiesForOutcome(fakeOutcome);
+            // }
             return;
         }
 
