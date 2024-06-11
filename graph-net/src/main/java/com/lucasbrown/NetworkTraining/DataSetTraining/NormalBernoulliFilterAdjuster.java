@@ -2,14 +2,11 @@ package com.lucasbrown.NetworkTraining.DataSetTraining;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.DoubleUnaryOperator;
 
 import com.lucasbrown.GraphNetwork.Global.GraphNetwork;
 import com.lucasbrown.NetworkTraining.ApproximationTools.DoubleFunction;
 import com.lucasbrown.NetworkTraining.ApproximationTools.IntegralTransformations;
-import com.lucasbrown.NetworkTraining.ApproximationTools.LinearInterpolation2D;
-import com.lucasbrown.NetworkTraining.ApproximationTools.LinearRange;
-import com.lucasbrown.NetworkTraining.ApproximationTools.MultiplicitiveRange;
-import com.lucasbrown.NetworkTraining.ApproximationTools.Range;
 
 import jsat.linear.DenseVector;
 import jsat.linear.Vec;
@@ -32,12 +29,12 @@ import jsat.math.optimization.NelderMead;
  * maximize
  * the likelihood of the observed data.
  */
-public class NormalBetaFilterAdjuster implements IExpectationAdjuster, Function {
+public class NormalBernoulliFilterAdjuster implements IExpectationAdjuster, Function {
 
     // Constants for optimization and numerical accuracy
     private static final double TOLLERANCE = 1E-6; // Tolerance for convergence in optimization
+    private static final int INTEGRATION_DIVISIONS = 100; 
     private static final int NM_ITTERATION_LIMIT = 1000; // Max iterations for Nelder-Mead optimization
-    private static double ACCURACY = 1E-12;
 
     // Precomputed mathematical constants for efficiency
     protected static final double root_pi = Math.sqrt(Math.PI);
@@ -47,19 +44,19 @@ public class NormalBetaFilterAdjuster implements IExpectationAdjuster, Function 
     // Filter components and adjustable parameters
     protected final NormalPeakFilter filter; // The filter being adjusted
     protected final NormalDistribution nodeDistribution; // Distribution of node values
-    protected final BetaDistribution arcDistribution; // Distribution of observation success
+    protected final BernoulliDistribution arcDistribution; // Distribution of observation success
     protected double mean, variance, N; // Current mean, variance, and sample size of the filter
 
     // Data points to be used for adjustment
     private ArrayList<WeightedPoint<FilterPoint>> adjustementPoints;
 
-    public NormalBetaFilterAdjuster(IFilter filter, ITrainableDistribution nodeDistribution,
+    public NormalBernoulliFilterAdjuster(IFilter filter, ITrainableDistribution nodeDistribution,
             ITrainableDistribution arcDistribution) {
-        this((NormalPeakFilter) filter, (NormalDistribution) nodeDistribution, (BetaDistribution) arcDistribution);
+        this((NormalPeakFilter) filter, (NormalDistribution) nodeDistribution, (BernoulliDistribution) arcDistribution);
     }
 
-    public NormalBetaFilterAdjuster(NormalPeakFilter filter, NormalDistribution nodeDistribution,
-            BetaDistribution arcDistribution) {
+    public NormalBernoulliFilterAdjuster(NormalPeakFilter filter, NormalDistribution nodeDistribution,
+    BernoulliDistribution arcDistribution) {
         this.filter = filter;
         this.nodeDistribution = nodeDistribution;
         this.arcDistribution = arcDistribution;
@@ -78,7 +75,7 @@ public class NormalBetaFilterAdjuster implements IExpectationAdjuster, Function 
      */
     @Override
     public void prepareAdjustment(double weight, double[] newData) {
-        prepareAdjustment(weight, newData[0], newData[1], newData[2]);
+        prepareAdjustment(weight, newData[0], newData[1]);
     }
 
     /**
@@ -91,8 +88,8 @@ public class NormalBetaFilterAdjuster implements IExpectationAdjuster, Function 
      * @param b      The beta observation (0 to 1) of the data point.
      * @param prob   The probability density of this point being selected
      */
-    public void prepareAdjustment(double weight, double x, double b, double prob) {
-        adjustementPoints.add(new WeightedPoint<FilterPoint>(weight, new FilterPoint(x, b, prob)));
+    public void prepareAdjustment(double weight, double x, double b) {
+        adjustementPoints.add(new WeightedPoint<FilterPoint>(weight, new FilterPoint(x, b)));
     }
 
     /**
@@ -125,9 +122,9 @@ public class NormalBetaFilterAdjuster implements IExpectationAdjuster, Function 
         List<Vec> init_points = new ArrayList<>(3); // Initial points for the optimization
 
         // Define three initial points around (0, 0)
-        init_points.add(new DenseVector(new double[] { -0.5, -0.5 }));
-        init_points.add(new DenseVector(new double[] { 0.5, -0.5 }));
-        init_points.add(new DenseVector(new double[] { 0, 0.5 }));
+        init_points.add(new DenseVector(new double[] { -0.2, -0.2 }));
+        init_points.add(new DenseVector(new double[] { 0.2, -0.2 }));
+        init_points.add(new DenseVector(new double[] { 0, 0.2 }));
 
         // Optimize the function (negative log-likelihood) to find the best shift and
         // scale
@@ -203,7 +200,7 @@ public class NormalBetaFilterAdjuster implements IExpectationAdjuster, Function 
      * @return The log-likelihood.
      */
     public double getLogLikelihood(double shift, double scale) {
-        double expected = N * getExpectedValueOfLogLikelihood(shift, scale);
+        double expected = getExpectedValueOfLikelihood(shift, scale);
         double sum = getSumOfWeightedPoints(shift, scale);
         return expected + sum;
     }
@@ -218,7 +215,7 @@ public class NormalBetaFilterAdjuster implements IExpectationAdjuster, Function 
      */
     public double getSumOfWeightedPoints(double shift, double scale) {
         return adjustementPoints.stream()
-                .mapToDouble(point -> getWeightedLogLikelihoodOfPoint(point, shift, scale))
+                .mapToDouble(point -> getWeightedLikelihoodOfPoint(point, shift, scale))
                 .sum();
     }
 
@@ -232,9 +229,9 @@ public class NormalBetaFilterAdjuster implements IExpectationAdjuster, Function 
      * @param scale The scaling factor applied to the variance of the filter.
      * @return The weighted log-likelihood of the data point.
      */
-    public double getWeightedLogLikelihoodOfPoint(WeightedPoint<FilterPoint> point, double shift, double scale) {
+    public double getWeightedLikelihoodOfPoint(WeightedPoint<FilterPoint> point, double shift, double scale) {
         FilterPoint fp = point.value;
-        return point.weight * getLogLikelihoodOfPoint(fp.x, fp.b, fp.prob, shift, scale);
+        return point.weight * getLikelihoodOfPoint(fp.x, fp.b, shift, scale);
     }
 
     /**
@@ -245,26 +242,25 @@ public class NormalBetaFilterAdjuster implements IExpectationAdjuster, Function 
      *
      * @param x     The observed value of the node.
      * @param b     The observed beta value (success or failure: 1 to 0).
-     * @param prob  The probability density.
      * @param shift The shift applied to the mean of the filter.
      * @param scale The scaling factor applied to the variance of the filter.
      * @return The log-likelihood of observing this data point.
      */
-    public double getLogLikelihoodOfPoint(double x, double b, double prob, double shift, double scale) {
+    public double getLikelihoodOfPoint(double x, double b, double shift, double scale) {
         // Calculate the full likelihood of observing x given the adjusted filter
         // parameters
-        double full_send = prob*NormalPeakFilter.likelihood(x, mean + shift, scale * variance);
+        double full_send = NormalPeakFilter.likelihood(x, mean + shift, scale * variance);
 
         // Handle different cases of the beta observation (b):
         if (b == 1) {
-            // Success: log-likelihood of the full probability
-            return Math.log(full_send);
+            // Success: likelihood of the full probability
+            return full_send;
         } else if (b == 0) {
-            // Failure: log-likelihood of the complementary probability (1 - full_send)
-            return (1 - b) * Math.log(1 - full_send);
+            // Failure: likelihood of the complementary probability (1 - full_send)
+            return 1-full_send;
         } else {
-            // Intermediate values of b: weighted combination of log-likelihoods
-            return b * Math.log(full_send) + (1 - b) * Math.log(1 - full_send);
+            // Intermediate values of b: weighted combination of likelihoods
+            return Math.pow(full_send/(1-full_send), b) * (1-full_send);
         }
     }
 
@@ -278,80 +274,26 @@ public class NormalBetaFilterAdjuster implements IExpectationAdjuster, Function 
      * @param scale The scaling factor applied to the variance of the filter.
      * @return The expected value of the log-likelihood.
      */
-    public double getExpectedValueOfLogLikelihood(double shift, double scale) {
-        double variance_x = nodeDistribution.getVariance();
+    public double getExpectedValueOfLikelihood(double shift, double scale) {
+        final double variance_x = nodeDistribution.getVariance();
         final double w = (mean - nodeDistribution.getMean() + shift) / (root_2 * variance_x);
-        double eta = variance_x / (scale * variance);
-        eta *= eta;
-        double alpha = arcDistribution.getAlpha();
-        double beta = arcDistribution.getBeta();
+        final double eta = Math.pow(variance_x / (scale * variance), 2);
+        final double p = arcDistribution.getP();
 
-        double A = getA(w, eta, variance_x);
-        double B = getB(w, eta, variance_x);
-
-        return (A * alpha + B * beta) / (alpha + beta);
+        return integrateOverX(p, w, eta);
     }
 
-    /**
-     * Solution to the integral:
-     * \frac{1}{\sqrt{\pi}}\int_{-\infty}^{\infty}\ln\left(\frac{1}{\sqrt{2\pi\sigma_{x}^{2}}}e^{-x^{2}}e^{-\eta\left(x-w\right)^{2}}\right)e^{-x^{2}}dx
-     * 
-     * @param w
-     * @param eta
-     * @param sigma_x
-     * @param mu
-     * @param mu_x
-     * @param sigma
-     * @return
-     */
-    public double getA(double w, double eta, double sigma_x) {
-        return -(1 + eta + 2 * w * w * eta + Math.log(2 * Math.PI * sigma_x * sigma_x)) / 2;
+    private double integrateOverX(double p, double w, double eta){
+        DoubleUnaryOperator transformed = t -> IntegralTransformations.hyperbolicTangentTransform(x -> integrand(x,p,w,eta), t);
+        return Trapezoidal.trapz(new DoubleFunction(transformed), -1d, 1d, INTEGRATION_DIVISIONS);
     }
 
-    /**
-     * Compute the integral:
-     * \frac{1}{\sqrt{\pi}}\int_{-\infty}^{\infty}\ln\left(1-\frac{1}{\sqrt{2\pi\sigma_{x}^{2}}}e^{-x^{2}}e^{-\eta\left(x-w\right)^{2}}\right)e^{-x^{2}}dx
-     * Using a finite series approximation: -\sum_{n=1}^{N}\frac{e^{-\frac{\left(n+1\right)n\eta w^{2}}{1+n+n\eta}}}{n\sqrt{1+n+n\eta}\left(2\pi\sigma_{x}^{2}\right)^{\frac{n}{2}}}
-     */
-    public double getB(double w, double eta, double sigma_x) {
+    private double integrand(double x, double p, double w, double eta){
+        double expectation_exponent = Math.exp(-eta*(x-w)*(x-w));
+        double expectation_value = p*Math.pow(expectation_exponent, N) + (1-p)*Math.pow(1-expectation_exponent, N);
 
-        // condition for the convergence of the integral
-        if(Math.exp(-eta*w*w/(eta+1))/root_2pi/sigma_x > 0.9999){
-            return Double.NEGATIVE_INFINITY;
-        }
-
-
-        double w2 = w * w;
-        // double prod_term = root_2pi*sigma_x;
-        // double prod_pow = 1;
-        double norm = Math.log(root_2pi*sigma_x);
-
-        double sum = 0;
-        double delta;
-        int n = 1;
-        do {
-            //prod_pow *= prod_term;
-            double n_eta = n*eta;
-            double denom = 1+n+n_eta;
-
-            // less expensive but unstable
-            // delta = Math.exp(-(n+1)*n_eta*w2/denom);
-            // delta /= Math.sqrt(denom);
-            // delta /= prod_pow;
-
-            // more expensive but more stable
-            double exponent = -(n+1)*n_eta*w2/denom;
-            exponent -= Math.log(n);
-            exponent -= Math.log(denom)/2;
-            exponent -= n*norm;
-            delta = Math.exp(exponent);
-            sum += delta;
-            n++;
-            assert Double.isFinite(delta);
-            //assert n < 100000;
-        } while (delta > ACCURACY);
-
-        return -sum;
+        double x_density = Math.exp(-x*x)/root_pi;
+        return expectation_value*x_density*expectation_exponent;
     }
 
     /**
@@ -365,9 +307,6 @@ public class NormalBetaFilterAdjuster implements IExpectationAdjuster, Function 
         // The success rate
         public double b;
 
-        // The probability density that this point was generated
-        public double prob;
-
         /**
          * Constructs a filter point from a x value and success rate pair
          * 
@@ -375,16 +314,14 @@ public class NormalBetaFilterAdjuster implements IExpectationAdjuster, Function 
          * @param b The success rate
          * @param b The probability density
          */
-        public FilterPoint(double x, double b, double prob) {
+        public FilterPoint(double x, double b) {
             this.x = x;
             this.b = b;
-            this.prob = prob;
         }
 
         @Override
         public String toString() {
-            return "value: " + Double.toString(x) + "\tb: " + Double.toString(b) + "\tprobability: "
-                    + Double.toString(prob);
+            return "value: " + Double.toString(x) + "\tb: " + Double.toString(b);
         }
     }
 

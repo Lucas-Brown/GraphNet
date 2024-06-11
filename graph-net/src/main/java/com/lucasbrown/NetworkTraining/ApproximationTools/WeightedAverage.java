@@ -18,6 +18,10 @@ public class WeightedAverage {
         return prodSum;
     }
 
+    public double getWeightSum(){
+        return weightSum;
+    }
+
     public double getAverage(){
         return prodSum / weightSum;
     }

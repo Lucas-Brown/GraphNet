@@ -13,7 +13,7 @@ import com.lucasbrown.NetworkTraining.ApproximationTools.ErrorFunction;
 import com.lucasbrown.NetworkTraining.DataSetTraining.BetaDistribution;
 import com.lucasbrown.NetworkTraining.DataSetTraining.BetaDistributionAdjuster;
 import com.lucasbrown.NetworkTraining.DataSetTraining.NoAdjustments;
-import com.lucasbrown.NetworkTraining.DataSetTraining.NormalBetaFilter;
+import com.lucasbrown.NetworkTraining.DataSetTraining.NormalPeakFilter;
 import com.lucasbrown.NetworkTraining.DataSetTraining.NormalBetaFilterAdjuster2;
 import com.lucasbrown.NetworkTraining.DataSetTraining.NormalDistribution;
 import com.lucasbrown.NetworkTraining.DataSetTraining.OpenFilter;
@@ -71,7 +71,7 @@ public class SplitterTest {
         ArcBuilder arcBuilder = new ArcBuilder(net);
         // arcBuilder.setFilterSupplier(OpenFilter::new);
         // arcBuilder.setFilterAdjusterSupplier(NoAdjustments::new);
-        arcBuilder.setFilterSupplier(NormalBetaFilter::getStandardNormalBetaFilter);
+        arcBuilder.setFilterSupplier(NormalPeakFilter::getStandardNormalBetaFilter);
         arcBuilder.setFilterAdjusterSupplier(NormalBetaFilterAdjuster2::new);
 
         arcBuilder.build(in, out1);

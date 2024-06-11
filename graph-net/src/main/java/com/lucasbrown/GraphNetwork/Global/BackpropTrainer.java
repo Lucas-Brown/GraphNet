@@ -97,13 +97,6 @@ public class BackpropTrainer {
     private void computeErrorOfOutput(OutputNode node, int timestep, Double target){
         ArrayList<Outcome> outcomes = networkHistory.getStateOfNode(timestep, node.getID());
         if(outcomes == null){
-            // if(target != null){
-            //     Outcome fakeOutcome = new Outcome();
-            //     fakeOutcome.probability = 1;
-            //     fakeOutcome.passRate.add(1, 1);
-            //     fakeOutcome.sourceNodes = new INode[0];
-            //     node.adjustProbabilitiesForOutcome(fakeOutcome);
-            // }
             return;
         }
 
@@ -115,10 +108,16 @@ public class BackpropTrainer {
         }
 
         for(Outcome outcome : outcomes){
-            outcome.passRate.add(1, 1);
-            outcome.errorOfOutcome.add(errorFunction.error_derivative(outcome.activatedValue, target), outcome.probability);
-            assert Double.isFinite(errorFunction.error(outcome.activatedValue, target));
-            total_error.add(errorFunction.error(outcome.activatedValue, target), outcome.probability);
+            if(timestep == this.timestep){
+                outcome.passRate.add(1-1d/timestep, 1);
+            }else{
+                outcome.passRate.add(1, 1);
+            }
+            outcome.errorDerivative.add(errorFunction.error_derivative(outcome.activatedValue, target), outcome.probability);
+
+            double error = errorFunction.error(outcome.activatedValue, target);
+            //assert Double.isFinite(errorFunction.error(outcome.activatedValue, target));
+            total_error.add(error, outcome.probability);
         }
         
     }

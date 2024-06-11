@@ -129,13 +129,13 @@ public class SimpleNode extends NodeBase {
 
             // add error to the gradient
             for (Outcome outcome : outcomesAtTime) {
-                if(!outcome.passRate.hasValues() || outcome.errorOfOutcome.getProdSum() == 0){
+                if(!outcome.passRate.hasValues() || outcome.errorDerivative.getProdSum() == 0){
                     continue;
                 }
                 
                 int key = outcome.binary_string;
 
-                double error = outcome.probability * outcome.errorOfOutcome.getAverage() / probabilityVolume;
+                double error = outcome.probability * outcome.errorDerivative.getAverage() / probabilityVolume;
                 assert Double.isFinite(error);
                 bias_gradient += error;
 

@@ -18,7 +18,7 @@ public class Outcome {
      * Accumulates the number of pass/fails for this signal. 
      */
     public WeightedAverage passRate = new WeightedAverage();
-    public WeightedAverage errorOfOutcome = new WeightedAverage();
+    public WeightedAverage errorDerivative = new WeightedAverage();
 
     @Override 
     public String toString()

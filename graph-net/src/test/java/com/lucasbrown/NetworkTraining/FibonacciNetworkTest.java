@@ -11,12 +11,15 @@ import com.lucasbrown.GraphNetwork.Local.Nodes.InputNode;
 import com.lucasbrown.GraphNetwork.Local.Nodes.OutputNode;
 import com.lucasbrown.GraphNetwork.Local.Nodes.SimpleNode;
 import com.lucasbrown.NetworkTraining.ApproximationTools.ErrorFunction;
+import com.lucasbrown.NetworkTraining.DataSetTraining.BernoulliDistribution;
+import com.lucasbrown.NetworkTraining.DataSetTraining.BernoulliDistributionAdjuster;
 import com.lucasbrown.NetworkTraining.DataSetTraining.BetaDistribution;
 import com.lucasbrown.NetworkTraining.DataSetTraining.BetaDistributionAdjuster;
 import com.lucasbrown.NetworkTraining.DataSetTraining.BetaDistributionAdjuster2;
 import com.lucasbrown.NetworkTraining.DataSetTraining.IFilter;
 import com.lucasbrown.NetworkTraining.DataSetTraining.ITrainableDistribution;
-import com.lucasbrown.NetworkTraining.DataSetTraining.NormalBetaFilter;
+import com.lucasbrown.NetworkTraining.DataSetTraining.NormalBernoulliFilterAdjuster;
+import com.lucasbrown.NetworkTraining.DataSetTraining.NormalPeakFilter;
 import com.lucasbrown.NetworkTraining.DataSetTraining.NormalBetaFilterAdjuster;
 import com.lucasbrown.NetworkTraining.DataSetTraining.NormalBetaFilterAdjuster2;
 import com.lucasbrown.NetworkTraining.DataSetTraining.NormalDistribution;
@@ -26,7 +29,7 @@ public class FibonacciNetworkTest {
 
     private static int counter = 0;
     private int offset = 2;
-    private int N = 10;
+    private int N = 20;
     private Double[][] inputData;
     private Double[][] outputData;
 
@@ -72,10 +75,10 @@ public class FibonacciNetworkTest {
         NodeBuilder nodeBuilder = new NodeBuilder(net);
 
         nodeBuilder.setActivationFunction(ActivationFunction.LINEAR);
-        nodeBuilder.setNodeConstructor(SimpleNode::new);
+        nodeBuilder.setNodeConstructor(ComplexNode::new);
         nodeBuilder.setOutputDistSupplier(NormalDistribution::getStandardNormalDistribution);
-        nodeBuilder.setProbabilityDistSupplier(BetaDistribution::getUniformBetaDistribution);
-        nodeBuilder.setProbabilityDistAdjusterSupplier(BetaDistributionAdjuster2::new);
+        nodeBuilder.setProbabilityDistSupplier(BernoulliDistribution::getEvenDistribution);
+        nodeBuilder.setProbabilityDistAdjusterSupplier(BernoulliDistributionAdjuster::new);
 
         nodeBuilder.setAsInputNode();
         InputNode in = (InputNode) nodeBuilder.build();
@@ -95,8 +98,8 @@ public class FibonacciNetworkTest {
         ArcBuilder arcBuilder = new ArcBuilder(net);
         // arcBuilder.setFilterSupplier(OpenFilter::new);
         // arcBuilder.setFilterAdjusterSupplier((IFilter filter, ITrainableDistribution dist1, ITrainableDistribution dist2) -> null);
-        arcBuilder.setFilterSupplier(NormalBetaFilter::getStandardNormalBetaFilter);
-        arcBuilder.setFilterAdjusterSupplier(NormalBetaFilterAdjuster2::new);
+        arcBuilder.setFilterSupplier(NormalPeakFilter::getStandardNormalBetaFilter);
+        arcBuilder.setFilterAdjusterSupplier(NormalBernoulliFilterAdjuster::new);
 
         arcBuilder.build(in, hidden1);
         arcBuilder.build(hidden1, hidden2);
@@ -106,10 +109,10 @@ public class FibonacciNetworkTest {
 
 
         BackpropTrainer bt = new BackpropTrainer(net, new ErrorFunction.MeanSquaredError());
-        bt.epsilon = 0.1;
+        bt.epsilon = 0.001;
 
         bt.setTrainingData(fibNet.inputData, fibNet.outputData);
-        bt.trainNetwork(100000, 10);
+        bt.trainNetwork(100000, 1);
 
         net.deactivateAll();
         net.setInputOperation(nodeMap -> BackpropTrainer.applyInputToNode(nodeMap, fibNet.inputData, counter++));

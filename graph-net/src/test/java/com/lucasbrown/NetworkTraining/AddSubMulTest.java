@@ -17,6 +17,8 @@ import com.lucasbrown.GraphNetwork.Local.Nodes.NodeBase;
 import com.lucasbrown.GraphNetwork.Local.Nodes.OutputNode;
 import com.lucasbrown.GraphNetwork.Local.Nodes.SimpleNode;
 import com.lucasbrown.NetworkTraining.ApproximationTools.ErrorFunction;
+import com.lucasbrown.NetworkTraining.DataSetTraining.BernoulliDistribution;
+import com.lucasbrown.NetworkTraining.DataSetTraining.BernoulliDistributionAdjuster;
 import com.lucasbrown.NetworkTraining.DataSetTraining.BetaDistribution;
 import com.lucasbrown.NetworkTraining.DataSetTraining.BetaDistributionAdjuster2;
 import com.lucasbrown.NetworkTraining.DataSetTraining.BetaDistributionFromData;
@@ -25,7 +27,8 @@ import com.lucasbrown.NetworkTraining.DataSetTraining.IExpectationAdjuster;
 import com.lucasbrown.NetworkTraining.DataSetTraining.IFilter;
 import com.lucasbrown.NetworkTraining.DataSetTraining.ITrainableDistribution;
 import com.lucasbrown.NetworkTraining.DataSetTraining.NoAdjustments;
-import com.lucasbrown.NetworkTraining.DataSetTraining.NormalBetaFilter;
+import com.lucasbrown.NetworkTraining.DataSetTraining.NormalBernoulliFilterAdjuster;
+import com.lucasbrown.NetworkTraining.DataSetTraining.NormalPeakFilter;
 import com.lucasbrown.NetworkTraining.DataSetTraining.NormalBetaFilterAdjuster;
 import com.lucasbrown.NetworkTraining.DataSetTraining.NormalDistribution;
 import com.lucasbrown.NetworkTraining.DataSetTraining.NormalDistributionFromData;
@@ -76,8 +79,8 @@ public class AddSubMulTest {
         nodeBuilder.setNodeConstructor(SimpleNode::new);
         nodeBuilder.setOutputDistSupplier(NormalDistribution::getStandardNormalDistribution);
         // nodeBuilder.setOutputDistAdjusterSupplier(NormalDistributionFromData::new);
-        nodeBuilder.setProbabilityDistSupplier(BetaDistribution::getUniformBetaDistribution);
-        nodeBuilder.setProbabilityDistAdjusterSupplier(BetaDistributionAdjuster2::new);
+        nodeBuilder.setProbabilityDistSupplier(BernoulliDistribution::getEvenDistribution);
+        nodeBuilder.setProbabilityDistAdjusterSupplier(BernoulliDistributionAdjuster::new);
 
         nodeBuilder.setAsInputNode();
 
@@ -100,10 +103,10 @@ public class AddSubMulTest {
         OutputNode out3 = (OutputNode) nodeBuilder.build();
 
         ArcBuilder arcBuilder = new ArcBuilder(net);
-        arcBuilder.setFilterSupplier(OpenFilter::new);
-        arcBuilder.setFilterAdjusterSupplier(NoAdjustments::new);
-        // arcBuilder.setFilterSupplier(NormalBetaFilter::getStandardNormalBetaFilter);
-        // arcBuilder.setFilterAdjusterSupplier(NormalBetaFilterAdjuster::new);
+        // arcBuilder.setFilterSupplier(OpenFilter::new);
+        // arcBuilder.setFilterAdjusterSupplier(NoAdjustments::new);
+        arcBuilder.setFilterSupplier(NormalPeakFilter::getStandardNormalBetaFilter);
+        arcBuilder.setFilterAdjusterSupplier(NormalBernoulliFilterAdjuster::new);
 
         // may need to write a dense layer builder
         arcBuilder.build(in1, hidden1_1);
@@ -135,11 +138,11 @@ public class AddSubMulTest {
         arcBuilder.build(hidden2_3, out3);
 
         BackpropTrainer bt = new BackpropTrainer(net, new ErrorFunction.MeanSquaredError());
-        bt.epsilon = 0.01;
+        bt.epsilon = 0.1;
 
         bt.setTrainingData(operator.inputData, operator.outputData);
 
-        bt.trainNetwork(10000, 100);
+        bt.trainNetwork(10000, 5);
         net.deactivateAll();
         net.setInputOperation(nodeMap -> BackpropTrainer.applyInputToNode(nodeMap, operator.inputData, counter++));
         for (int i = 0; i < operator.inputData.length; i++) {

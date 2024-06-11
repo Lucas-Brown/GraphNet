@@ -33,7 +33,7 @@ public abstract class NodeBase implements INode {
 
     // TODO: remove hard-coded value
     private static double ZERO_THRESHOLD = 1E-12;
-    private static int CATASTROPHE_LIMIT = 25;
+    private static int CATASTROPHE_LIMIT = 10;
 
     protected final Random rng = new Random();
 
@@ -396,7 +396,8 @@ public abstract class NodeBase implements INode {
     public void prepareOutputDistributionAdjustments(ArrayList<Outcome> allOutcomes) {
         for (Outcome o : allOutcomes) {
             // weigh the outcomes by their probability of occurring
-            double error = o.errorOfOutcome.hasValues() ? o.errorOfOutcome.getAverage() : 0;
+            // double error = o.errorOfOutcome.hasValues() ? o.errorOfOutcome.getAverage() : 0;
+            double error = 0;
             outputAdjuster.prepareAdjustment(o.probability, new double[] { o.activatedValue - error });
         }
     }
@@ -527,21 +528,46 @@ public abstract class NodeBase implements INode {
 
     @Override
     public void sendErrorsBackwards(Outcome outcomeAtTime) {
+        if(!outcomeAtTime.errorDerivative.hasValues()){
+            return;
+        }
+
         int binary_string = outcomeAtTime.binary_string;
-        double error_derivative = activationFunction.derivative(outcomeAtTime.netValue)
-                * outcomeAtTime.errorOfOutcome.getProdSum();
+        double error_derivative = outcomeAtTime.errorDerivative.getAverage() * activationFunction.derivative(outcomeAtTime.netValue);
+
+                
+        if(Math.abs(error_derivative) > 100000){
+            Math.abs(0);
+        }
+
+                
         double[] weightsOfNodes = getWeights(binary_string);
 
         for (int i = 0; i < weightsOfNodes.length; i++) {
-            if (!outcomeAtTime.passRate.hasValues()) {
+            if (!outcomeAtTime.passRate.hasValues() || outcomeAtTime.probability == 0) {
                 continue;
             }
             Outcome so = outcomeAtTime.sourceOutcomes[i];
-            double prob = outcomeAtTime.sourceTransferProbabilities[i];
+            
+            // Get the arc connectting the node to its source 
+            Arc arc = getIncomingConnectionFrom(outcomeAtTime.sourceNodes[i]).get();
+
+            // use the arc to predict the probability of this event
+            double shifted_value = so.activatedValue - error_derivative;
+            double prob = outcomeAtTime.probability * arc.filter.getChanceToSend(shifted_value) / outcomeAtTime.sourceTransferProbabilities[i];
+
+            // accumulate error :)
+            // accumulate BEAN! YAS
+            // goofball ;)
+            // just a lil bit
+            // <3
+            // <3
+            so.errorDerivative.add(error_derivative * weightsOfNodes[i], prob);
+
+            // accumulate pass rates
             double pass_avg = outcomeAtTime.passRate.getAverage();
             assert Double.isFinite(pass_avg);
             so.passRate.add(pass_avg, prob);
-            so.errorOfOutcome.add(error_derivative * weightsOfNodes[i], prob);
 
             // apply error as new point for the distribution
             // Arc connection =
@@ -566,7 +592,7 @@ public abstract class NodeBase implements INode {
         for (int i = 0; i < outcome.sourceNodes.length; i++) {
             INode sourceNode = outcome.sourceNodes[i];
 
-            double error_derivative = outcome.errorOfOutcome.getAverage();
+            double error_derivative = outcome.errorDerivative.getAverage();
             Arc arc = getIncomingConnectionFrom(sourceNode).get(); // should be guaranteed to exist
 
             // if the error is not defined and the pass rate is 0, then zero error should be
@@ -578,7 +604,7 @@ public abstract class NodeBase implements INode {
 
             if (arc.filterAdjuster != null) {
                 double shifted_value = outcome.sourceOutcomes[i].activatedValue - error_derivative;
-                double prob = outcome.probability / outcome.sourceTransferProbabilities[i];
+                double prob = outcome.probability * arc.filter.getChanceToSend(shifted_value) / outcome.sourceTransferProbabilities[i];
                 arc.filterAdjuster.prepareAdjustment(prob, new double[] { shifted_value, pass_rate });
             }
         }

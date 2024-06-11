@@ -23,7 +23,7 @@ import com.lucasbrown.NetworkTraining.DataSetTraining.BetaDistributionFromData2;
 import com.lucasbrown.NetworkTraining.DataSetTraining.IExpectationAdjuster;
 import com.lucasbrown.NetworkTraining.DataSetTraining.IFilter;
 import com.lucasbrown.NetworkTraining.DataSetTraining.ITrainableDistribution;
-import com.lucasbrown.NetworkTraining.DataSetTraining.NormalBetaFilter;
+import com.lucasbrown.NetworkTraining.DataSetTraining.NormalPeakFilter;
 import com.lucasbrown.NetworkTraining.DataSetTraining.NormalBetaFilterAdjuster;
 import com.lucasbrown.NetworkTraining.DataSetTraining.NormalBetaFilterAdjuster2;
 import com.lucasbrown.NetworkTraining.DataSetTraining.NormalDistribution;
@@ -103,7 +103,7 @@ public class AdderTest {
         ArcBuilder arcBuilder = new ArcBuilder(net);
         // arcBuilder.setFilterSupplier(OpenFilter::new);
         // arcBuilder.setFilterAdjusterSupplier((IFilter filter, ITrainableDistribution dist1, ITrainableDistribution dist2) -> (IExpectationAdjuster) null);
-        arcBuilder.setFilterSupplier(NormalBetaFilter::getStandardNormalBetaFilter);
+        arcBuilder.setFilterSupplier(NormalPeakFilter::getStandardNormalBetaFilter);
         arcBuilder.setFilterAdjusterSupplier(NormalBetaFilterAdjuster2::new);
 
         arcBuilder.build(in1, out);

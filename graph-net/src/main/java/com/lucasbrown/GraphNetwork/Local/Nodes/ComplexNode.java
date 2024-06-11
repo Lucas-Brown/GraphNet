@@ -161,21 +161,22 @@ public class ComplexNode extends NodeBase {
 
             // add error to the gradient
             for (Outcome outcome : outcomesAtTime) {
-                if(!outcome.passRate.hasValues() || outcome.errorOfOutcome.getProdSum() == 0){
+                if(!outcome.passRate.hasValues() || outcome.errorDerivative.getProdSum() == 0){
                     continue;
                 }
                 
                 int key = outcome.binary_string;
 
-                double error = outcome.probability * outcome.errorOfOutcome.getProdSum() / probabilityVolume;
+                double error = outcome.probability * outcome.errorDerivative.getAverage() / probabilityVolume;
                 assert Double.isFinite(error);
                 bias_gradient[key] += error;
 
                 for (int i = 0; i < weights[key].length; i++) {
-                    weights_gradient[key][i] += error * outcome.sourceOutcomes[i].activatedValue;
+                    weights_gradient[key][i] += error * outcome.sourceOutcomes[i].netValue;
                 }
             }
         }
+
 
         // divide all gradients by the number of non-empty timesteps
         for (int key = 1; key < getIncomingPowerSetSize(); key++) {

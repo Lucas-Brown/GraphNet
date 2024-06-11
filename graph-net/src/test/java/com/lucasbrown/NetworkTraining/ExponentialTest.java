@@ -31,9 +31,10 @@ import com.lucasbrown.NetworkTraining.DataSetTraining.NormalDistribution;
 import com.lucasbrown.NetworkTraining.DataSetTraining.NormalDistributionFromData;
 import com.lucasbrown.NetworkTraining.DataSetTraining.OpenFilter;
 
-public class RepeaterTest {
+public class ExponentialTest {
 
     private static int counter = 0;
+    private static double base = 2;
     private int N = 25;
     private Double[][] inputData;
     private Double[][] outputData;
@@ -50,16 +51,17 @@ public class RepeaterTest {
         outputData = new Double[N][1];
         outputData[0] = new Double[]{null};
         outputData[1] = new Double[]{null};
+        outputData[2] = new Double[]{1d};
 
-        for(int i = 2; i < N; i++){
-            outputData[i] = new Double[]{(double) i};
+        for(int i = 3; i < N; i++){
+            outputData[i] = new Double[]{outputData[i-1][0]*base};
         }
     }
 
     public static void main(String[] args) {
-        RepeaterTest repeater = new RepeaterTest();
-        repeater.initializeInputData();
-        repeater.initializeOutputData();
+        ExponentialTest exponentialGrowth = new ExponentialTest();
+        exponentialGrowth.initializeInputData();
+        exponentialGrowth.initializeOutputData();
 
         GraphNetwork net = new GraphNetwork();
 
@@ -86,10 +88,10 @@ public class RepeaterTest {
         out.setName("Output");
 
         ArcBuilder arcBuilder = new ArcBuilder(net);
-        arcBuilder.setFilterSupplier(NormalPeakFilter::getStandardNormalBetaFilter);
-        arcBuilder.setFilterAdjusterSupplier(NormalBernoulliFilterAdjuster::new);
-        // arcBuilder.setFilterSupplier(() -> new FlatRateFilter(0.999));
-        // arcBuilder.setFilterAdjusterSupplier(NoAdjustments::new);
+        // arcBuilder.setFilterSupplier(NormalPeakFilter::getStandardNormalBetaFilter);
+        // arcBuilder.setFilterAdjusterSupplier(NormalBernoulliFilterAdjuster::new);
+        arcBuilder.setFilterSupplier(() -> new FlatRateFilter(1));
+        arcBuilder.setFilterAdjusterSupplier(NoAdjustments::new);
 
         arcBuilder.build(in, hidden);
         arcBuilder.build(hidden, hidden);
@@ -97,14 +99,14 @@ public class RepeaterTest {
 
 
         BackpropTrainer bt = new BackpropTrainer(net, new ErrorFunction.MeanSquaredError());
-        bt.epsilon = 0.001;
+        bt.epsilon = 1;
 
-        bt.setTrainingData(repeater.inputData, repeater.outputData);
-        bt.trainNetwork(100000, 1000);
+        bt.setTrainingData(exponentialGrowth.inputData, exponentialGrowth.outputData);
+        bt.trainNetwork(100000, 1);
 
         net.deactivateAll();
-        net.setInputOperation(nodeMap -> BackpropTrainer.applyInputToNode(nodeMap, repeater.inputData, counter++));
-        for (int i = 0; i < repeater.inputData.length; i++) {
+        net.setInputOperation(nodeMap -> BackpropTrainer.applyInputToNode(nodeMap, exponentialGrowth.inputData, counter++));
+        for (int i = 0; i < exponentialGrowth.inputData.length; i++) {
             net.trainingStep();
             System.out.println(net);
         }

@@ -2,24 +2,24 @@ package com.lucasbrown.NetworkTraining.DataSetTraining;
 
 import java.util.Random;
 
-public class NormalBetaFilter implements IFilter{
+public class NormalPeakFilter implements IFilter{
 
     private final Random rng;
 
     private double mean, variance, N;
 
-    public NormalBetaFilter(double mean, double variance, double N, Random rng){
+    public NormalPeakFilter(double mean, double variance, double N, Random rng){
         this.mean = mean;
         this.variance = variance;
         this.N = N;
         this.rng = rng;
     }
 
-    public NormalBetaFilter(double mean, double variance, double N){
+    public NormalPeakFilter(double mean, double variance, double N){
         this(mean, variance, N, new Random());
     }
 
-    public NormalBetaFilter(double mean, double variance){
+    public NormalPeakFilter(double mean, double variance){
         this(mean, variance, 0);
     }
 
@@ -58,9 +58,9 @@ public class NormalBetaFilter implements IFilter{
         return Math.exp(-w*w/2);
     }
 
-    public static NormalBetaFilter getStandardNormalBetaFilter()
+    public static NormalPeakFilter getStandardNormalBetaFilter()
     {
-        return new NormalBetaFilter(0, 1);
+        return new NormalPeakFilter(0, 1);
     }
 
     

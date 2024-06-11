@@ -11,7 +11,7 @@ import jsat.linear.Vec;
 import jsat.math.Function;
 import jsat.math.optimization.NelderMead;
 
-public class BetaDistributionAdjuster implements Function, IExpectationAdjuster {
+public class BetaDistributionAdjuster extends WeightedDoubleCollector implements Function {
 
     private static final double TOLLERANCE = 1E-6; // tollerance for optimization
     private static final int NM_ITTERATION_LIMIT = 1000;
@@ -19,8 +19,6 @@ public class BetaDistributionAdjuster implements Function, IExpectationAdjuster 
     private double alpha, beta, N;
 
     private BetaDistribution distribution;
-
-    private ArrayList<WeightedDouble> newPoints;
 
     public BetaDistributionAdjuster(ITrainableDistribution distribution) {
         this((BetaDistribution) distribution);
@@ -60,24 +58,12 @@ public class BetaDistributionAdjuster implements Function, IExpectationAdjuster 
         return f(x.arrayCopy());
     }
 
+    @Override
     public void prepareAdjustment(double weight, double value) {
         if (value < 0 || value > 1) {
             throw new InvalidParameterException("The beta distribution is bounded between 0 and 1");
         }
-        newPoints.add(new WeightedDouble(weight, value));
-    }
-
-    @Override
-    public void prepareAdjustment(double weight, double[] newPoint) {
-        if(newPoint.length > 1){
-            throw new InvalidParameterException("This distribution only accepts a single degree of input. ");
-        }
-        prepareAdjustment(weight, newPoint[0]);
-    }
-
-    @Override
-    public void prepareAdjustment(double[] newData) {
-        prepareAdjustment(1, newData);
+        super.prepareAdjustment(weight, value);
     }
 
     @Override

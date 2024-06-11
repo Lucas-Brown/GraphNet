@@ -7,10 +7,6 @@ import java.util.function.DoubleUnaryOperator;
 import com.lucasbrown.GraphNetwork.Global.GraphNetwork;
 import com.lucasbrown.NetworkTraining.ApproximationTools.DoubleFunction;
 import com.lucasbrown.NetworkTraining.ApproximationTools.IntegralTransformations;
-import com.lucasbrown.NetworkTraining.ApproximationTools.LinearInterpolation2D;
-import com.lucasbrown.NetworkTraining.ApproximationTools.LinearRange;
-import com.lucasbrown.NetworkTraining.ApproximationTools.MultiplicitiveRange;
-import com.lucasbrown.NetworkTraining.ApproximationTools.Range;
 
 import jsat.linear.DenseVector;
 import jsat.linear.Vec;
@@ -39,7 +35,6 @@ public class NormalBetaFilterAdjuster2 implements IExpectationAdjuster, Function
     private static final double TOLLERANCE = 1E-6; // Tolerance for convergence in optimization
     private static final int INTEGRATION_DIVISIONS = 100; 
     private static final int NM_ITTERATION_LIMIT = 1000; // Max iterations for Nelder-Mead optimization
-    private static double ACCURACY = 1E-12;
 
     // Precomputed mathematical constants for efficiency
     protected static final double root_pi = Math.sqrt(Math.PI);
@@ -47,7 +42,7 @@ public class NormalBetaFilterAdjuster2 implements IExpectationAdjuster, Function
     protected static final double root_2pi = root_pi * root_2;
 
     // Filter components and adjustable parameters
-    protected final NormalBetaFilter filter; // The filter being adjusted
+    protected final NormalPeakFilter filter; // The filter being adjusted
     protected final NormalDistribution nodeDistribution; // Distribution of node values
     protected final BetaDistribution arcDistribution; // Distribution of observation success
     protected double mean, variance, N; // Current mean, variance, and sample size of the filter
@@ -57,10 +52,10 @@ public class NormalBetaFilterAdjuster2 implements IExpectationAdjuster, Function
 
     public NormalBetaFilterAdjuster2(IFilter filter, ITrainableDistribution nodeDistribution,
             ITrainableDistribution arcDistribution) {
-        this((NormalBetaFilter) filter, (NormalDistribution) nodeDistribution, (BetaDistribution) arcDistribution);
+        this((NormalPeakFilter) filter, (NormalDistribution) nodeDistribution, (BetaDistribution) arcDistribution);
     }
 
-    public NormalBetaFilterAdjuster2(NormalBetaFilter filter, NormalDistribution nodeDistribution,
+    public NormalBetaFilterAdjuster2(NormalPeakFilter filter, NormalDistribution nodeDistribution,
             BetaDistribution arcDistribution) {
         this.filter = filter;
         this.nodeDistribution = nodeDistribution;
@@ -127,9 +122,9 @@ public class NormalBetaFilterAdjuster2 implements IExpectationAdjuster, Function
         List<Vec> init_points = new ArrayList<>(3); // Initial points for the optimization
 
         // Define three initial points around (0, 0)
-        init_points.add(new DenseVector(new double[] { -0.5, -0.5 }));
-        init_points.add(new DenseVector(new double[] { 0.5, -0.5 }));
-        init_points.add(new DenseVector(new double[] { 0, 0.5 }));
+        init_points.add(new DenseVector(new double[] { -0.2, -0.2 }));
+        init_points.add(new DenseVector(new double[] { 0.2, -0.2 }));
+        init_points.add(new DenseVector(new double[] { 0, 0.2 }));
 
         // Optimize the function (negative log-likelihood) to find the best shift and
         // scale
@@ -205,7 +200,7 @@ public class NormalBetaFilterAdjuster2 implements IExpectationAdjuster, Function
      * @return The log-likelihood.
      */
     public double getLogLikelihood(double shift, double scale) {
-        double expected = N * getExpectedValueOfLikelihood(shift, scale);
+        double expected = getExpectedValueOfLikelihood(shift, scale);
         double sum = getSumOfWeightedPoints(shift, scale);
         return expected + sum;
     }
@@ -220,7 +215,7 @@ public class NormalBetaFilterAdjuster2 implements IExpectationAdjuster, Function
      */
     public double getSumOfWeightedPoints(double shift, double scale) {
         return adjustementPoints.stream()
-                .mapToDouble(point -> getWeightedLogLikelihoodOfPoint(point, shift, scale))
+                .mapToDouble(point -> getWeightedLikelihoodOfPoint(point, shift, scale))
                 .sum();
     }
 
@@ -234,7 +229,7 @@ public class NormalBetaFilterAdjuster2 implements IExpectationAdjuster, Function
      * @param scale The scaling factor applied to the variance of the filter.
      * @return The weighted log-likelihood of the data point.
      */
-    public double getWeightedLogLikelihoodOfPoint(WeightedPoint<FilterPoint> point, double shift, double scale) {
+    public double getWeightedLikelihoodOfPoint(WeightedPoint<FilterPoint> point, double shift, double scale) {
         FilterPoint fp = point.value;
         return point.weight * getLikelihoodOfPoint(fp.x, fp.b, shift, scale);
     }
@@ -254,7 +249,7 @@ public class NormalBetaFilterAdjuster2 implements IExpectationAdjuster, Function
     public double getLikelihoodOfPoint(double x, double b, double shift, double scale) {
         // Calculate the full likelihood of observing x given the adjusted filter
         // parameters
-        double full_send = NormalBetaFilter.likelihood(x, mean + shift, scale * variance);
+        double full_send = NormalPeakFilter.likelihood(x, mean + shift, scale * variance);
 
         // Handle different cases of the beta observation (b):
         if (b == 1) {
@@ -294,7 +289,7 @@ public class NormalBetaFilterAdjuster2 implements IExpectationAdjuster, Function
 
     private double integrand(double x, double b, double w, double eta){
         double expectation_exponent = Math.exp(-eta*(x-w)*(x-w));
-        double expectation_value = Math.pow(expectation_exponent, b) * Math.pow(1-expectation_exponent, 1-b);
+        double expectation_value = Math.pow(expectation_exponent, N*b) * Math.pow(1-expectation_exponent, N*(1-b));
 
         double x_density = Math.exp(-x*x)/root_pi;
         double b_density = arcDistribution.getProbabilityDensity(b);
