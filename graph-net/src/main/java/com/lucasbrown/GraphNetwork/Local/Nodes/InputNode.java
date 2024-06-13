@@ -2,6 +2,7 @@ package com.lucasbrown.GraphNetwork.Local.Nodes;
 
 import java.security.InvalidAlgorithmParameterException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
 import com.lucasbrown.GraphNetwork.Global.GraphNetwork;

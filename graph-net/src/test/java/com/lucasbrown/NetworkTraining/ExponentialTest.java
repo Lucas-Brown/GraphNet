@@ -98,11 +98,11 @@ public class ExponentialTest {
         arcBuilder.build(hidden, out);
 
 
-        BackpropTrainer bt = new BackpropTrainer(net, new ErrorFunction.MeanSquaredError());
-        bt.epsilon = 1;
+        BackpropTrainer bt = new BackpropTrainer(net, new ErrorFunction.LogarithmicError());
+        bt.epsilon = 0.0000001;
 
         bt.setTrainingData(exponentialGrowth.inputData, exponentialGrowth.outputData);
-        bt.trainNetwork(100000, 1);
+        bt.trainNetwork(10000000, 10000);
 
         net.deactivateAll();
         net.setInputOperation(nodeMap -> BackpropTrainer.applyInputToNode(nodeMap, exponentialGrowth.inputData, counter++));

@@ -1,5 +1,7 @@
 package com.lucasbrown.GraphNetwork.Local;
 
+import java.util.HashMap;
+
 import com.lucasbrown.GraphNetwork.Local.Nodes.INode;
 import com.lucasbrown.NetworkTraining.ApproximationTools.PassFailCounter;
 import com.lucasbrown.NetworkTraining.ApproximationTools.WeightedAverage;
@@ -19,6 +21,7 @@ public class Outcome {
      */
     public WeightedAverage passRate = new WeightedAverage();
     public WeightedAverage errorDerivative = new WeightedAverage();
+    public WeightedAverage errorSecondDerivative = new WeightedAverage();
 
     @Override 
     public String toString()
