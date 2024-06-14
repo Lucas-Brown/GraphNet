@@ -6,7 +6,7 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.Objects;
 
-import com.lucasbrown.GraphNetwork.Global.GraphNetwork;
+import com.lucasbrown.GraphNetwork.Global.Network.GraphNetwork;
 import com.lucasbrown.GraphNetwork.Local.Outcome;
 import com.lucasbrown.GraphNetwork.Local.Nodes.INode;
 
@@ -17,7 +17,7 @@ public class History {
     /**
      * for each time, a map from node id to a list of outcomes
      */
-    private ArrayList<HashMap<Integer, ArrayList<Outcome>>> outcomesThroughTime;
+    private ArrayList<HashMap<INode, ArrayList<Outcome>>> outcomesThroughTime;
 
     public History(GraphNetwork network) {
         this.network = network;
@@ -26,35 +26,35 @@ public class History {
 
     public void captureState() {
         ArrayList<INode> nodes = network.getActiveNodes();
-        HashMap<Integer, ArrayList<Outcome>> state = new HashMap<>(nodes.size());
+        HashMap<INode, ArrayList<Outcome>> state = new HashMap<>(nodes.size());
         for (INode node : nodes) {
-            state.put(node.getID(), node.getState());
+            state.put(node, node.getState());
         }
 
         outcomesThroughTime.add(state);
     }
 
-    public HashMap<Integer, ArrayList<Outcome>> getStateAtTimestep(int timestep) {
+    public HashMap<INode, ArrayList<Outcome>> getStateAtTimestep(int timestep) {
         return outcomesThroughTime.get(timestep);
     }
 
-    public ArrayList<Outcome> getStateOfNode(int timestep, int node_id) {
-        return outcomesThroughTime.get(timestep).get(node_id);
+    public ArrayList<Outcome> getStateOfNode(int timestep, INode node) {
+        return outcomesThroughTime.get(timestep).get(node);
     }
 
-    public List<ArrayList<Outcome>> getHistoryOfNode(int node_id) {
+    public List<ArrayList<Outcome>> getHistoryOfNode(INode node) {
         return outcomesThroughTime.stream()
-                .map(map -> map.get(node_id))
+                .map(map -> map.get(node))
                 .map(list -> list == null ? new ArrayList<Outcome>(0) : list)
                 .toList();
     }
 
-    public List<Outcome> getAllOutcomesOfNode(int node_id) {
-        return outcomesThroughTime.stream().flatMap(node_map -> node_map.get(node_id).stream()).toList();
+    public List<Outcome> getAllOutcomesOfNode(INode node) {
+        return outcomesThroughTime.stream().flatMap(node_map -> node_map.get(node).stream()).toList();
     }
 
-    public HashMap<Integer, ArrayList<Outcome>> getOutcomesOfKeyFromNode(int node_id) {
-        List<Outcome> all_outcomes = getAllOutcomesOfNode(node_id);
+    public HashMap<Integer, ArrayList<Outcome>> getOutcomesOfKeyFromNode(INode node) {
+        List<Outcome> all_outcomes = getAllOutcomesOfNode(node);
         HashMap<Integer, ArrayList<Outcome>> keyMap = new HashMap<>(8, 2);
         for (Outcome out : all_outcomes) {
             ArrayList<Outcome> outcomesForKey = keyMap.get(out.binary_string);
@@ -83,9 +83,9 @@ public class History {
             sb.append("Time Step ");
             sb.append(t);
             sb.append("\n\t");
-            for (Entry<Integer, ArrayList<Outcome>> nodeOutcome : outcomesThroughTime.get(t).entrySet()) {
+            for (Entry<INode, ArrayList<Outcome>> nodeOutcome : outcomesThroughTime.get(t).entrySet()) {
                 sb.append("Node ");
-                sb.append(nodeOutcome.getKey());
+                sb.append(nodeOutcome.getKey().getID());
                 sb.append(": ");
                 sb.append(nodeOutcome.getValue().stream().sorted(Outcome::descendingProbabilitiesComparator).limit(2).toList().toString());
                 sb.append("\n\t");

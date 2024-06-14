@@ -6,7 +6,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import com.lucasbrown.GraphNetwork.Global.GraphNetwork;
+import com.lucasbrown.GraphNetwork.Global.Network.GraphNetwork;
 
 import jsat.linear.DenseVector;
 import jsat.linear.Vec;

@@ -1,0 +1,290 @@
+package com.lucasbrown.GraphNetwork.Global.Trainers;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map.Entry;
+
+import com.lucasbrown.GraphNetwork.Global.Network.GraphNetwork;
+import com.lucasbrown.GraphNetwork.Local.Arc;
+import com.lucasbrown.GraphNetwork.Local.Outcome;
+import com.lucasbrown.GraphNetwork.Local.Nodes.IInputNode;
+import com.lucasbrown.GraphNetwork.Local.Nodes.INode;
+import com.lucasbrown.GraphNetwork.Local.Nodes.ITrainable;
+import com.lucasbrown.GraphNetwork.Local.Nodes.InputNode;
+import com.lucasbrown.GraphNetwork.Local.Nodes.OutputNode;
+import com.lucasbrown.NetworkTraining.History;
+import com.lucasbrown.NetworkTraining.ApproximationTools.ErrorFunction;
+import com.lucasbrown.NetworkTraining.ApproximationTools.WeightedAverage;
+import com.lucasbrown.NetworkTraining.DataSetTraining.IExpectationAdjuster;
+
+public class BackpropTrainer {
+    
+    public double epsilon = 0.01;
+    private WeightedAverage total_error;
+
+    private int timestep;
+    private final GraphNetwork network;
+    private final History networkHistory;
+    private final ErrorFunction errorFunction;
+
+    private Double[][] inputs;
+    private Double[][] targets;
+
+    private HashMap<Integer, double[]> bias_gradient;
+    private HashMap<Integer, double[][]> weights_gradient;
+
+    private ArrayList<OutputNode> outputNodes;
+    private HashSet<ITrainable> allNodes;
+
+    public BackpropTrainer(GraphNetwork network, ErrorFunction errorFunction)
+    {
+        this.network = network;
+        this.errorFunction = errorFunction;
+        networkHistory = new History(network);
+        
+        castAllToTrainable();
+
+        network.setInputOperation(this::applyInputToNode);
+        outputNodes = network.getOutputNodes();
+
+        total_error = new WeightedAverage();
+    }
+
+    private void castAllToTrainable(){
+        ArrayList<INode> nodes = network.getNodes();
+        allNodes = new HashSet<>(nodes.size());
+        for(INode node : nodes){
+            allNodes.add((ITrainable) node);
+        }
+    }
+
+    /**
+     * input and target dimension : [timestep][node]
+     * @param inputs
+     * @param targets
+     */
+    public void setTrainingData(Double[][] inputs, Double[][] targets){
+        this.inputs = inputs;
+        this.targets = targets;
+    }
+
+    public void trainNetwork(int steps, int print_interval){
+        while(steps-- > 0){
+            trainingStep(steps % print_interval == 0);
+        }
+    }
+
+    public void trainingStep(boolean print_forward){
+        captureForward(print_forward);
+
+        computeErrorOfOutputs(print_forward);
+        backpropagateErrors();
+        applyErrorSignals();
+        network.deactivateAll();
+        networkHistory.burnHistory();
+    }
+
+
+    private void captureForward(boolean print_forward){
+        for (timestep = 0; timestep < inputs.length; timestep++) {
+            network.trainingStep();
+            if(print_forward) {
+                System.out.println(network.toString() + " | Target = " + Arrays.toString(targets[timestep]));
+            }
+            networkHistory.captureState();
+        }
+        timestep--;
+    }
+
+
+    private void computeErrorOfOutputs(boolean print_forward){
+        for(int time = timestep; time > 0; time--){
+            for (int i = 0; i < outputNodes.size(); i++) {
+                computeErrorOfOutput(outputNodes.get(i), time, targets[time][i]);
+            }
+        }
+        //assert total_error.getAverage() < 1E6;
+        assert Double.isFinite(total_error.getAverage());
+        if(print_forward){
+            System.out.println(total_error.getAverage());
+        }
+        total_error.reset();
+    }
+
+    private void computeErrorOfOutput(OutputNode node, int timestep, Double target){
+        ArrayList<Outcome> outcomes = networkHistory.getStateOfNode(timestep, node);
+        if(outcomes == null){
+            return;
+        }
+
+        if(target == null){
+            for(Outcome outcome : outcomes){
+                outcome.passRate.add(0, 1);
+            }
+            return;
+        }
+
+        for(Outcome outcome : outcomes){
+            if(timestep == this.timestep){
+                outcome.passRate.add(1-1d/timestep, 1);
+            }else{
+                outcome.passRate.add(1, 1);
+            }
+            outcome.errorDerivative.add(errorFunction.error_derivative(outcome.activatedValue, target), outcome.probability);
+
+            double error = errorFunction.error(outcome.activatedValue, target);
+            //assert Double.isFinite(errorFunction.error(outcome.activatedValue, target));
+            total_error.add(error, outcome.probability);
+        }
+        
+    }
+
+    private void backpropagateErrors() {
+        ArrayList<INode> nodes = network.getNodes();
+        while(timestep >= 0){
+            HashMap<INode, ArrayList<Outcome>> state = networkHistory.getStateAtTimestep(timestep);
+            for(Entry<INode, ArrayList<Outcome>> e : state.entrySet()){
+                INode node = nodes.get(e.getKey().getID()); 
+                updateNodeForTimestep((ITrainable) node, e.getValue());
+            }
+            timestep--;
+        }
+    }
+
+    private void updateNodeForTimestep(ITrainable node, ArrayList<Outcome> outcomesAtTIme){
+        prepareOutputDistributionAdjustments(node, outcomesAtTIme);
+        outcomesAtTIme.forEach(node::sendErrorsBackwards);
+        outcomesAtTIme.forEach(node::adjustProbabilitiesForOutcome);
+    }
+
+    private void applyErrorSignals(){
+        allNodes.forEach(this::applyErrorSignalsToNode);
+        allNodes.forEach(ITrainable::applyDistributionUpdate);
+        allNodes.forEach(ITrainable::applyFilterUpdate);
+    }
+
+    private void applyErrorSignalsToNode(INode node){
+        node.applyErrorSignals(epsilon, networkHistory.getHistoryOfNode(node));
+    }
+
+    private void applyInputToNode(HashMap<Integer, ? extends IInputNode> inputNodeMap){
+        applyInputToNode(inputNodeMap, inputs, timestep);
+    }
+
+    
+    /**
+     * Use the outcomes to prepare weighted adjustments to the outcome distribution
+     */
+    public void prepareOutputDistributionAdjustments(ITrainable node, ArrayList<Outcome> allOutcomes) {
+        for (Outcome o : allOutcomes) {
+            // weigh the outcomes by their probability of occurring
+            // double error = o.errorOfOutcome.hasValues() ? o.errorOfOutcome.getAverage() : 0;
+            double error = 0;
+            IExpectationAdjuster adjuster = node.getOutputDistributionAdjuster();
+            adjuster.prepareAdjustment(o.probability, new double[] { o.activatedValue - error });
+        }
+    }
+
+
+    public void sendErrorsBackwards(ITrainable node, Outcome outcomeAtTime) {
+        if(!outcomeAtTime.errorDerivative.hasValues()){
+            return;
+        }
+
+        int binary_string = outcomeAtTime.binary_string;
+        double error_derivative = outcomeAtTime.errorDerivative.getAverage() * node.getActivationFunction().derivative(outcomeAtTime.netValue);
+
+                
+        if(Math.abs(error_derivative) > 100000){
+            Math.abs(0);
+        }
+
+                
+        double[] weightsOfNodes = node.getWeights(binary_string);
+
+        for (int i = 0; i < weightsOfNodes.length; i++) {
+            if (!outcomeAtTime.passRate.hasValues() || outcomeAtTime.probability == 0) {
+                continue;
+            }
+            Outcome so = outcomeAtTime.sourceOutcomes[i];
+            
+            // Get the arc connectting the node to its source 
+            Arc arc = node.getIncomingConnectionFrom(outcomeAtTime.sourceNodes[i]).get();
+
+            // use the arc to predict the probability of this event
+            double shifted_value = so.activatedValue - error_derivative;
+            double prob = outcomeAtTime.probability * arc.filter.getChanceToSend(shifted_value) / outcomeAtTime.sourceTransferProbabilities[i];
+
+            // accumulate error :)
+            // accumulate BEAN! YAS
+            // goofball ;)
+            // just a lil bit
+            // <3
+            // <3
+            so.errorDerivative.add(error_derivative * weightsOfNodes[i], prob);
+
+            // accumulate pass rates
+            double pass_avg = outcomeAtTime.passRate.getAverage();
+            assert Double.isFinite(pass_avg);
+            so.passRate.add(pass_avg, prob);
+
+            // apply error as new point for the distribution
+            // Arc connection =
+            // outcomeAtTime.sourceNodes[i].getOutgoingConnectionTo(this).get();
+            // connection.probDist.prepareReinforcement(outcomeAtTime.netValue -
+            // error_derivative);
+        }
+
+    }
+
+    @Override
+    public void adjustProbabilitiesForOutcome(Outcome outcome) {
+        if (!outcome.passRate.hasValues() || outcome.probability == 0) {
+            return;
+        }
+        double pass_rate = outcome.passRate.getAverage();
+
+        // Add another point for the net firing chance distribution
+        chanceAdjuster.prepareAdjustment(outcome.probability, new double[] { pass_rate });
+
+        // Reinforce the filter with the pass rate for each point
+        for (int i = 0; i < outcome.sourceNodes.length; i++) {
+            INode sourceNode = outcome.sourceNodes[i];
+
+            double error_derivative = outcome.errorDerivative.getAverage();
+            Arc arc = getIncomingConnectionFrom(sourceNode).get(); // should be guaranteed to exist
+
+            // if the error is not defined and the pass rate is 0, then zero error should be
+            // expected
+            if (Double.isNaN(error_derivative) && pass_rate == 0) {
+                error_derivative = 0;
+            }
+            assert !Double.isNaN(error_derivative);
+
+            if (arc.filterAdjuster != null) {
+                double shifted_value = outcome.sourceOutcomes[i].activatedValue - error_derivative;
+                double prob = outcome.probability * arc.filter.getChanceToSend(shifted_value) / outcome.sourceTransferProbabilities[i];
+                arc.filterAdjuster.prepareAdjustment(prob, new double[] { shifted_value, pass_rate });
+            }
+        }
+
+    }
+
+    public static void applyInputToNode(HashMap<Integer, ? extends IInputNode> inputNodeMap, Double[][] input, int counter){
+        InputNode[] sortedNodes = inputNodeMap.values().stream().sorted().toArray(InputNode[]::new);
+
+        for (int i = 0; i < sortedNodes.length; i++) {
+            if(input[counter][i] != null){
+                sortedNodes[i].acceptUserForwardSignal(input[counter][i]);
+            }
+        }
+    }
+
+    
+    
+    public void sendErrorsBackwards(Outcome outcome);
+
+    public void adjustProbabilitiesForOutcome(Outcome outcome);
+}

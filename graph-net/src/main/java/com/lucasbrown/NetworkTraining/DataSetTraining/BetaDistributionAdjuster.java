@@ -4,7 +4,7 @@ import java.security.InvalidParameterException;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.lucasbrown.GraphNetwork.Global.GraphNetwork;
+import com.lucasbrown.GraphNetwork.Global.Network.GraphNetwork;
 
 import jsat.linear.DenseVector;
 import jsat.linear.Vec;

@@ -1,6 +1,6 @@
 package com.lucasbrown.NetworkTraining.DataSetTraining;
 
-import com.lucasbrown.GraphNetwork.Global.GraphNetwork;
+import com.lucasbrown.GraphNetwork.Global.Network.GraphNetwork;
 
 public class BernoulliDistributionAdjuster extends WeightedDoubleCollector {
 

@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.DoubleUnaryOperator;
 
-import com.lucasbrown.GraphNetwork.Global.GraphNetwork;
+import com.lucasbrown.GraphNetwork.Global.Network.GraphNetwork;
 import com.lucasbrown.NetworkTraining.ApproximationTools.DoubleFunction;
 import com.lucasbrown.NetworkTraining.ApproximationTools.IntegralTransformations;
 

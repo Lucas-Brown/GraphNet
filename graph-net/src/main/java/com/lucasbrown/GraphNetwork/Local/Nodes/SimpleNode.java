@@ -5,7 +5,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
-import com.lucasbrown.GraphNetwork.Global.GraphNetwork;
+import com.lucasbrown.GraphNetwork.Global.Network.GraphNetwork;
 import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
 import com.lucasbrown.GraphNetwork.Local.Arc;
 import com.lucasbrown.GraphNetwork.Local.Outcome;
@@ -20,7 +20,7 @@ import com.lucasbrown.NetworkTraining.DataSetTraining.ITrainableDistribution;
  * Each node uses a @code NodeConnection to evaluate its own likelyhood of
  * sending a signal out to other connected nodes
  */
-public class SimpleNode extends NodeBase {
+public class SimpleNode extends TrainableNodeBase {
 
     protected double[] weights;
     protected double bias;
@@ -72,6 +72,21 @@ public class SimpleNode extends NodeBase {
         return bias;
     }
 
+    @Override
+    public void setWeights(int binStr, double[] newWeights){
+        weights = newWeights;
+    }
+
+    @Override
+    public void setBias(int binStr, double newBias){
+        bias = newBias;
+    }
+
+    @Override
+    public int getNumberOfVariables(){
+        return weights.length + 1;
+    }
+
     /**
      * Compute the merged signal strength of a set of incoming signals
      * 
@@ -79,7 +94,7 @@ public class SimpleNode extends NodeBase {
      * @return
      */
     @Override
-    protected double computeMergedSignalStrength(Collection<Signal> incomingSignals, int binary_string) {
+    public double computeMergedSignalStrength(Collection<Signal> incomingSignals, int binary_string) {
 
         ArrayList<Signal> sortedSignals = sortSignalByID(incomingSignals);
 

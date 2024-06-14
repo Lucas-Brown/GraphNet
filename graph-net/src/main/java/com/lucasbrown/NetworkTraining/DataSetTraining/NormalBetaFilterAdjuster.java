@@ -3,7 +3,7 @@ package com.lucasbrown.NetworkTraining.DataSetTraining;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.lucasbrown.GraphNetwork.Global.GraphNetwork;
+import com.lucasbrown.GraphNetwork.Global.Network.GraphNetwork;
 import com.lucasbrown.NetworkTraining.ApproximationTools.DoubleFunction;
 import com.lucasbrown.NetworkTraining.ApproximationTools.IntegralTransformations;
 import com.lucasbrown.NetworkTraining.ApproximationTools.LinearInterpolation2D;

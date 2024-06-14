@@ -1,4 +1,4 @@
-package com.lucasbrown.GraphNetwork.Global;
+package com.lucasbrown.GraphNetwork.Global.Network;
 
 public class IncompleteNodeException extends Exception{
 

@@ -1,4 +1,4 @@
-package com.lucasbrown.GraphNetwork.Global;
+package com.lucasbrown.GraphNetwork.Global.Network;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;

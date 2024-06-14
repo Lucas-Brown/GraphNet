@@ -3,7 +3,7 @@ package com.lucasbrown.NetworkTraining.DataSetTraining;
 import java.security.InvalidParameterException;
 import java.util.ArrayList;
 
-import com.lucasbrown.GraphNetwork.Global.GraphNetwork;
+import com.lucasbrown.GraphNetwork.Global.Network.GraphNetwork;
 
 public class BetaDistributionAdjuster2 implements IExpectationAdjuster {
 

@@ -1,4 +1,4 @@
-package com.lucasbrown.GraphNetwork.Global;
+package com.lucasbrown.NetworkTraining.ApproximationTools;
 
 public class DoublePair {
 

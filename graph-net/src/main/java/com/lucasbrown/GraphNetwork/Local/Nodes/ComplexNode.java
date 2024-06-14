@@ -6,7 +6,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.stream.IntStream;
 
-import com.lucasbrown.GraphNetwork.Global.GraphNetwork;
+import com.lucasbrown.GraphNetwork.Global.Network.GraphNetwork;
 import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
 import com.lucasbrown.GraphNetwork.Local.Arc;
 import com.lucasbrown.GraphNetwork.Local.Outcome;
@@ -21,7 +21,7 @@ import com.lucasbrown.NetworkTraining.DataSetTraining.ITrainableDistribution;
  * Each node uses a @code NodeConnection to evaluate its own likelyhood of
  * sending a signal out to other connected nodes
  */
-public class ComplexNode extends NodeBase {
+public class ComplexNode extends TrainableNodeBase {
 
     /**
      * Each possible combinations of inputs has a corresponding unique set of
@@ -32,10 +32,6 @@ public class ComplexNode extends NodeBase {
     protected double[][] weights;
     protected double[] biases;
 
-    private double[] probability_weight_sum;
-    private double[] bias_gradient;
-    private double[][] weights_gradient;
-
     public ComplexNode(final GraphNetwork network, final ActivationFunction activationFunction,
         ITrainableDistribution outputDistribution, IExpectationAdjuster outputAdjuster, 
         ITrainableDistribution signalChanceDistribution, IExpectationAdjuster chanceAdjuster) {
@@ -43,7 +39,6 @@ public class ComplexNode extends NodeBase {
         weights = new double[1][1];
         biases = new double[1];
         weights[0] = new double[0];
-        probability_weight_sum = new double[1];
         bias_gradient = new double[1];
         weights_gradient = new double[1][1];
         weights_gradient[0] = new double[0];
@@ -72,7 +67,6 @@ public class ComplexNode extends NodeBase {
         biases = Arrays.copyOf(biases, new_size);
         weights = Arrays.copyOf(weights, new_size);
 
-        probability_weight_sum = new double[new_size];
         bias_gradient = new double[new_size];
         weights_gradient = new double[new_size][];
 
@@ -103,6 +97,17 @@ public class ComplexNode extends NodeBase {
         return biases[bitStr];
     }
 
+    
+    @Override
+    public void setWeights(int bitStr, double[] newWeights) {
+        weights[bitStr] = newWeights;
+    }
+
+    @Override
+    public void setBias(int bitStr, double newBias) {
+        biases[bitStr] = newBias;
+    }
+
     /**
      * Compute the merged signal strength of a set of incoming signals
      * 
@@ -110,7 +115,7 @@ public class ComplexNode extends NodeBase {
      * @return
      */
     @Override
-    protected double computeMergedSignalStrength(Collection<Signal> incomingSignals, int binary_string) {
+    public double computeMergedSignalStrength(Collection<Signal> incomingSignals, int binary_string) {
 
         ArrayList<Signal> sortedSignals = sortSignalByID(incomingSignals);
 
@@ -179,7 +184,7 @@ public class ComplexNode extends NodeBase {
 
 
         // divide all gradients by the number of non-empty timesteps
-        for (int key = 1; key < getIncomingPowerSetSize(); key++) {
+        for (int key = 1; key < getNumInputCombinations(); key++) {
             bias_gradient[key] /= T;
 
             for (int i = 0; i < weights[key].length; i++) {
@@ -218,4 +223,5 @@ public class ComplexNode extends NodeBase {
          */
 
     }
+
 }

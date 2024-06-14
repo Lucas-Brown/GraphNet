@@ -11,7 +11,7 @@ import java.util.Optional;
 import java.util.Random;
 import java.util.stream.Collectors;
 
-import com.lucasbrown.GraphNetwork.Global.GraphNetwork;
+import com.lucasbrown.GraphNetwork.Global.Network.GraphNetwork;
 import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
 import com.lucasbrown.GraphNetwork.Local.Arc;
 import com.lucasbrown.GraphNetwork.Local.Outcome;
@@ -67,24 +67,7 @@ public abstract class NodeBase implements INode {
      */
     protected final ArrayList<Arc> incoming, outgoing;
 
-    /**
-     * The distribution of outputs produced by this node
-     */
-    protected ITrainableDistribution outputDistribution;
-
-    /**
-     * An objects which adjusts the parameters of outputDistribution given new data
-     */
-    protected IExpectationAdjuster outputAdjuster;
-
-    /**
-     * The probability distribution corresponding to signal passes
-     */
-    public ITrainableDistribution signalChanceDistribution;
-
-    public IExpectationAdjuster chanceAdjuster;
-
-    private int incomingPowerSetSize;
+    private int numInputCombinations;
 
     /**
      * Forward-training signals
@@ -92,18 +75,6 @@ public abstract class NodeBase implements INode {
     protected HashMap<Integer, ArrayList<Signal>> forward, forwardNext;
 
     protected HashSet<Integer> uniqueIncomingNodeIDs;
-
-    /**
-     * backward training signals
-     */
-    protected ArrayList<Signal> backward, backwardNext;
-
-    protected boolean hasRecentBackwardsSignal;
-
-    /**
-     * The most recent backwards signal to be compared to by forward signals
-     */
-    protected ArrayList<Signal> inference, inferenceNext;
 
     /**
      * Maps all incoming node ID's to an int from 0 to the number of incoming nodes
@@ -115,39 +86,20 @@ public abstract class NodeBase implements INode {
 
     protected boolean hasValidForwardSignal;
 
-    public NodeBase(GraphNetwork network, final ActivationFunction activationFunction,
-            ITrainableDistribution outputDistribution,
-            ITrainableDistribution signalChanceDistribution) {
-        this(network, activationFunction, outputDistribution,
-                outputDistribution.getDefaulAdjuster().apply(outputDistribution),
-                signalChanceDistribution, signalChanceDistribution.getDefaulAdjuster().apply(signalChanceDistribution));
-    }
-
-    public NodeBase(GraphNetwork network, final ActivationFunction activationFunction,
-            ITrainableDistribution outputDistribution, IExpectationAdjuster outputAdjuster,
-            ITrainableDistribution signalChanceDistribution, IExpectationAdjuster chanceAdjuster) {
+    public NodeBase(GraphNetwork network, final ActivationFunction activationFunction) {
         id = ID_COUNTER++;
         name = "INode " + id;
         this.network = network;
         this.activationFunction = activationFunction;
-        this.outputDistribution = outputDistribution;
-        this.outputAdjuster = outputAdjuster;
-        this.signalChanceDistribution = signalChanceDistribution;
-        this.chanceAdjuster = chanceAdjuster;
         incoming = new ArrayList<Arc>();
         outgoing = new ArrayList<Arc>();
         orderedIDMap = new HashMap<>();
-        incomingPowerSetSize = 1;
+        numInputCombinations = 1;
 
         uniqueIncomingNodeIDs = new HashSet<>();
         outcomes = new ArrayList<>();
-        inference = new ArrayList<>();
-        inferenceNext = new ArrayList<>();
         forward = new HashMap<>();
         forwardNext = new HashMap<>();
-        backward = new ArrayList<>();
-        backwardNext = new ArrayList<>();
-        hasRecentBackwardsSignal = false;
     }
 
     @Override
@@ -180,22 +132,12 @@ public abstract class NodeBase implements INode {
         return activationFunction;
     }
 
-    @Override
-    public ITrainableDistribution getOutputDistribution() {
-        return outputDistribution;
-    }
-
-    @Override
-    public ITrainableDistribution getSignalChanceDistribution() {
-        return signalChanceDistribution;
-    }
-
     protected int getIndexOfIncomingNode(INode incoming) {
         return orderedIDMap.get(incoming.getID());
     }
 
-    public int getIncomingPowerSetSize() {
-        return incomingPowerSetSize;
+    public int getNumInputCombinations() {
+        return numInputCombinations;
     }
 
     /**
@@ -216,8 +158,8 @@ public abstract class NodeBase implements INode {
      */
     @Override
     public boolean addIncomingConnection(Arc connection) {
-        orderedIDMap.put(connection.getSendingID(), incomingPowerSetSize);
-        incomingPowerSetSize *= 2;
+        orderedIDMap.put(connection.getSendingID(), numInputCombinations);
+        numInputCombinations *= 2;
         return incoming.add(connection);
     }
 
@@ -260,28 +202,6 @@ public abstract class NodeBase implements INode {
     @Override
     public void recieveForwardSignal(Signal signal) {
         appendForward(signal);
-        network.notifyNodeActivation(this);
-    }
-
-    /**
-     * Notify this node of a new incoming backward signal
-     * 
-     * @param signal
-     */
-    @Override
-    public void recieveBackwardSignal(Signal signal) {
-        backwardNext.add(signal);
-        network.notifyNodeActivation(this);
-    }
-
-    /**
-     * Notify this node of a new inference signal
-     * 
-     * @param signal
-     */
-    @Override
-    public void recieveInferenceSignal(Signal signal) {
-        inferenceNext.add(signal);
         network.notifyNodeActivation(this);
     }
 
@@ -353,53 +273,15 @@ public abstract class NodeBase implements INode {
      * @throws InvalidAlgorithmParameterException
      */
     public void acceptSignals() throws InvalidAlgorithmParameterException {
-        if (forwardNext.isEmpty() & backwardNext.isEmpty() & inferenceNext.isEmpty()) {
+        if (forwardNext.isEmpty()) {
             throw new InvalidAlgorithmParameterException(
                     "handleIncomingSignals should never be called if no signals have been recieved.");
-        }
-
-        if ((!forwardNext.isEmpty() || !backwardNext.isEmpty()) && !inferenceNext.isEmpty()) {
-            throw new InvalidAlgorithmParameterException(
-                    "Inference and training signals should not be run simultaneously.");
-        }
-
-        // Prepare state variables for either inference or training
-        if (!inferenceNext.isEmpty()) {
-            /*
-             * inference = inferenceNext;
-             * inferenceNext = new ArrayList<Signal>();
-             * hasValidForwardSignal = true;
-             * acceptIncomingForwardSignals(inference);
-             */
-        } else {
-            if (!forwardNext.isEmpty()) {
-                hasValidForwardSignal = true;
-                forward = forwardNext;
-                forwardNext = new HashMap<>();
-                combinePossibilities();
-            }
-            if (!backwardNext.isEmpty()) {
-                /*
-                 * hasRecentBackwardsSignal = true;
-                 * backward = backwardNext;
-                 * backwardNext = new ArrayList<Signal>();
-                 * recentBackwardsSignal = getRecentBackwardsSignal();
-                 */
-            }
-        }
-
-    }
-
-    /**
-     * Use the outcomes to prepare weighted adjustments to the outcome distribution
-     */
-    public void prepareOutputDistributionAdjustments(ArrayList<Outcome> allOutcomes) {
-        for (Outcome o : allOutcomes) {
-            // weigh the outcomes by their probability of occurring
-            // double error = o.errorOfOutcome.hasValues() ? o.errorOfOutcome.getAverage() : 0;
-            double error = 0;
-            outputAdjuster.prepareAdjustment(o.probability, new double[] { o.activatedValue - error });
-        }
+        }    
+    
+        hasValidForwardSignal = true;
+        forward = forwardNext;
+        forwardNext = new HashMap<>();
+        combinePossibilities();
     }
 
     /**
@@ -466,31 +348,6 @@ public abstract class NodeBase implements INode {
         return probability;
     }
 
-    private double getRecentBackwardsSignal() {
-        return backward.stream().mapToDouble(Signal::getOutputStrength).average().getAsDouble();
-    }
-
-    /**
-     * Attempt to send forward and backward signals
-     */
-    @Override
-    public void sendTrainingSignals() {
-
-        if (!outgoing.isEmpty()) {
-            // Send the forward signals and record the cumulative error
-            sendForwardSignals();
-            hasValidForwardSignal = false;
-        }
-
-        /*
-         * if (!incoming.isEmpty()) {
-         * sendBackwardsSignals();
-         * }
-         */
-
-    }
-
-
     /**
      * Send forward signals and record differences of expectation for training
      * 
@@ -503,113 +360,13 @@ public abstract class NodeBase implements INode {
                 connection.sendForwardSignal(out); // oh god
             }
         }
-
-    }
-
-
-    @Override
-    public void applyDistributionUpdate() {
-        outputAdjuster.applyAdjustments();
-        chanceAdjuster.applyAdjustments();
-    }
-
-    @Override
-    public void applyFilterUpdate() {
-        for (Arc connection : outgoing) {
-            if (connection.filterAdjuster != null) {
-                connection.filterAdjuster.applyAdjustments();
-            }
-        }
+        hasValidForwardSignal = false;
     }
 
     public ArrayList<Outcome> getState() {
         return outcomes;
     }
 
-    @Override
-    public void sendErrorsBackwards(Outcome outcomeAtTime) {
-        if(!outcomeAtTime.errorDerivative.hasValues()){
-            return;
-        }
-
-        int binary_string = outcomeAtTime.binary_string;
-        double error_derivative = outcomeAtTime.errorDerivative.getAverage() * activationFunction.derivative(outcomeAtTime.netValue);
-
-                
-        if(Math.abs(error_derivative) > 100000){
-            Math.abs(0);
-        }
-
-                
-        double[] weightsOfNodes = getWeights(binary_string);
-
-        for (int i = 0; i < weightsOfNodes.length; i++) {
-            if (!outcomeAtTime.passRate.hasValues() || outcomeAtTime.probability == 0) {
-                continue;
-            }
-            Outcome so = outcomeAtTime.sourceOutcomes[i];
-            
-            // Get the arc connectting the node to its source 
-            Arc arc = getIncomingConnectionFrom(outcomeAtTime.sourceNodes[i]).get();
-
-            // use the arc to predict the probability of this event
-            double shifted_value = so.activatedValue - error_derivative;
-            double prob = outcomeAtTime.probability * arc.filter.getChanceToSend(shifted_value) / outcomeAtTime.sourceTransferProbabilities[i];
-
-            // accumulate error :)
-            // accumulate BEAN! YAS
-            // goofball ;)
-            // just a lil bit
-            // <3
-            // <3
-            so.errorDerivative.add(error_derivative * weightsOfNodes[i], prob);
-
-            // accumulate pass rates
-            double pass_avg = outcomeAtTime.passRate.getAverage();
-            assert Double.isFinite(pass_avg);
-            so.passRate.add(pass_avg, prob);
-
-            // apply error as new point for the distribution
-            // Arc connection =
-            // outcomeAtTime.sourceNodes[i].getOutgoingConnectionTo(this).get();
-            // connection.probDist.prepareReinforcement(outcomeAtTime.netValue -
-            // error_derivative);
-        }
-
-    }
-
-    @Override
-    public void adjustProbabilitiesForOutcome(Outcome outcome) {
-        if (!outcome.passRate.hasValues() || outcome.probability == 0) {
-            return;
-        }
-        double pass_rate = outcome.passRate.getAverage();
-
-        // Add another point for the net firing chance distribution
-        chanceAdjuster.prepareAdjustment(outcome.probability, new double[] { pass_rate });
-
-        // Reinforce the filter with the pass rate for each point
-        for (int i = 0; i < outcome.sourceNodes.length; i++) {
-            INode sourceNode = outcome.sourceNodes[i];
-
-            double error_derivative = outcome.errorDerivative.getAverage();
-            Arc arc = getIncomingConnectionFrom(sourceNode).get(); // should be guaranteed to exist
-
-            // if the error is not defined and the pass rate is 0, then zero error should be
-            // expected
-            if (Double.isNaN(error_derivative) && pass_rate == 0) {
-                error_derivative = 0;
-            }
-            assert !Double.isNaN(error_derivative);
-
-            if (arc.filterAdjuster != null) {
-                double shifted_value = outcome.sourceOutcomes[i].activatedValue - error_derivative;
-                double prob = outcome.probability * arc.filter.getChanceToSend(shifted_value) / outcome.sourceTransferProbabilities[i];
-                arc.filterAdjuster.prepareAdjustment(prob, new double[] { shifted_value, pass_rate });
-            }
-        }
-
-    }
 
     public int mappedIDComparator(Signal s1, Signal s2) {
         int i1 = orderedIDMap.get(s1.sendingNode.getID());
@@ -618,14 +375,9 @@ public abstract class NodeBase implements INode {
     }
 
     public void clearSignals() {
-        hasRecentBackwardsSignal = false;
         hasValidForwardSignal = false;
-        inference.clear();
         forward.clear();
-        backward.clear();
-        inferenceNext.clear();
         forwardNext.clear();
-        backwardNext.clear();
     }
 
     @Override
@@ -654,11 +406,4 @@ public abstract class NodeBase implements INode {
             return false;
         return INode.areNodesEqual(this, (INode) o);
     }
-
-    protected abstract double computeMergedSignalStrength(Collection<Signal> incomingSignals, int binary_string);
-
-    public abstract double[] getWeights(int bitStr);
-
-    public abstract double getBias(int bitStr);
-
 }
