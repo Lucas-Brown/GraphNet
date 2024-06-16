@@ -1,7 +1,7 @@
 package com.lucasbrown.GraphNetwork.Local.Nodes;
 
 public interface IOutputNode {
-    
+
     /**
      * Get the value of this node
      * The caller should first verify if this node is active using {@code isActive}

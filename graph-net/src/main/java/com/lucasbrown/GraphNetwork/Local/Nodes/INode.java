@@ -10,7 +10,6 @@ import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
 import com.lucasbrown.GraphNetwork.Local.Arc;
 import com.lucasbrown.GraphNetwork.Local.Outcome;
 import com.lucasbrown.GraphNetwork.Local.Signal;
-import com.lucasbrown.NetworkTraining.DataSetTraining.IExpectationAdjuster;
 
 public interface INode extends Comparable<INode> {
 
@@ -72,7 +71,6 @@ public interface INode extends Comparable<INode> {
      */
     public Optional<Arc> getIncomingConnectionFrom(INode sendingNode);
 
-
     /**
      * Notify this node of a new incoming forward signal
      * 
@@ -114,6 +112,7 @@ public interface INode extends Comparable<INode> {
 
     /**
      * Get a view of the internal state of this node
+     * 
      * @return
      */
     public ArrayList<Outcome> getState();

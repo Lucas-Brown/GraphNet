@@ -6,7 +6,6 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Random;
 import java.util.stream.Collectors;
@@ -18,10 +17,6 @@ import com.lucasbrown.GraphNetwork.Local.Outcome;
 import com.lucasbrown.GraphNetwork.Local.Signal;
 import com.lucasbrown.NetworkTraining.ApproximationTools.IterableTools;
 import com.lucasbrown.NetworkTraining.ApproximationTools.Pair;
-import com.lucasbrown.NetworkTraining.ApproximationTools.Convolution.FilterDistributionConvolution;
-import com.lucasbrown.NetworkTraining.DataSetTraining.BackwardsSamplingDistribution;
-import com.lucasbrown.NetworkTraining.DataSetTraining.IExpectationAdjuster;
-import com.lucasbrown.NetworkTraining.DataSetTraining.ITrainableDistribution;
 
 /**
  * A node within a graph neural network.
@@ -276,8 +271,8 @@ public abstract class NodeBase implements INode {
         if (forwardNext.isEmpty()) {
             throw new InvalidAlgorithmParameterException(
                     "handleIncomingSignals should never be called if no signals have been recieved.");
-        }    
-    
+        }
+
         hasValidForwardSignal = true;
         forward = forwardNext;
         forwardNext = new HashMap<>();
@@ -366,7 +361,6 @@ public abstract class NodeBase implements INode {
     public ArrayList<Outcome> getState() {
         return outcomes;
     }
-
 
     public int mappedIDComparator(Signal s1, Signal s2) {
         int i1 = orderedIDMap.get(s1.sendingNode.getID());

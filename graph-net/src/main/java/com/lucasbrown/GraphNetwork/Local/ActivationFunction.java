@@ -49,7 +49,6 @@ public interface ActivationFunction {
 
     }
 
-    
     static class RectifiedLinearUnit implements ActivationFunction {
 
         @Override
@@ -74,18 +73,17 @@ public interface ActivationFunction {
 
     }
 
-    
     public static class LeakyRectifiedLinearUnit implements ActivationFunction {
 
         private final double alpha;
 
-        public LeakyRectifiedLinearUnit(double alpha){
+        public LeakyRectifiedLinearUnit(double alpha) {
             this.alpha = alpha;
         }
 
         @Override
         public double activator(double x) {
-            return x < 0 ? x*alpha : x;
+            return x < 0 ? x * alpha : x;
         }
 
         @Override
@@ -105,12 +103,11 @@ public interface ActivationFunction {
 
     }
 
-
     static class SignedQuadratic implements ActivationFunction {
 
         @Override
         public double activator(double x) {
-            return Math.signum(x) * x * x/2 + x;
+            return Math.signum(x) * x * x / 2 + x;
         }
 
         @Override
@@ -120,12 +117,12 @@ public interface ActivationFunction {
 
         @Override
         public double inverse(double x) {
-            return Math.signum(x) * (Math.sqrt(2*Math.abs(x) + 1) - 1);
+            return Math.signum(x) * (Math.sqrt(2 * Math.abs(x) + 1) - 1);
         }
 
         @Override
         public double inverseDerivative(double x) {
-            return 1 / Math.sqrt(2*Math.abs(x) + 1);
+            return 1 / Math.sqrt(2 * Math.abs(x) + 1);
         }
 
     }
@@ -139,7 +136,7 @@ public interface ActivationFunction {
 
         @Override
         public double derivative(double x) {
-            return 1/(Math.abs(x) + 1);
+            return 1 / (Math.abs(x) + 1);
         }
 
         @Override

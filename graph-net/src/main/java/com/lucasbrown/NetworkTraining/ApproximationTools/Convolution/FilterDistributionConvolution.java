@@ -1,21 +1,14 @@
 package com.lucasbrown.NetworkTraining.ApproximationTools.Convolution;
 
+import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
+import com.lucasbrown.NetworkTraining.DataSetTraining.BackwardsSamplingDistribution;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
-import java.util.function.DoubleUnaryOperator;
 import java.util.stream.DoubleStream;
 import java.util.stream.IntStream;
-import java.util.stream.Stream;
 
-import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
-import com.lucasbrown.NetworkTraining.ApproximationTools.DoubleFunction;
-import com.lucasbrown.NetworkTraining.ApproximationTools.IntegralTransformations;
-import com.lucasbrown.NetworkTraining.DataSetTraining.BackwardsSamplingDistribution;
-import com.lucasbrown.NetworkTraining.DataSetTraining.IFilter;
-import com.lucasbrown.NetworkTraining.DataSetTraining.ITrainableDistribution;
-
-import jsat.math.integration.Romberg;
 import jsat.distributions.multivariate.NormalM;
 import jsat.linear.DenseMatrix;
 import jsat.linear.DenseVector;

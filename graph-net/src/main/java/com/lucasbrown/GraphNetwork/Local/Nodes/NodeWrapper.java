@@ -3,23 +3,21 @@ package com.lucasbrown.GraphNetwork.Local.Nodes;
 import java.security.InvalidAlgorithmParameterException;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.List;
 import java.util.Optional;
 
-import com.lucasbrown.GraphNetwork.Global.GraphNetwork;
+import com.lucasbrown.GraphNetwork.Global.Network.GraphNetwork;
 import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
 import com.lucasbrown.GraphNetwork.Local.Arc;
 import com.lucasbrown.GraphNetwork.Local.Outcome;
 import com.lucasbrown.GraphNetwork.Local.Signal;
-import com.lucasbrown.NetworkTraining.DataSetTraining.BackwardsSamplingDistribution;
 import com.lucasbrown.NetworkTraining.DataSetTraining.IExpectationAdjuster;
 import com.lucasbrown.NetworkTraining.DataSetTraining.ITrainableDistribution;
 
-public class NodeWrapper implements INode {
+public class NodeWrapper implements ITrainable {
 
-    protected INode wrappingNode;
+    protected ITrainable wrappingNode;
 
-    public NodeWrapper(INode node) {
+    public NodeWrapper(ITrainable node) {
         wrappingNode = node;
     }
 
@@ -127,26 +125,6 @@ public class NodeWrapper implements INode {
     }
 
     /**
-     * Notify this node of a new incoming backward signal
-     * 
-     * @param signal
-     */
-    @Override
-    public void recieveBackwardSignal(Signal signal) {
-        wrappingNode.recieveBackwardSignal(signal);
-    }
-
-    /**
-     * Notify this node of a new inference signal
-     * 
-     * @param signal
-     */
-    @Override
-    public void recieveInferenceSignal(Signal signal) {
-        wrappingNode.recieveInferenceSignal(signal);
-    }
-
-    /**
      * Get whether the current forward signal is set and valid
      * 
      * @return
@@ -182,21 +160,6 @@ public class NodeWrapper implements INode {
     }
 
     @Override
-    public void prepareOutputDistributionAdjustments(ArrayList<Outcome> allOutcomes) {
-        wrappingNode.prepareOutputDistributionAdjustments(allOutcomes);
-    }
-
-    @Override
-    public void sendErrorsBackwards(Outcome outcomeAtTime) {
-        wrappingNode.sendErrorsBackwards(outcomeAtTime);
-    }
-
-    @Override
-    public void adjustProbabilitiesForOutcome(Outcome outcome){
-        wrappingNode.adjustProbabilitiesForOutcome(outcome);
-    }
-
-    @Override
     public void applyDistributionUpdate() {
         wrappingNode.applyDistributionUpdate();
     }
@@ -204,11 +167,6 @@ public class NodeWrapper implements INode {
     @Override
     public void applyFilterUpdate() {
         wrappingNode.applyFilterUpdate();
-    }
-
-    @Override
-    public void applyErrorSignals(double epsilon, List<ArrayList<Outcome>> allOutcomes) {
-        wrappingNode.applyErrorSignals(epsilon, allOutcomes);
     }
 
     @Override
@@ -222,13 +180,58 @@ public class NodeWrapper implements INode {
     }
 
     @Override
-    public void sendTrainingSignals() {
-        wrappingNode.sendTrainingSignals();
+    public double computeMergedSignalStrength(Collection<Signal> incomingSignals, int binary_string) {
+        return wrappingNode.computeMergedSignalStrength(incomingSignals, binary_string);
+    }
+
+    @Override
+    public void setWeights(int bitStr, double[] newWeights) {
+        wrappingNode.setBias(bitStr, bitStr);
+    }
+
+    @Override
+    public void setBias(int bitStr, double newBias) {
+        wrappingNode.setBias(bitStr, newBias);
+    }
+
+    @Override
+    public int getNumberOfVariables() {
+        return wrappingNode.getNumberOfVariables();
+    }
+
+    @Override
+    public int getLinearIndexOfWeight(int key, int weight_index) {
+        return wrappingNode.getLinearIndexOfWeight(key, weight_index);
+    }
+
+    @Override
+    public int getLinearIndexOfBias(int key) {
+        return wrappingNode.getLinearIndexOfBias(key);
+    }
+
+    @Override
+    public IExpectationAdjuster getOutputDistributionAdjuster() {
+        return wrappingNode.getOutputDistributionAdjuster();
+    }
+
+    @Override
+    public IExpectationAdjuster getSignalChanceDistributionAdjuster() {
+        return wrappingNode.getSignalChanceDistributionAdjuster();
+    }
+
+    @Override
+    public void applyGradient(double[] gradient, double epsilon) {
+        wrappingNode.applyGradient(gradient, epsilon);
     }
 
     @Override
     public int compareTo(INode o) {
         return INode.CompareNodes(this, o);
+    }
+
+    @Override
+    public int hashCode(){
+        return wrappingNode.hashCode();
     }
 
     @Override

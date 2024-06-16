@@ -6,9 +6,8 @@ import com.lucasbrown.GraphNetwork.Local.Arc;
 import com.lucasbrown.NetworkTraining.DataSetTraining.IExpectationAdjuster;
 import com.lucasbrown.NetworkTraining.DataSetTraining.ITrainableDistribution;
 
-public abstract class TrainableNodeBase extends NodeBase implements ITrainable{
- 
-    
+public abstract class TrainableNodeBase extends NodeBase implements ITrainable {
+
     /**
      * The distribution of outputs produced by this node
      */
@@ -36,16 +35,15 @@ public abstract class TrainableNodeBase extends NodeBase implements ITrainable{
 
     public TrainableNodeBase(GraphNetwork network, final ActivationFunction activationFunction,
             ITrainableDistribution outputDistribution, IExpectationAdjuster outputAdjuster,
-            ITrainableDistribution signalChanceDistribution, IExpectationAdjuster chanceAdjuster){
-            super(network, activationFunction);
+            ITrainableDistribution signalChanceDistribution, IExpectationAdjuster chanceAdjuster) {
+        super(network, activationFunction);
 
-            this.outputDistribution = outputDistribution;
-            this.outputAdjuster = outputAdjuster;
-            this.signalChanceDistribution = signalChanceDistribution;
-            this.chanceAdjuster = chanceAdjuster;   
+        this.outputDistribution = outputDistribution;
+        this.outputAdjuster = outputAdjuster;
+        this.signalChanceDistribution = signalChanceDistribution;
+        this.chanceAdjuster = chanceAdjuster;
     }
 
-    
     @Override
     public ITrainableDistribution getOutputDistribution() {
         return outputDistribution;
@@ -56,7 +54,6 @@ public abstract class TrainableNodeBase extends NodeBase implements ITrainable{
         return signalChanceDistribution;
     }
 
-    
     @Override
     public IExpectationAdjuster getOutputDistributionAdjuster() {
         return outputAdjuster;
@@ -66,7 +63,7 @@ public abstract class TrainableNodeBase extends NodeBase implements ITrainable{
     public IExpectationAdjuster getSignalChanceDistributionAdjuster() {
         return chanceAdjuster;
     }
-    
+
     @Override
     public void applyDistributionUpdate() {
         outputAdjuster.applyAdjustments();

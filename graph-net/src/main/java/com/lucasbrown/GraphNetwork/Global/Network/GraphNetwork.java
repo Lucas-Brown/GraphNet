@@ -31,7 +31,6 @@ public class GraphNetwork {
     // Temporary global variable for testing
     public static final double N_MAX = 10000;
 
-
     /**
      * A list of all nodes within the graph network
      */
@@ -108,38 +107,9 @@ public class GraphNetwork {
                 .collect(Collectors.toCollection(ArrayList::new));
     }
 
-    /**
-     * Creates a new node and adds it to the list of nodes within the network
-     * TODO: Potentially remove external addition of nodes and connections in favor
-     * of dynamically adding nodes/edges during training
-     * 
-     * @return The node that was created
-     */
-    /*
-     * public INode createHiddenNode(final ActivationFunction activationFunction) {
-     * INode n = new INode(this, networkData, activationFunction);
-     * nodes.add(n);
-     * return n;
-     * }
-     * 
-     * public InputNode createInputNode(final ActivationFunction activationFunction)
-     * {
-     * InputNode n = new InputNode(this, networkData, activationFunction);
-     * nodes.add(n);
-     * return n;
-     * }
-     * 
-     * public OutputNode createOutputNode(final ActivationFunction
-     * activationFunction) {
-     * OutputNode n = new OutputNode(this, networkData, activationFunction);
-     * nodes.add(n);
-     * return n;
-     * }
-     */
-
     public Arc addNewConnection(INode transmittingNode, INode recievingNode,
             IFilter transferFunction, IExpectationAdjuster filterAdjuster) {
-        
+
         Arc connection = new Arc(transmittingNode, recievingNode, transferFunction, filterAdjuster);
         transmittingNode.addOutgoingConnection(connection);
         recievingNode.addIncomingConnection(connection);
@@ -156,24 +126,13 @@ public class GraphNetwork {
     }
 
     /**
-     * Step the entire network forward one itteration
-     * Does not train the network
-     */
-    public void inferenceStep() {
-        inputOperation.accept(input_nodes);
-        recieveSignals();
-        outputOperation.accept(output_nodes);
-        sendInferenceSignals();
-    }
-
-    /**
      * 
      */
     public void trainingStep() {
         inputOperation.accept(input_nodes);
         outputOperation.accept(output_nodes);
         recieveSignals();
-        sendTrainingSignals();
+        sendForwardSignals();
     }
 
     public boolean isNetworkDead() {
@@ -195,17 +154,8 @@ public class GraphNetwork {
         });
     }
 
-    private void sendInferenceSignals() {
-        // activeNodes.forEach(INode::sendInferenceSignals);
-    }
-
-    /**
-     * Tell each node to compute next phase of signals
-     */
-    private void sendTrainingSignals() {
-        // Will automatically collect generated signals in {@code activeNextNodes}
-        activeNodes.stream().forEach(INode::sendTrainingSignals);
-        //activeNodes.stream().forEach(INode::applyTrainingChanges);
+    private void sendForwardSignals() {
+        activeNodes.stream().forEach(INode::sendForwardSignals);
     }
 
     @Override
@@ -232,13 +182,13 @@ public class GraphNetwork {
         activeNextNodes.clear();
     }
 
-    public void addNodeToNetwork(INode node){
+    public void addNodeToNetwork(INode node) {
         node.setParentNetwork(this);
         nodes.add(node);
-        if(node instanceof InputNode){
+        if (node instanceof InputNode) {
             input_nodes.put(node.getID(), (InputNode) node);
         }
-        if(node instanceof OutputNode){
+        if (node instanceof OutputNode) {
             output_nodes.put(node.getID(), (OutputNode) node);
         }
     }

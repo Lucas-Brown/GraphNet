@@ -3,12 +3,10 @@ package com.lucasbrown.GraphNetwork.Local.Nodes;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.List;
 
 import com.lucasbrown.GraphNetwork.Global.Network.GraphNetwork;
 import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
 import com.lucasbrown.GraphNetwork.Local.Arc;
-import com.lucasbrown.GraphNetwork.Local.Outcome;
 import com.lucasbrown.GraphNetwork.Local.Signal;
 import com.lucasbrown.NetworkTraining.ApproximationTools.IterableTools;
 import com.lucasbrown.NetworkTraining.DataSetTraining.IExpectationAdjuster;
@@ -25,17 +23,13 @@ public class SimpleNode extends TrainableNodeBase {
     protected double[] weights;
     protected double bias;
 
-    private double bias_gradient;
-    private double[] weights_gradient;
-
     public SimpleNode(final GraphNetwork network, final ActivationFunction activationFunction,
-        ITrainableDistribution outputDistribution, IExpectationAdjuster outputAdjuster, 
-        ITrainableDistribution signalChanceDistribution, IExpectationAdjuster chanceAdjuster) {
-        super(network, activationFunction, outputDistribution, outputAdjuster, signalChanceDistribution, chanceAdjuster);
+            ITrainableDistribution outputDistribution, IExpectationAdjuster outputAdjuster,
+            ITrainableDistribution signalChanceDistribution, IExpectationAdjuster chanceAdjuster) {
+        super(network, activationFunction, outputDistribution, outputAdjuster, signalChanceDistribution,
+                chanceAdjuster);
         weights = new double[0];
         bias = rng.nextGaussian();
-        bias_gradient = 0;
-        weights_gradient = new double[0];
     }
 
     /**
@@ -56,10 +50,6 @@ public class SimpleNode extends TrainableNodeBase {
     private void appendWeights() {
         weights = Arrays.copyOf(weights, weights.length + 1);
         weights[weights.length - 1] = rng.nextGaussian();
-        weights_gradient = new double[weights.length];
-        // for (int i = 0; i < weights_delta.length; i++) {
-        // weights_delta[i] = new double();
-        // }
     }
 
     @Override
@@ -73,18 +63,28 @@ public class SimpleNode extends TrainableNodeBase {
     }
 
     @Override
-    public void setWeights(int binStr, double[] newWeights){
+    public void setWeights(int binStr, double[] newWeights) {
         weights = newWeights;
     }
 
     @Override
-    public void setBias(int binStr, double newBias){
+    public void setBias(int binStr, double newBias) {
         bias = newBias;
     }
 
     @Override
-    public int getNumberOfVariables(){
+    public int getNumberOfVariables() {
         return weights.length + 1;
+    }
+
+    @Override
+    public int getLinearIndexOfWeight(int key, int weight_index) {
+        return weight_index;
+    }
+
+    @Override
+    public int getLinearIndexOfBias(int key) {
+        return weights.length;
     }
 
     /**
@@ -105,112 +105,18 @@ public class SimpleNode extends TrainableNodeBase {
             strength += sortedSignals.get(i).getOutputStrength() * weights_of_signals[i];
         }
 
-        assert Double.isFinite(strength); 
+        assert Double.isFinite(strength);
         return strength;
     }
 
     @Override
-    public void applyErrorSignals(double epsilon, List<ArrayList<Outcome>> allOutcomes) {
-        computeGradient(allOutcomes);
-        applyGradient(epsilon);
-    }
-
-    private void computeGradient(List<ArrayList<Outcome>> allOutcomes) {
-        int T = 0;
-
-        // for all time steps
-        for (ArrayList<Outcome> outcomesAtTime : allOutcomes) {
-            
-            // Compute the probability volume of this timestep
-            double probabilityVolume = 1;
-            boolean atLeastOnePass = false;
-            for (Outcome outcome : outcomesAtTime) {
-                probabilityVolume += outcome.probability;
-                atLeastOnePass |= outcome.passRate.hasValues();
-            }
-
-            // at least one outcome must have a chance to pass through 
-            if(!atLeastOnePass){
-                continue;
-            }
-
-            // Increase the number of non-zero timesteps
-            T++;
-
-            // if zero volume, move on to next set
-            if (probabilityVolume == 0) {
-                continue;
-            }
-
-            // add error to the gradient
-            for (Outcome outcome : outcomesAtTime) {
-                if(!outcome.passRate.hasValues() || outcome.errorDerivative.getProdSum() == 0){
-                    continue;
-                }
-                
-                int key = outcome.binary_string;
-
-                double error = outcome.probability * outcome.errorDerivative.getAverage() / probabilityVolume;
-                assert Double.isFinite(error);
-                bias_gradient += error;
-
-                int i = 0;
-                while (key > 0) {
-                    if ((key & 0b1) == 1) {
-                        weights_gradient[i] += error * outcome.sourceOutcomes[i].netValue;
-                        i++;
-                    }
-                    key = key >> 0b1;
-                }
-            }
-        }//:D heehee ~ Jess hi :) i love you 
-        
-        //assert T > 0;
-
-        if(T == 0){
-            return;
-        }
-
-        // test for approximate error
-        //double foo = allOutcomes.stream().flatMap(outcomeList -> outcomeList.stream()).mapToDouble(outcome -> outcome.errorOfOutcome.getProdSum()).average().getAsDouble();
-
-        // divide all gradients by the number of non-empty timesteps
-        bias_gradient /= T;
-        assert Double.isFinite(bias_gradient);
-
+    public void applyGradient(double[] gradient, double epsilon) {
         for (int i = 0; i < weights.length; i++) {
-            weights_gradient[i] /= T;
-            assert Double.isFinite(weights_gradient[i]);
-        }
-    }
-
-    private void applyGradient(double epsilon) {
-        bias -= bias_gradient * epsilon;
-        bias_gradient = 0;
-
-        for (int i = 0; i < weights.length; i++) {
-            weights[i] -= weights_gradient[i] * epsilon;
-            weights_gradient[i] = 0;
-        }
-    }
-
-    /**
-     * Attempt to send forward and backward signals
-     */
-    public void sendTrainingSignals() {
-
-        if (!outgoing.isEmpty()) {
-            // Send the forward signals and record the cumulative error
-            sendForwardSignals();
-            hasValidForwardSignal = false;
+            weights[i] -= gradient[i] * epsilon;
+            gradient[i] = 0;
         }
 
-        /*
-         * if (!incoming.isEmpty()) {
-         * sendBackwardsSignals();
-         * }
-         */
-
+        bias -= gradient[gradient.length - 1] * epsilon;
     }
 
 }

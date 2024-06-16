@@ -1,13 +1,12 @@
 package com.lucasbrown.GraphNetwork.Global.Network;
 
-import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
 import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
 import com.lucasbrown.GraphNetwork.Local.Nodes.INode;
+import com.lucasbrown.GraphNetwork.Local.Nodes.ITrainable;
 import com.lucasbrown.GraphNetwork.Local.Nodes.InputNode;
 import com.lucasbrown.GraphNetwork.Local.Nodes.OutputNode;
 import com.lucasbrown.NetworkTraining.DataSetTraining.IExpectationAdjuster;
@@ -117,9 +116,9 @@ public class NodeBuilder {
             probabilityDistributionAdjusterSupplier = probabilityDistribution.getDefaulAdjuster();
         }
 
-        INode node = nodeConstructor.apply(network, activationFunction, outputDistribution,
-        outputDistributionAdjusterSupplier.apply(outputDistribution), probabilityDistribution,
-        probabilityDistributionAdjusterSupplier.apply(probabilityDistribution));
+        ITrainable node = nodeConstructor.apply(network, activationFunction, outputDistribution,
+                outputDistributionAdjusterSupplier.apply(outputDistribution), probabilityDistribution,
+                probabilityDistributionAdjusterSupplier.apply(probabilityDistribution));
 
         if (is_input) {
             node = new InputNode(node);
@@ -143,14 +142,12 @@ public class NodeBuilder {
         return Stream.generate(this::build).limit(copies).toArray(INode[]::new);
     }
 
-
-    
     // Shorter name for the quad-function in this context
     @FunctionalInterface
     public static interface NodeConstructor {
 
-        public abstract INode apply(GraphNetwork network, final ActivationFunction activationFunction,
-        ITrainableDistribution outputDistribution, IExpectationAdjuster outputAdjuster,
-            ITrainableDistribution signalChanceDistribution, IExpectationAdjuster chanceAdjuster);
+        public abstract ITrainable apply(GraphNetwork network, final ActivationFunction activationFunction,
+                ITrainableDistribution outputDistribution, IExpectationAdjuster outputAdjuster,
+                ITrainableDistribution signalChanceDistribution, IExpectationAdjuster chanceAdjuster);
     }
 }

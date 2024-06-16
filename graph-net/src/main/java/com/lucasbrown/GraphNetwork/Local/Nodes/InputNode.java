@@ -1,12 +1,7 @@
 package com.lucasbrown.GraphNetwork.Local.Nodes;
 
-import java.security.InvalidAlgorithmParameterException;
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
 
-import com.lucasbrown.GraphNetwork.Global.GraphNetwork;
-import com.lucasbrown.GraphNetwork.Global.SharedNetworkData;
 import com.lucasbrown.GraphNetwork.Local.Arc;
 import com.lucasbrown.GraphNetwork.Local.Outcome;
 
@@ -18,7 +13,7 @@ public class InputNode extends NodeWrapper implements IInputNode {
 
     private double inputValue;
 
-    public InputNode(INode node){
+    public InputNode(ITrainable node) {
         super(node);
     }
 
@@ -26,14 +21,14 @@ public class InputNode extends NodeWrapper implements IInputNode {
     public void acceptUserForwardSignal(double value) {
         inputValue = value;
         wrappingNode.getParentNetwork().notifyNodeActivation(this);
-        wrappingNode.setValidForwardSignal(true); 
+        wrappingNode.setValidForwardSignal(true);
     }
 
     @Override
     public void acceptUserInferenceSignal(double value) {
         inputValue = value;
         wrappingNode.getParentNetwork().notifyNodeActivation(this);
-        wrappingNode.setValidForwardSignal(true); 
+        wrappingNode.setValidForwardSignal(true);
     }
 
     @Override
@@ -41,29 +36,21 @@ public class InputNode extends NodeWrapper implements IInputNode {
         // do nothing!
     }
 
-    @Override 
-    public void sendTrainingSignals(){
-        sendForwardSignals();
-        setValidForwardSignal(false);
-    }
-
     @Override
     public void sendForwardSignals() {
         for (Arc connection : getAllOutgoingConnections()) {
-            connection.sendForwardSignal(getOutcome()); 
+            connection.sendForwardSignal(getOutcome());
         }
     }
 
     @Override
-    public ArrayList<Outcome> getState()
-    {
+    public ArrayList<Outcome> getState() {
         ArrayList<Outcome> outcomes = new ArrayList<>(1);
         outcomes.add(getOutcome());
         return outcomes;
     }
 
-    
-    private Outcome getOutcome(){
+    private Outcome getOutcome() {
         Outcome outcome = new Outcome();
         outcome.netValue = inputValue;
         outcome.activatedValue = getActivationFunction().activator(inputValue);
@@ -72,46 +59,14 @@ public class InputNode extends NodeWrapper implements IInputNode {
         return outcome;
     }
 
-    @Override 
-    public void sendErrorsBackwards(Outcome outcomeAtTime){
-        // since this is an input node, there's nothing to send an error to
-    }
-    
-    @Override
-    public void applyErrorSignals(double epsilon, List<ArrayList<Outcome>> allOutcomes) {
-        // cannot apply any error
-    }
-    
-    /*
-     * @Override
-     * protected void acceptIncomingForwardSignals(ArrayList<Signal>
-     * incomingSignals) {
-     * if (incomingSignals.size() == 0)
-     * return;
-     * 
-     * assert incomingSignals.size() == 1;
-     * 
-     * super.hasValidForwardSignal = true;
-     * 
-     * mergedForwardStrength = incomingSignals.get(0).strength;
-     * activatedStrength = activationFunction.activator(mergedForwardStrength);
-     * }
-     * 
-     * @Override
-     * protected void updateWeightsAndBias(double error_derivative){
-     * return; // do not update, no matter what *HE* whispers
-     * }
-     */
-
     @Override
     public boolean addIncomingConnection(Arc connection) {
         throw new UnsupportedOperationException("Input nodes are not allowed to have any incoming connections.");
     }
-    
+
     @Override
     public String toString() {
         return String.format("%s: (%.2e, 100%s)", getName(), inputValue, "%");
     }
 
-    
 }
