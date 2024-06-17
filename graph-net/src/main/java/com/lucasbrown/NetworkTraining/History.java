@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.Objects;
+import java.util.stream.Stream;
 
 import com.lucasbrown.GraphNetwork.Global.Network.GraphNetwork;
 import com.lucasbrown.GraphNetwork.Local.Outcome;
@@ -67,6 +68,10 @@ public class History {
             }
         }
         return keyMap;
+    }
+
+    public Stream<ArrayList<Outcome>> getAnonymousHistoryStream(){
+        return outcomesThroughTime.stream().flatMap(map -> map.values().stream());
     }
 
     /**

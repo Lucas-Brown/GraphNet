@@ -16,14 +16,12 @@ public interface ActivationFunction {
 
     public abstract double derivative(double x);
 
-    public abstract double inverse(double x);
-
-    public abstract double inverseDerivative(double x);
+    public abstract double secondDerivative(double x);
 
     public static final Linear LINEAR = new Linear();
     public static final RectifiedLinearUnit ReLU = new RectifiedLinearUnit();
-    public static final SignedQuadratic SIGNED_QUADRATIC = new SignedQuadratic();
-    public static final SignedLogarithmic SIGNED_LOGARITHMIC = new SignedLogarithmic();
+    // public static final SignedQuadratic SIGNED_QUADRATIC = new SignedQuadratic();
+    // public static final SignedLogarithmic SIGNED_LOGARITHMIC = new SignedLogarithmic();
 
     static class Linear implements ActivationFunction {
 
@@ -38,13 +36,8 @@ public interface ActivationFunction {
         }
 
         @Override
-        public double inverse(double x) {
-            return x;
-        }
-
-        @Override
-        public double inverseDerivative(double x) {
-            return 1;
+        public double secondDerivative(double x) {
+            return 0;
         }
 
     }
@@ -62,13 +55,8 @@ public interface ActivationFunction {
         }
 
         @Override
-        public double inverse(double x) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public double inverseDerivative(double x) {
-            throw new UnsupportedOperationException();
+        public double secondDerivative(double x) {
+            return 0;
         }
 
     }
@@ -92,17 +80,14 @@ public interface ActivationFunction {
         }
 
         @Override
-        public double inverse(double x) {
-            throw new UnsupportedOperationException();
+        public double secondDerivative(double x) {
+            return 0;
         }
 
-        @Override
-        public double inverseDerivative(double x) {
-            throw new UnsupportedOperationException();
-        }
 
     }
 
+    /* 
     static class SignedQuadratic implements ActivationFunction {
 
         @Override
@@ -150,5 +135,6 @@ public interface ActivationFunction {
         }
 
     }
+        */
 
 }

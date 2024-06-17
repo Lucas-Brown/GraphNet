@@ -20,7 +20,10 @@ import com.lucasbrown.NetworkTraining.ApproximationTools.ErrorFunction;
 import com.lucasbrown.NetworkTraining.ApproximationTools.WeightedAverage;
 import com.lucasbrown.NetworkTraining.DataSetTraining.IExpectationAdjuster;
 
-public class BackpropTrainer {
+import jsat.linear.DenseMatrix;
+import jsat.linear.Matrix;
+
+public class NewtonTrainer {
 
     public double epsilon = 0.01;
     private WeightedAverage total_error;
@@ -38,7 +41,13 @@ public class BackpropTrainer {
 
     private boolean normalizeError;
 
-    public BackpropTrainer(GraphNetwork network, ErrorFunction errorFunction, boolean normalizeError) {
+    private int totalNumOfVariables;
+    private HashMap<ITrainable, Integer> vectorNodeOffset;
+
+    private Matrix errorDerivative;
+    private Matrix errorHessian;
+
+    public NewtonTrainer(GraphNetwork network, ErrorFunction errorFunction, boolean normalizeError) {
         this.network = network;
         this.errorFunction = errorFunction;
         this.normalizeError = normalizeError;
@@ -54,9 +63,15 @@ public class BackpropTrainer {
 
     private void castAllToTrainable() {
         ArrayList<INode> nodes = network.getNodes();
+        vectorNodeOffset = new HashMap<>(nodes.size());
         allNodes = new HashSet<>(nodes.size());
+
+        int totalNumOfVariables = 0;
         for (INode node : nodes) {
-            allNodes.add((ITrainable) node);
+            ITrainable tnode = (ITrainable) node;
+            allNodes.add(tnode);
+            vectorNodeOffset.put(tnode, totalNumOfVariables);
+            totalNumOfVariables += tnode.getNumberOfVariables();
         }
     }
 
@@ -82,9 +97,20 @@ public class BackpropTrainer {
 
         computeErrorOfOutputs(print_forward);
         backpropagateErrors();
+        if(normalizeError){
+            normalizeErrors();
+        }
         applyErrorSignals();
         network.deactivateAll();
         networkHistory.burnHistory();
+    }
+
+    private int getLinearIndexOfWeight(ITrainable node, int key, int weight_index){
+        return vectorNodeOffset.get(node) + node.getLinearIndexOfWeight(key, weight_index);
+    }
+
+    private int getLinearIndexOfBias(ITrainable node, int key){
+        return vectorNodeOffset.get(node) + node.getLinearIndexOfBias(key);
     }
 
     private void captureForward(boolean print_forward) {
@@ -134,6 +160,10 @@ public class BackpropTrainer {
             outcome.errorDerivative.add(errorFunction.error_derivative(outcome.activatedValue, target),
                     outcome.probability);
 
+            outcome.errorSecondDerivative += errorFunction.error_second_derivative(outcome.activatedValue, target) * outcome.probability;
+
+            outcome.crossErrorDerivative = new DenseMatrix(totalNumOfVariables, 1); 
+
             double error = errorFunction.error(outcome.activatedValue, target);
             // assert Double.isFinite(errorFunction.error(outcome.activatedValue, target));
             total_error.add(error, outcome.probability);
@@ -152,6 +182,34 @@ public class BackpropTrainer {
             timestep--;
         }
     }
+
+    
+    private void normalizeErrors() {
+        networkHistory.getAnonymousHistoryStream().forEach(this::normalizeErrors);
+    }
+
+    private void normalizeErrors(ArrayList<Outcome> outcomesAtTime){
+        
+        // compute the probability volume
+        double probabilityVolume = 0;
+        for (Outcome outcome : outcomesAtTime) {
+            probabilityVolume += outcome.probability;
+        }
+
+        // if the volume is zero, we can't noramlize. This should only occure when the error is zero anyways
+        if(probabilityVolume == 0){
+            return;
+        }
+        for (Outcome outcome : outcomesAtTime) {
+            double normalizationConstant = outcome.probability / probabilityVolume;
+            double error_average = outcome.errorDerivative.getAverage();
+            outcome.errorDerivative.reset();
+            outcome.errorDerivative.add(error_average * normalizationConstant, 1);
+            outcome.errorSecondDerivative *= normalizationConstant;
+        }
+
+    }
+
 
     private void updateNodeForTimestep(ITrainable node, ArrayList<Outcome> outcomesAtTIme) {
         prepareOutputDistributionAdjustments(node, outcomesAtTIme);
@@ -193,8 +251,10 @@ public class BackpropTrainer {
         }
 
         int binary_string = outcomeAtTime.binary_string;
-        double error_derivative = outcomeAtTime.errorDerivative.getAverage()
-                * node.getActivationFunction().derivative(outcomeAtTime.netValue);
+        double activator_derivative = node.getActivationFunction().derivative(outcomeAtTime.netValue);
+        double activator_second_derivative = node.getActivationFunction().secondDerivative(outcomeAtTime.netValue);
+        double error_derivative = outcomeAtTime.errorDerivative.getAverage();
+        double net_derivative = error_derivative * activator_derivative;
 
         double[] weightsOfNodes = node.getWeights(binary_string);
 
@@ -202,6 +262,7 @@ public class BackpropTrainer {
             if (!outcomeAtTime.passRate.hasValues() || outcomeAtTime.probability == 0) {
                 continue;
             }
+            double w = weightsOfNodes[i];
             Outcome so = outcomeAtTime.sourceOutcomes[i];
 
             // Get the arc connectting the node to its source
@@ -212,8 +273,17 @@ public class BackpropTrainer {
             double prob = outcomeAtTime.probability * arc.filter.getChanceToSend(shifted_value)
                     / outcomeAtTime.sourceTransferProbabilities[i];
 
-            // accumulate error
-            so.errorDerivative.add(error_derivative * weightsOfNodes[i], prob);
+            // accumulate first derivative error
+            so.errorDerivative.add(net_derivative * w, prob);
+
+            
+            // accumulate second derivative error
+            double secondDerivative = so.errorSecondDerivative * net_derivative * net_derivative;
+            secondDerivative += error_derivative * activator_second_derivative * w * w;
+            so.errorSecondDerivative += secondDerivative * prob;
+
+            // compute the cross-derivative
+            so.crossErrorDerivative = so.crossErrorDerivative.add(errorDerivative);
 
             // accumulate pass rates
             double pass_avg = outcomeAtTime.passRate.getAverage();
@@ -287,11 +357,8 @@ public class BackpropTrainer {
         // for all time steps
         for (ArrayList<Outcome> outcomesAtTime : allOutcomes) {
 
-            // Compute the probability volume of this timestep
-            double probabilityVolume = 0;
             boolean atLeastOnePass = false;
             for (Outcome outcome : outcomesAtTime) {
-                probabilityVolume += outcome.probability;
                 atLeastOnePass |= outcome.passRate.hasValues();
             }
 
@@ -303,10 +370,6 @@ public class BackpropTrainer {
             // Increase the number of non-zero timesteps
             T++;
 
-            // if zero volume, move on to next set
-            if (probabilityVolume == 0) {
-                continue;
-            }
 
             // add error to the gradient
             for (Outcome outcome : outcomesAtTime) {
@@ -317,9 +380,6 @@ public class BackpropTrainer {
                 int key = outcome.binary_string;
 
                 double error = outcome.errorDerivative.getProdSum();
-                if(normalizeError){
-                    error *= outcome.probability / probabilityVolume;
-                }
                 assert Double.isFinite(error);
                 gradient[node.getLinearIndexOfBias(key)] += error;
 
