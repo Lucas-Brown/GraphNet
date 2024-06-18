@@ -3,6 +3,7 @@ package com.lucasbrown.GraphNetwork.Local;
 import com.lucasbrown.GraphNetwork.Local.Nodes.INode;
 import com.lucasbrown.NetworkTraining.ApproximationTools.WeightedAverage;
 
+import jsat.linear.DenseMatrix;
 import jsat.linear.Matrix;
 
 public class Outcome {
@@ -20,8 +21,10 @@ public class Outcome {
      */
     public WeightedAverage passRate = new WeightedAverage();
     public WeightedAverage errorDerivative = new WeightedAverage();
-    public double errorSecondDerivative = 0;
-    public Matrix crossErrorDerivative;
+
+    // TODO: seperate training information
+    public Matrix errorJacobian;
+    public Matrix errorHessian;
 
     @Override
     public String toString() {

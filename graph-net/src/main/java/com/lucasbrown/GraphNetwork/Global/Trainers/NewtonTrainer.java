@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map.Entry;
 
 import com.lucasbrown.GraphNetwork.Global.Network.GraphNetwork;
+import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
 import com.lucasbrown.GraphNetwork.Local.Arc;
 import com.lucasbrown.GraphNetwork.Local.Outcome;
 import com.lucasbrown.GraphNetwork.Local.Nodes.IInputNode;
@@ -124,6 +125,65 @@ public class NewtonTrainer {
         timestep--;
     }
 
+    private void computeFullErrorDerivatives(){
+        for (int time = timestep; time > 0; time--) {
+            for (int i = 0; i < outputNodes.size(); i++) {
+                computeFullErrorDerivatives(outputNodes.get(i), time);
+            }
+        }
+    }
+
+    private void computeFullErrorDerivatives(ITrainable node, int timestep){
+        ArrayList<Outcome> outcomes = networkHistory.getStateOfNode(timestep, node);
+
+
+        // initialize matrices
+        for(Outcome outcome : outcomes){
+            outcome.errorJacobian = new DenseMatrix(totalNumOfVariables, 1);
+            outcome.errorHessian = new DenseMatrix(totalNumOfVariables, totalNumOfVariables);
+        }
+
+        // Compute the Jacobians and Hessians
+        for(Outcome outcome : outcomes){
+            computeErrorSignals(node, outcome);
+        }
+    }
+
+    private void computeErrorSignals(ITrainable node, Outcome outcome){
+        // the Jacobian and Hessian of the input matrix will always be zero 
+        if(node instanceof InputNode){
+            return;
+        }
+
+
+        Matrix z_jacobi = new DenseMatrix(totalNumOfVariables, 1);
+        int key = outcome.binary_string;
+
+        // construct the jacobian for the net value (z)
+        // starting with the direct derivative of z
+        for(int i = 0; i < outcome.sourceOutcomes.length; i++){
+            int idx = getLinearIndexOfWeight(node, key, i);
+            z_jacobi.set(idx, 1, outcome.sourceOutcomes[i].activatedValue);
+        }
+        int idx = getLinearIndexOfBias(node, key);
+        z_jacobi.set(idx, 1, 1);
+
+        // incorporate previous jacobians
+        double[] weights = node.getWeights(key);
+        for (int i = 0; i < weights.length; i++) {
+            Matrix weighed_jacobi = outcome.sourceOutcomes[i].errorJacobian.multiply(weights[i]);
+            z_jacobi = z_jacobi.add(weighed_jacobi);
+        }
+
+        // use the net value jacobian to compute the activation jacobian
+        ActivationFunction activator = node.getActivationFunction(); 
+        double actvation_derivative = activator.derivative(outcome.netValue);
+        double actvation_second_derivative = activator.secondDerivative(outcome.netValue);
+
+
+
+    }
+
     private void computeErrorOfOutputs(boolean print_forward) {
         for (int time = timestep; time > 0; time--) {
             for (int i = 0; i < outputNodes.size(); i++) {
@@ -162,7 +222,7 @@ public class NewtonTrainer {
 
             outcome.errorSecondDerivative += errorFunction.error_second_derivative(outcome.activatedValue, target) * outcome.probability;
 
-            outcome.crossErrorDerivative = new DenseMatrix(totalNumOfVariables, 1); 
+            outcome.errorHessian = new DenseMatrix(totalNumOfVariables, 1); 
 
             double error = errorFunction.error(outcome.activatedValue, target);
             // assert Double.isFinite(errorFunction.error(outcome.activatedValue, target));
@@ -283,7 +343,7 @@ public class NewtonTrainer {
             so.errorSecondDerivative += secondDerivative * prob;
 
             // compute the cross-derivative
-            so.crossErrorDerivative = so.crossErrorDerivative.add(errorDerivative);
+            so.errorHessian = so.errorHessian.add(errorDerivative);
 
             // accumulate pass rates
             double pass_avg = outcomeAtTime.passRate.getAverage();
