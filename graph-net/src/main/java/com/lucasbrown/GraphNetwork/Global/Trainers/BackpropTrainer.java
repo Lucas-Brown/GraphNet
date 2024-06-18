@@ -276,7 +276,10 @@ public class BackpropTrainer {
 
     public void applyErrorSignals(ITrainable node, List<ArrayList<Outcome>> allOutcomes) {
         double[] gradient = computeGradient(node, allOutcomes);
-        node.applyGradient(gradient, epsilon);
+        for (int i = 0; i < gradient.length; i++) {
+            gradient[i] *= epsilon;
+        }
+        node.applyDelta(gradient);
     }
 
     private double[] computeGradient(ITrainable node, List<ArrayList<Outcome>> allOutcomes) {

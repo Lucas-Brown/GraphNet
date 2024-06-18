@@ -235,7 +235,7 @@ public class FilterDistributionConvolution {
             invertedSamples[sample] = new double[samples[sample].length];
             for (int i = 0; i < invertedSamples[sample].length; i++) {
                 int idx = indices[i];
-                invertedSamples[sample][i] = activators.get(idx).inverse(samples[sample][i] / weights[idx]);
+                //invertedSamples[sample][i] = activators.get(idx).inverse(samples[sample][i] / weights[idx]);
             }
         }
         return invertedSamples;

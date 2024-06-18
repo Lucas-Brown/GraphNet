@@ -29,10 +29,28 @@ public class History {
         ArrayList<INode> nodes = network.getActiveNodes();
         HashMap<INode, ArrayList<Outcome>> state = new HashMap<>(nodes.size());
         for (INode node : nodes) {
-            state.put(node, node.getState());
+            ArrayList<Outcome> outcomes = node.getState();
+            state.put(node, outcomes);
+
+            
+            // assertion to make sure all references to previous nodes are maintained
+            for(Outcome outcome: outcomes){
+                if(outcome.sourceOutcomes == null){
+                    continue;
+                }
+                for(int i = 0 ; i < outcome.sourceOutcomes.length; i++){
+                    boolean containsReference = false;
+                    ArrayList<Outcome> sourceOutcomes = getStateOfNode(outcomesThroughTime.size()-1, outcome.sourceNodes[i]);
+                    for(Outcome so : sourceOutcomes){
+                        containsReference |= outcome.sourceOutcomes[i] == so;
+                    }
+                    assert containsReference;
+                }
+            }
         }
 
         outcomesThroughTime.add(state);
+
     }
 
     public HashMap<INode, ArrayList<Outcome>> getStateAtTimestep(int timestep) {

@@ -110,13 +110,13 @@ public class SimpleNode extends TrainableNodeBase {
     }
 
     @Override
-    public void applyGradient(double[] gradient, double epsilon) {
+    public void applyDelta(double[] gradient) {
         for (int i = 0; i < weights.length; i++) {
-            weights[i] -= gradient[i] * epsilon;
+            weights[i] -= gradient[i];
             gradient[i] = 0;
         }
 
-        bias -= gradient[gradient.length - 1] * epsilon;
+        bias -= gradient[gradient.length - 1];
     }
 
 }

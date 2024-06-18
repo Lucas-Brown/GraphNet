@@ -294,6 +294,22 @@ public abstract class NodeBase implements INode {
                 .limit(CATASTROPHE_LIMIT)
                 .collect(Collectors.toCollection(ArrayList::new));
 
+        // assertion to make sure all references to previous nodes are maintained
+        // for(Outcome outcome: outcomes){
+        //     if(outcome.sourceOutcomes == null){
+        //         continue;
+        //     }
+        //     for(int i = 0 ; i < outcome.sourceOutcomes.length; i++){
+        //         boolean containsReference = false;
+        //         List<Outcome> sourceOutcomes = forward.get(getIndexOfIncomingNode(outcome.sourceNodes[i])).stream().map(signal -> signal.sourceOutcome).toList();
+        //         for(Outcome so : sourceOutcomes){
+        //             containsReference |= outcome.sourceOutcomes[i] == so;
+        //         }
+        //         assert containsReference;
+        //     }
+        // }
+
+
         assert outcomes.stream().mapToDouble(outcome -> outcome.probability).sum() <= 1
                 : "Sum of all outcome probabilities must be equal to or less than 1. \nProbability sum = "
                         + outcomes.stream().mapToDouble(outcome -> outcome.probability).sum();

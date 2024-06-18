@@ -12,6 +12,7 @@ import com.lucasbrown.GraphNetwork.Local.Outcome;
 public class InputNode extends NodeWrapper implements IInputNode {
 
     private double inputValue;
+    private ArrayList<Outcome> outcomes;
 
     public InputNode(ITrainable node) {
         super(node);
@@ -22,13 +23,8 @@ public class InputNode extends NodeWrapper implements IInputNode {
         inputValue = value;
         wrappingNode.getParentNetwork().notifyNodeActivation(this);
         wrappingNode.setValidForwardSignal(true);
-    }
-
-    @Override
-    public void acceptUserInferenceSignal(double value) {
-        inputValue = value;
-        wrappingNode.getParentNetwork().notifyNodeActivation(this);
-        wrappingNode.setValidForwardSignal(true);
+        outcomes = new ArrayList<>(1);
+        outcomes.add(getOutcome());
     }
 
     @Override
@@ -39,14 +35,12 @@ public class InputNode extends NodeWrapper implements IInputNode {
     @Override
     public void sendForwardSignals() {
         for (Arc connection : getAllOutgoingConnections()) {
-            connection.sendForwardSignal(getOutcome());
+            connection.sendForwardSignal(outcomes.get(0));
         }
     }
 
     @Override
     public ArrayList<Outcome> getState() {
-        ArrayList<Outcome> outcomes = new ArrayList<>(1);
-        outcomes.add(getOutcome());
         return outcomes;
     }
 

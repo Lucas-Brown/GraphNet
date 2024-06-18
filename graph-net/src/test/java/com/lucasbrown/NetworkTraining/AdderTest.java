@@ -8,6 +8,7 @@ import com.lucasbrown.GraphNetwork.Global.Network.ArcBuilder;
 import com.lucasbrown.GraphNetwork.Global.Network.GraphNetwork;
 import com.lucasbrown.GraphNetwork.Global.Network.NodeBuilder;
 import com.lucasbrown.GraphNetwork.Global.Trainers.BackpropTrainer;
+import com.lucasbrown.GraphNetwork.Global.Trainers.NewtonTrainer;
 import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
 import com.lucasbrown.GraphNetwork.Local.Nodes.ComplexNode;
 import com.lucasbrown.GraphNetwork.Local.Nodes.InputNode;
@@ -102,14 +103,14 @@ public class AdderTest {
         arcBuilder.build(in2, out);
         arcBuilder.build(in3, out);
 
-        BackpropTrainer bt = new BackpropTrainer(net, new ErrorFunction.MeanSquaredError());
+        NewtonTrainer bt = new NewtonTrainer(net, new ErrorFunction.MeanSquaredError(), false);
         bt.epsilon = 1;
 
         bt.setTrainingData(adder.inputData, adder.outputData);
 
-        bt.trainNetwork(10000, 100);
+        bt.trainNetwork(10000, 1);
         net.deactivateAll();
-        net.setInputOperation(nodeMap -> BackpropTrainer.applyInputToNode(nodeMap, adder.inputData, counter++));
+        net.setInputOperation(nodeMap -> NewtonTrainer.applyInputToNode(nodeMap, adder.inputData, counter++));
         for (int i = 0; i < adder.inputData.length; i++) {
             net.trainingStep();
             System.out.println(net);

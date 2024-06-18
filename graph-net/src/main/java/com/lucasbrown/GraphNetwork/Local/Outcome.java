@@ -3,7 +3,6 @@ package com.lucasbrown.GraphNetwork.Local;
 import com.lucasbrown.GraphNetwork.Local.Nodes.INode;
 import com.lucasbrown.NetworkTraining.ApproximationTools.WeightedAverage;
 
-import jsat.linear.DenseMatrix;
 import jsat.linear.Matrix;
 
 public class Outcome {

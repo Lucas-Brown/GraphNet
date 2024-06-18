@@ -62,8 +62,10 @@ public abstract class BackwardsSamplingDistribution implements ITrainableDistrib
     }
 
     public DoubleUnaryOperator getActivatedDistribution(ActivationFunction activator, double weight) {
-        return x -> getProbabilityDensity(activator.inverse(x) / weight)
-                * Math.abs(activator.inverseDerivative(x) / weight);
+        
+        throw new RuntimeException("This method has been depricated"); 
+        // return x -> getProbabilityDensity(activator.inverse(x) / weight)
+        //         * Math.abs(activator.inverseDerivative(x) / weight);
     }
 
     public IConvolution toConvolution(ActivationFunction activator, double weight){

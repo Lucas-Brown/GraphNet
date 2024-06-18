@@ -6,6 +6,8 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map.Entry;
+import java.util.stream.DoubleStream;
+import java.util.stream.Stream;
 
 import com.lucasbrown.GraphNetwork.Global.Network.GraphNetwork;
 import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
@@ -22,6 +24,7 @@ import com.lucasbrown.NetworkTraining.ApproximationTools.WeightedAverage;
 import com.lucasbrown.NetworkTraining.DataSetTraining.IExpectationAdjuster;
 
 import jsat.linear.DenseMatrix;
+import jsat.linear.LUPDecomposition;
 import jsat.linear.Matrix;
 
 public class NewtonTrainer {
@@ -45,6 +48,7 @@ public class NewtonTrainer {
     private int totalNumOfVariables;
     private HashMap<ITrainable, Integer> vectorNodeOffset;
 
+    private Matrix parameterDeltas;
     private Matrix errorDerivative;
     private Matrix errorHessian;
 
@@ -67,7 +71,7 @@ public class NewtonTrainer {
         vectorNodeOffset = new HashMap<>(nodes.size());
         allNodes = new HashSet<>(nodes.size());
 
-        int totalNumOfVariables = 0;
+        totalNumOfVariables = 0;
         for (INode node : nodes) {
             ITrainable tnode = (ITrainable) node;
             allNodes.add(tnode);
@@ -96,21 +100,19 @@ public class NewtonTrainer {
     public void trainingStep(boolean print_forward) {
         captureForward(print_forward);
 
-        computeErrorOfOutputs(print_forward);
+        computeFullErrorDerivatives();
+        computeDelta(print_forward);
         backpropagateErrors();
-        if(normalizeError){
-            normalizeErrors();
-        }
         applyErrorSignals();
         network.deactivateAll();
         networkHistory.burnHistory();
     }
 
-    private int getLinearIndexOfWeight(ITrainable node, int key, int weight_index){
+    private int getLinearIndexOfWeight(ITrainable node, int key, int weight_index) {
         return vectorNodeOffset.get(node) + node.getLinearIndexOfWeight(key, weight_index);
     }
 
-    private int getLinearIndexOfBias(ITrainable node, int key){
+    private int getLinearIndexOfBias(ITrainable node, int key) {
         return vectorNodeOffset.get(node) + node.getLinearIndexOfBias(key);
     }
 
@@ -125,72 +127,132 @@ public class NewtonTrainer {
         timestep--;
     }
 
-    private void computeFullErrorDerivatives(){
-        for (int time = timestep; time > 0; time--) {
-            for (int i = 0; i < outputNodes.size(); i++) {
-                computeFullErrorDerivatives(outputNodes.get(i), time);
+    private void computeFullErrorDerivatives() {
+        for (int time = 0; time < inputs.length; time++) {
+            for (ITrainable node : allNodes) {
+                computeFullErrorDerivatives(node, time);
             }
         }
     }
 
-    private void computeFullErrorDerivatives(ITrainable node, int timestep){
+    private void computeFullErrorDerivatives(ITrainable node, int timestep) {
         ArrayList<Outcome> outcomes = networkHistory.getStateOfNode(timestep, node);
 
+        if (outcomes == null || outcomes.isEmpty()) {
+            return;
+        }
+
+        double probVolume;
+        if (normalizeError) {
+            probVolume = getProbabilityVolume(outcomes);
+        } else {
+            probVolume = 1;
+        }
 
         // initialize matrices
-        for(Outcome outcome : outcomes){
+        for (Outcome outcome : outcomes) {
             outcome.errorJacobian = new DenseMatrix(totalNumOfVariables, 1);
             outcome.errorHessian = new DenseMatrix(totalNumOfVariables, totalNumOfVariables);
         }
 
         // Compute the Jacobians and Hessians
-        for(Outcome outcome : outcomes){
-            computeErrorSignals(node, outcome);
+        for (Outcome outcome : outcomes) {
+            computeErrorSignals(node, outcome, probVolume);
         }
     }
 
-    private void computeErrorSignals(ITrainable node, Outcome outcome){
-        // the Jacobian and Hessian of the input matrix will always be zero 
-        if(node instanceof InputNode){
+    private double getProbabilityVolume(ArrayList<Outcome> outcomes) {
+        return outcomes.stream().mapToDouble(outcome -> outcome.probability).sum();
+    }
+
+    /**
+     * 
+     * @param node
+     * @param outcome
+     * @param probabilityVolume
+     */
+    private void computeErrorSignals(ITrainable node, Outcome outcome, double probabilityVolume) {
+        // the Jacobian and Hessian of the input matrix will always be zero
+        if (node instanceof InputNode) {
             return;
         }
-
 
         Matrix z_jacobi = new DenseMatrix(totalNumOfVariables, 1);
         int key = outcome.binary_string;
 
+        // normalize probabilities
+        double normProb = outcome.probability / probabilityVolume;
+        double[] probabilities = DoubleStream.of(outcome.sourceTransferProbabilities).map(d -> d * normProb).toArray();
+
         // construct the jacobian for the net value (z)
         // starting with the direct derivative of z
-        for(int i = 0; i < outcome.sourceOutcomes.length; i++){
+        for (int i = 0; i < outcome.sourceOutcomes.length; i++) {
             int idx = getLinearIndexOfWeight(node, key, i);
-            z_jacobi.set(idx, 1, outcome.sourceOutcomes[i].activatedValue);
+            z_jacobi.set(idx, 0, normProb * outcome.sourceOutcomes[i].activatedValue);
         }
-        int idx = getLinearIndexOfBias(node, key);
-        z_jacobi.set(idx, 1, 1);
+        int bias_idx = getLinearIndexOfBias(node, key);
+        z_jacobi.set(bias_idx, 0, normProb);
 
         // incorporate previous jacobians
         double[] weights = node.getWeights(key);
         for (int i = 0; i < weights.length; i++) {
-            Matrix weighed_jacobi = outcome.sourceOutcomes[i].errorJacobian.multiply(weights[i]);
-            z_jacobi = z_jacobi.add(weighed_jacobi);
+            Outcome so = outcome.sourceOutcomes[i];
+            double prob = probabilities[i];
+            Matrix weighed_jacobi = so.errorJacobian.multiply(prob * weights[i]);
+            z_jacobi.mutableAdd(weighed_jacobi);
         }
 
         // use the net value jacobian to compute the activation jacobian
-        ActivationFunction activator = node.getActivationFunction(); 
-        double actvation_derivative = activator.derivative(outcome.netValue);
-        double actvation_second_derivative = activator.secondDerivative(outcome.netValue);
+        ActivationFunction activator = node.getActivationFunction();
+        double activation_derivative = activator.derivative(outcome.netValue);
+        double activation_second_derivative = activator.secondDerivative(outcome.netValue);
 
+        // apply to activated jacobi
+        outcome.errorJacobian = z_jacobi.multiply(activation_derivative);
 
+        // construct hessian
+        Matrix JJT = z_jacobi.multiplyTranspose(z_jacobi);
+        Matrix jacobi_chain = new DenseMatrix(totalNumOfVariables, totalNumOfVariables);
 
+        for (int i = 0; i < outcome.sourceOutcomes.length; i++) {
+            int idx = getLinearIndexOfWeight(node, key, i);
+            Outcome so = outcome.sourceOutcomes[i];
+            double prob = probabilities[i];
+            Matrix jac = so.errorJacobian;
+            for (int j = 0; j < totalNumOfVariables; j++) {
+                jacobi_chain.set(j, idx, prob * jac.get(j, 0));
+            }
+        }
+
+        for (int i = 0; i < outcome.sourceOutcomes.length; i++) {
+            Outcome so = outcome.sourceOutcomes[i];
+            double prob = probabilities[i];
+            jacobi_chain.mutableAdd(so.errorHessian.multiply(prob * weights[i]));
+        }
+
+        // finalize Hessian
+        outcome.errorHessian = JJT.multiply(activation_second_derivative);
+        outcome.errorHessian.mutableAdd(jacobi_chain.multiply(activation_derivative));
     }
 
-    private void computeErrorOfOutputs(boolean print_forward) {
-        for (int time = timestep; time > 0; time--) {
+    private void computeDelta(boolean print_forward) {
+        errorDerivative = new DenseMatrix(totalNumOfVariables, 1);
+        errorHessian = new DenseMatrix(totalNumOfVariables, totalNumOfVariables);
+
+        computeErrorOfOutput(print_forward);
+
+        LUPDecomposition decomposition = new LUPDecomposition(errorHessian);
+        parameterDeltas = decomposition.solve(errorDerivative);
+        parameterDeltas.mutableMultiply(epsilon);
+    }
+
+    private void computeErrorOfOutput(boolean print_forward) {
+        for (int time = inputs.length - 1; time > 0; time--) {
             for (int i = 0; i < outputNodes.size(); i++) {
                 computeErrorOfOutput(outputNodes.get(i), time, targets[time][i]);
             }
         }
-        // assert total_error.getAverage() < 1E6;
+
         assert Double.isFinite(total_error.getAverage());
         if (print_forward) {
             System.out.println(total_error.getAverage());
@@ -213,16 +275,21 @@ public class NewtonTrainer {
 
         for (Outcome outcome : outcomes) {
             // if (timestep == this.timestep) {
-            //     outcome.passRate.add(1 - 1d / timestep, 1);
+            // outcome.passRate.add(1 - 1d / timestep, 1);
             // } else {
-                outcome.passRate.add(1, 1);
+            outcome.passRate.add(1, 1);
             // }
-            outcome.errorDerivative.add(errorFunction.error_derivative(outcome.activatedValue, target),
-                    outcome.probability);
 
-            outcome.errorSecondDerivative += errorFunction.error_second_derivative(outcome.activatedValue, target) * outcome.probability;
+            double error_derivative = errorFunction.error_derivative(outcome.activatedValue, target);
+            double error_second_derivative = errorFunction.error_second_derivative(outcome.activatedValue, target);
 
-            outcome.errorHessian = new DenseMatrix(totalNumOfVariables, 1); 
+            // accumulate jacobians
+            errorDerivative.mutableAdd(outcome.errorJacobian.multiply(error_derivative));
+
+            // accumulate hessian
+            Matrix JJT = outcome.errorJacobian.multiplyTranspose(outcome.errorJacobian);
+            errorHessian.mutableAdd(JJT.multiply(error_second_derivative));
+            errorHessian.mutableAdd(outcome.errorHessian.multiply(error_derivative));
 
             double error = errorFunction.error(outcome.activatedValue, target);
             // assert Double.isFinite(errorFunction.error(outcome.activatedValue, target));
@@ -243,37 +310,8 @@ public class NewtonTrainer {
         }
     }
 
-    
-    private void normalizeErrors() {
-        networkHistory.getAnonymousHistoryStream().forEach(this::normalizeErrors);
-    }
-
-    private void normalizeErrors(ArrayList<Outcome> outcomesAtTime){
-        
-        // compute the probability volume
-        double probabilityVolume = 0;
-        for (Outcome outcome : outcomesAtTime) {
-            probabilityVolume += outcome.probability;
-        }
-
-        // if the volume is zero, we can't noramlize. This should only occure when the error is zero anyways
-        if(probabilityVolume == 0){
-            return;
-        }
-        for (Outcome outcome : outcomesAtTime) {
-            double normalizationConstant = outcome.probability / probabilityVolume;
-            double error_average = outcome.errorDerivative.getAverage();
-            outcome.errorDerivative.reset();
-            outcome.errorDerivative.add(error_average * normalizationConstant, 1);
-            outcome.errorSecondDerivative *= normalizationConstant;
-        }
-
-    }
-
-
     private void updateNodeForTimestep(ITrainable node, ArrayList<Outcome> outcomesAtTIme) {
         prepareOutputDistributionAdjustments(node, outcomesAtTIme);
-        outcomesAtTIme.forEach(outcome -> sendErrorsBackwards(node, outcome));
         outcomesAtTIme.forEach(outcome -> adjustProbabilitiesForOutcome(node, outcome));
     }
 
@@ -281,10 +319,6 @@ public class NewtonTrainer {
         allNodes.forEach(this::applyErrorSignalsToNode);
         allNodes.forEach(ITrainable::applyDistributionUpdate);
         allNodes.forEach(ITrainable::applyFilterUpdate);
-    }
-
-    private void applyErrorSignalsToNode(ITrainable node) {
-        applyErrorSignals(node, networkHistory.getHistoryOfNode(node));
     }
 
     private void applyInputToNode(HashMap<Integer, ? extends IInputNode> inputNodeMap) {
@@ -298,65 +332,8 @@ public class NewtonTrainer {
         IExpectationAdjuster adjuster = node.getOutputDistributionAdjuster();
         for (Outcome o : allOutcomes) {
             // weigh the outcomes by their probability of occurring
-            // double error = o.errorOfOutcome.hasValues() ? o.errorOfOutcome.getAverage() :
-            // 0;
-            double error = 0;
-            adjuster.prepareAdjustment(o.probability, new double[] { o.activatedValue - error });
+            adjuster.prepareAdjustment(o.probability, new double[] { o.activatedValue });
         }
-    }
-
-    public void sendErrorsBackwards(ITrainable node, Outcome outcomeAtTime) {
-        if (!outcomeAtTime.errorDerivative.hasValues()) {
-            return;
-        }
-
-        int binary_string = outcomeAtTime.binary_string;
-        double activator_derivative = node.getActivationFunction().derivative(outcomeAtTime.netValue);
-        double activator_second_derivative = node.getActivationFunction().secondDerivative(outcomeAtTime.netValue);
-        double error_derivative = outcomeAtTime.errorDerivative.getAverage();
-        double net_derivative = error_derivative * activator_derivative;
-
-        double[] weightsOfNodes = node.getWeights(binary_string);
-
-        for (int i = 0; i < weightsOfNodes.length; i++) {
-            if (!outcomeAtTime.passRate.hasValues() || outcomeAtTime.probability == 0) {
-                continue;
-            }
-            double w = weightsOfNodes[i];
-            Outcome so = outcomeAtTime.sourceOutcomes[i];
-
-            // Get the arc connectting the node to its source
-            Arc arc = node.getIncomingConnectionFrom(outcomeAtTime.sourceNodes[i]).get();
-
-            // use the arc to predict the probability of this event
-            double shifted_value = so.activatedValue - error_derivative;
-            double prob = outcomeAtTime.probability * arc.filter.getChanceToSend(shifted_value)
-                    / outcomeAtTime.sourceTransferProbabilities[i];
-
-            // accumulate first derivative error
-            so.errorDerivative.add(net_derivative * w, prob);
-
-            
-            // accumulate second derivative error
-            double secondDerivative = so.errorSecondDerivative * net_derivative * net_derivative;
-            secondDerivative += error_derivative * activator_second_derivative * w * w;
-            so.errorSecondDerivative += secondDerivative * prob;
-
-            // compute the cross-derivative
-            so.errorHessian = so.errorHessian.add(errorDerivative);
-
-            // accumulate pass rates
-            double pass_avg = outcomeAtTime.passRate.getAverage();
-            assert Double.isFinite(pass_avg);
-            so.passRate.add(pass_avg, prob);
-
-            // apply error as new point for the distribution
-            // Arc connection =
-            // outcomeAtTime.sourceNodes[i].getOutgoingConnectionTo(this).get();
-            // connection.probDist.prepareReinforcement(outcomeAtTime.netValue -
-            // error_derivative);
-        }
-
     }
 
     public void adjustProbabilitiesForOutcome(ITrainable node, Outcome outcome) {
@@ -373,18 +350,12 @@ public class NewtonTrainer {
         for (int i = 0; i < outcome.sourceNodes.length; i++) {
             INode sourceNode = outcome.sourceNodes[i];
 
-            double error_derivative = outcome.errorDerivative.getAverage();
             Arc arc = node.getIncomingConnectionFrom(sourceNode).get(); // should be guaranteed to exist
 
             // if the error is not defined and the pass rate is 0, then zero error should be
             // expected
-            if (Double.isNaN(error_derivative) && pass_rate == 0) {
-                error_derivative = 0;
-            }
-            assert !Double.isNaN(error_derivative);
-
             if (arc.filterAdjuster != null) {
-                double shifted_value = outcome.sourceOutcomes[i].activatedValue - error_derivative;
+                double shifted_value = outcome.sourceOutcomes[i].activatedValue;
                 double prob = outcome.probability * arc.filter.getChanceToSend(shifted_value)
                         / outcome.sourceTransferProbabilities[i];
                 arc.filterAdjuster.prepareAdjustment(prob, new double[] { shifted_value, pass_rate });
@@ -404,56 +375,18 @@ public class NewtonTrainer {
         }
     }
 
-    public void applyErrorSignals(ITrainable node, List<ArrayList<Outcome>> allOutcomes) {
-        double[] gradient = computeGradient(node, allOutcomes);
-        node.applyGradient(gradient, epsilon);
+    public void applyErrorSignalsToNode(ITrainable node) {
+
+        double[] allDeltas = parameterDeltas.getColumn(0).arrayCopy();
+        double[] gradient = gradientOfNode(node, allDeltas);
+        node.applyDelta(gradient);
     }
 
-    private double[] computeGradient(ITrainable node, List<ArrayList<Outcome>> allOutcomes) {
-
-        double[] gradient = new double[node.getNumberOfVariables()];
-        int T = 0;
-
-        // for all time steps
-        for (ArrayList<Outcome> outcomesAtTime : allOutcomes) {
-
-            boolean atLeastOnePass = false;
-            for (Outcome outcome : outcomesAtTime) {
-                atLeastOnePass |= outcome.passRate.hasValues();
-            }
-
-            // at least one outcome must have a chance to pass through
-            if (!atLeastOnePass) {
-                continue;
-            }
-
-            // Increase the number of non-zero timesteps
-            T++;
-
-
-            // add error to the gradient
-            for (Outcome outcome : outcomesAtTime) {
-                if (!outcome.passRate.hasValues() || outcome.errorDerivative.getProdSum() == 0) {
-                    continue;
-                }
-
-                int key = outcome.binary_string;
-
-                double error = outcome.errorDerivative.getProdSum();
-                assert Double.isFinite(error);
-                gradient[node.getLinearIndexOfBias(key)] += error;
-
-                for (int i = 0; i < node.getWeights(key).length; i++) {
-                    gradient[node.getLinearIndexOfWeight(key, i)] += error * outcome.sourceOutcomes[i].netValue;
-                }
-            }
-        }
-
-        // divide all gradients by the number of non-empty timesteps
-        for (int i = 0; i < gradient.length; i++) {
-            gradient[i] /= T;
-        }
-
+    private double[] gradientOfNode(ITrainable node, double[] allDeltas) {
+        int startIdx = vectorNodeOffset.get(node);
+        int length = node.getNumberOfVariables();
+        double[] gradient = new double[length];
+        System.arraycopy(allDeltas, startIdx, gradient, 0, length);
         return gradient;
     }
 

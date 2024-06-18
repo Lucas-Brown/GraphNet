@@ -62,6 +62,6 @@ public interface ITrainable extends INode {
 
     public void applyFilterUpdate();
 
-    public void applyGradient(double[] gradient, double epsilon);
+    public void applyDelta(double[] gradient);
 
 }

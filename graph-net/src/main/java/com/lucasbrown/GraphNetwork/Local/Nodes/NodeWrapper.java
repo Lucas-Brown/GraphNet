@@ -220,8 +220,8 @@ public class NodeWrapper implements ITrainable {
     }
 
     @Override
-    public void applyGradient(double[] gradient, double epsilon) {
-        wrappingNode.applyGradient(gradient, epsilon);
+    public void applyDelta(double[] gradient) {
+        wrappingNode.applyDelta(gradient);
     }
 
     @Override

@@ -137,13 +137,13 @@ public class ComplexNode extends TrainableNodeBase {
     }
 
     @Override
-    public void applyGradient(double[] gradient, double epsilon) {
+    public void applyDelta(double[] gradient) {
 
         int i = 0;
         int key = 1;
         int linear_index = 0;
         while (key < getNumInputCombinations()) {
-            weights[key][i] -= gradient[linear_index] * epsilon;
+            weights[key][i] -= gradient[linear_index];
             i++;
             linear_index++;
             if (i >= weights[key].length) {
@@ -153,13 +153,13 @@ public class ComplexNode extends TrainableNodeBase {
         }
 
         for (key = 1; key < biases.length; key++) {
-            biases[key] -= gradient[linear_index++] * epsilon;
+            biases[key] -= gradient[linear_index++];
         }
     }
 
     @Override
     public int getNumberOfVariables() {
-        return numWeights + biases.length;
+        return numWeights + biases.length - 1;
     }
 
 }
