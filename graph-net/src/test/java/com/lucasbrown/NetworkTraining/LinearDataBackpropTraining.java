@@ -1,11 +1,13 @@
 package com.lucasbrown.NetworkTraining;
 
-import com.lucasbrown.GraphNetwork.Global.ArcBuilder;
-import com.lucasbrown.GraphNetwork.Global.BackpropTrainer;
-import com.lucasbrown.GraphNetwork.Global.GraphNetwork;
-import com.lucasbrown.GraphNetwork.Global.NodeBuilder;
+import com.lucasbrown.GraphNetwork.Global.Network.ArcBuilder;
+import com.lucasbrown.GraphNetwork.Global.Network.GraphNetwork;
+import com.lucasbrown.GraphNetwork.Global.Network.NodeBuilder;
+import com.lucasbrown.GraphNetwork.Global.Trainers.BackpropTrainer;
+import com.lucasbrown.GraphNetwork.Global.Trainers.NewtonTrainer;
 import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
 import com.lucasbrown.GraphNetwork.Local.Nodes.INode;
+import com.lucasbrown.GraphNetwork.Local.Nodes.ITrainable;
 import com.lucasbrown.GraphNetwork.Local.Nodes.InputNode;
 import com.lucasbrown.GraphNetwork.Local.Nodes.OutputNode;
 import com.lucasbrown.GraphNetwork.Local.Nodes.SimpleNode;
@@ -13,7 +15,9 @@ import com.lucasbrown.NetworkTraining.ApproximationTools.ErrorFunction;
 import com.lucasbrown.NetworkTraining.DataSetTraining.BetaDistribution;
 import com.lucasbrown.NetworkTraining.DataSetTraining.BetaDistributionAdjuster;
 import com.lucasbrown.NetworkTraining.DataSetTraining.BetaDistributionAdjuster2;
+import com.lucasbrown.NetworkTraining.DataSetTraining.NoAdjustments;
 import com.lucasbrown.NetworkTraining.DataSetTraining.NormalPeakFilter;
+import com.lucasbrown.NetworkTraining.DataSetTraining.OpenFilter;
 import com.lucasbrown.NetworkTraining.DataSetTraining.NormalBetaFilterAdjuster;
 import com.lucasbrown.NetworkTraining.DataSetTraining.NormalBetaFilterAdjuster2;
 import com.lucasbrown.NetworkTraining.DataSetTraining.NormalDistribution;
@@ -61,7 +65,7 @@ public class LinearDataBackpropTraining {
         InputNode in = (InputNode) nodeBuilder.build();
 
         nodeBuilder.setAsHiddenNode();
-        INode hidden = nodeBuilder.build();
+        ITrainable hidden = (ITrainable) nodeBuilder.build();
 
         nodeBuilder.setAsOutputNode();
         OutputNode out = (OutputNode) nodeBuilder.build();
@@ -71,18 +75,20 @@ public class LinearDataBackpropTraining {
         out.setName("Output");
 
         ArcBuilder arcBuilder = new ArcBuilder(net);
-        arcBuilder.setFilterSupplier(NormalPeakFilter::getStandardNormalBetaFilter);
-        arcBuilder.setFilterAdjusterSupplier(NormalBetaFilterAdjuster2::new);
+        // arcBuilder.setFilterSupplier(NormalPeakFilter::getStandardNormalBetaFilter);
+        // arcBuilder.setFilterAdjusterSupplier(NormalBetaFilterAdjuster2::new);
+        arcBuilder.setFilterSupplier(OpenFilter::new);
+        arcBuilder.setFilterAdjusterSupplier(NoAdjustments::new);
 
         arcBuilder.build(in, hidden);
         arcBuilder.build(hidden, out);
 
-        BackpropTrainer bt = new BackpropTrainer(net, new ErrorFunction.MeanSquaredError());
+        BackpropTrainer bt = new BackpropTrainer(net, new ErrorFunction.MeanSquaredError(), false);
         bt.epsilon = 0.1;
 
         bt.setTrainingData(linear.inputData, linear.outputData);
 
-        bt.trainNetwork(10000, 10);
+        bt.trainNetwork(10000, 1);
         net.deactivateAll();
         net.setInputOperation(nodeMap -> BackpropTrainer.applyInputToNode(nodeMap, linear.inputData, counter++));
         for (int i = 0; i < linear.inputData.length; i++) {

@@ -1,13 +1,14 @@
 package com.lucasbrown.NetworkTraining;
 
-import com.lucasbrown.GraphNetwork.Global.ArcBuilder;
-import com.lucasbrown.GraphNetwork.Global.ArcBuilder.FilterAdjusterFunction;
-import com.lucasbrown.GraphNetwork.Global.BackpropTrainer;
-import com.lucasbrown.GraphNetwork.Global.GraphNetwork;
-import com.lucasbrown.GraphNetwork.Global.NodeBuilder;
+import com.lucasbrown.GraphNetwork.Global.Network.ArcBuilder;
+import com.lucasbrown.GraphNetwork.Global.Network.GraphNetwork;
+import com.lucasbrown.GraphNetwork.Global.Network.NodeBuilder;
+import com.lucasbrown.GraphNetwork.Global.Trainers.BackpropTrainer;
+import com.lucasbrown.GraphNetwork.Global.Trainers.NewtonTrainer;
 import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
 import com.lucasbrown.GraphNetwork.Local.Nodes.ComplexNode;
 import com.lucasbrown.GraphNetwork.Local.Nodes.INode;
+import com.lucasbrown.GraphNetwork.Local.Nodes.ITrainable;
 import com.lucasbrown.GraphNetwork.Local.Nodes.InputNode;
 import com.lucasbrown.GraphNetwork.Local.Nodes.OutputNode;
 import com.lucasbrown.GraphNetwork.Local.Nodes.SimpleNode;
@@ -78,7 +79,7 @@ public class ExponentialTest {
         InputNode in = (InputNode) nodeBuilder.build();
 
         nodeBuilder.setAsHiddenNode();
-        INode hidden = nodeBuilder.build();
+        ITrainable hidden = (ITrainable) nodeBuilder.build();
 
         nodeBuilder.setAsOutputNode();
         OutputNode out = (OutputNode) nodeBuilder.build();
@@ -98,11 +99,11 @@ public class ExponentialTest {
         arcBuilder.build(hidden, out);
 
 
-        BackpropTrainer bt = new BackpropTrainer(net, new ErrorFunction.LogarithmicError());
-        bt.epsilon = 0.0000001;
+        NewtonTrainer bt = new NewtonTrainer(net, new ErrorFunction.LogarithmicError(), false);
+        bt.epsilon = 0.001;
 
         bt.setTrainingData(exponentialGrowth.inputData, exponentialGrowth.outputData);
-        bt.trainNetwork(10000000, 10000);
+        bt.trainNetwork(10000000, 1);
 
         net.deactivateAll();
         net.setInputOperation(nodeMap -> BackpropTrainer.applyInputToNode(nodeMap, exponentialGrowth.inputData, counter++));
