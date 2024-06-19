@@ -63,4 +63,10 @@ public class InputNode extends NodeWrapper implements IInputNode {
         return String.format("%s: (%.2e, 100%s)", getName(), inputValue, "%");
     }
 
+    @Override
+    public void applyDelta(double[] gradient)
+    {
+        // do not
+    }
+
 }

@@ -243,7 +243,6 @@ public class NewtonTrainer {
 
         LUPDecomposition decomposition = new LUPDecomposition(errorHessian);
         parameterDeltas = decomposition.solve(errorDerivative);
-        parameterDeltas.mutableMultiply(epsilon);
 
         // for(double d : parameterDeltas.getColumn(0).arrayCopy()){
         //     assert Double.isFinite(d);
@@ -325,6 +324,7 @@ public class NewtonTrainer {
     }
 
     private void applyErrorSignals() {
+        parameterDeltas.mutableMultiply(epsilon);
         allNodes.forEach(this::applyErrorSignalsToNode);
         allNodes.forEach(ITrainable::applyDistributionUpdate);
         allNodes.forEach(ITrainable::applyFilterUpdate);

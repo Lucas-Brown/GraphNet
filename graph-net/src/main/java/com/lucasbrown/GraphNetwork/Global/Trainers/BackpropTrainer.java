@@ -188,7 +188,7 @@ public class BackpropTrainer {
     }
 
     public void sendErrorsBackwards(ITrainable node, Outcome outcomeAtTime) {
-        if (!outcomeAtTime.errorDerivative.hasValues()) {
+        if (node instanceof IInputNode || !outcomeAtTime.errorDerivative.hasValues()) {
             return;
         }
 
@@ -239,6 +239,11 @@ public class BackpropTrainer {
         IExpectationAdjuster adjuster = node.getSignalChanceDistributionAdjuster();
         adjuster.prepareAdjustment(outcome.probability, new double[] { pass_rate });
 
+        // no source nodes to adjust
+        if(node instanceof IInputNode){
+            return;
+        }
+
         // Reinforce the filter with the pass rate for each point
         for (int i = 0; i < outcome.sourceNodes.length; i++) {
             INode sourceNode = outcome.sourceNodes[i];
@@ -283,6 +288,9 @@ public class BackpropTrainer {
     }
 
     private double[] computeGradient(ITrainable node, List<ArrayList<Outcome>> allOutcomes) {
+        if(node instanceof IInputNode){
+            return new double[0];
+        }
 
         double[] gradient = new double[node.getNumberOfVariables()];
         int T = 0;

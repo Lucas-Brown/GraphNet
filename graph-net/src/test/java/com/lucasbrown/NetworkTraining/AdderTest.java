@@ -103,7 +103,7 @@ public class AdderTest {
         arcBuilder.build(in2, out);
         arcBuilder.build(in3, out);
 
-        NewtonTrainer bt = new NewtonTrainer(net, new ErrorFunction.MeanSquaredError(), false);
+        BackpropTrainer bt = new BackpropTrainer(net, new ErrorFunction.MeanSquaredError(), false);
         bt.epsilon = 1;
 
         bt.setTrainingData(adder.inputData, adder.outputData);

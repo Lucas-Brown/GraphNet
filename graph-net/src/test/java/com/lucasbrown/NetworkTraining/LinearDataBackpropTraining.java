@@ -75,16 +75,16 @@ public class LinearDataBackpropTraining {
         out.setName("Output");
 
         ArcBuilder arcBuilder = new ArcBuilder(net);
-        // arcBuilder.setFilterSupplier(NormalPeakFilter::getStandardNormalBetaFilter);
-        // arcBuilder.setFilterAdjusterSupplier(NormalBetaFilterAdjuster2::new);
-        arcBuilder.setFilterSupplier(OpenFilter::new);
-        arcBuilder.setFilterAdjusterSupplier(NoAdjustments::new);
+        arcBuilder.setFilterSupplier(NormalPeakFilter::getStandardNormalBetaFilter);
+        arcBuilder.setFilterAdjusterSupplier(NormalBetaFilterAdjuster2::new);
+        // arcBuilder.setFilterSupplier(OpenFilter::new);
+        // arcBuilder.setFilterAdjusterSupplier(NoAdjustments::new);
 
         arcBuilder.build(in, hidden);
         arcBuilder.build(hidden, out);
 
-        BackpropTrainer bt = new BackpropTrainer(net, new ErrorFunction.MeanSquaredError(), false);
-        bt.epsilon = 0.1;
+        NewtonTrainer bt = new NewtonTrainer(net, new ErrorFunction.MeanSquaredError(), false);
+        bt.epsilon = 1;
 
         bt.setTrainingData(linear.inputData, linear.outputData);
 
