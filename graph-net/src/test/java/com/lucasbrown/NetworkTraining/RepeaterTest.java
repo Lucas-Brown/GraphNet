@@ -1,13 +1,14 @@
 package com.lucasbrown.NetworkTraining;
 
-import com.lucasbrown.GraphNetwork.Global.ArcBuilder;
-import com.lucasbrown.GraphNetwork.Global.ArcBuilder.FilterAdjusterFunction;
-import com.lucasbrown.GraphNetwork.Global.BackpropTrainer;
-import com.lucasbrown.GraphNetwork.Global.GraphNetwork;
-import com.lucasbrown.GraphNetwork.Global.NodeBuilder;
+import com.lucasbrown.GraphNetwork.Global.Network.ArcBuilder;
+import com.lucasbrown.GraphNetwork.Global.Network.GraphNetwork;
+import com.lucasbrown.GraphNetwork.Global.Network.NodeBuilder;
+import com.lucasbrown.GraphNetwork.Global.Trainers.BackpropTrainer;
+import com.lucasbrown.GraphNetwork.Global.Trainers.NewtonTrainer;
 import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
 import com.lucasbrown.GraphNetwork.Local.Nodes.ComplexNode;
 import com.lucasbrown.GraphNetwork.Local.Nodes.INode;
+import com.lucasbrown.GraphNetwork.Local.Nodes.ITrainable;
 import com.lucasbrown.GraphNetwork.Local.Nodes.InputNode;
 import com.lucasbrown.GraphNetwork.Local.Nodes.OutputNode;
 import com.lucasbrown.GraphNetwork.Local.Nodes.SimpleNode;
@@ -76,7 +77,7 @@ public class RepeaterTest {
         InputNode in = (InputNode) nodeBuilder.build();
 
         nodeBuilder.setAsHiddenNode();
-        INode hidden = nodeBuilder.build();
+        ITrainable hidden = (ITrainable) nodeBuilder.build();
 
         nodeBuilder.setAsOutputNode();
         OutputNode out = (OutputNode) nodeBuilder.build();
@@ -96,11 +97,11 @@ public class RepeaterTest {
         arcBuilder.build(hidden, out);
 
 
-        BackpropTrainer bt = new BackpropTrainer(net, new ErrorFunction.MeanSquaredError());
-        bt.epsilon = 0.001;
+        NewtonTrainer bt = new NewtonTrainer(net, new ErrorFunction.MeanSquaredError());
+        bt.epsilon = 1;
 
         bt.setTrainingData(repeater.inputData, repeater.outputData);
-        bt.trainNetwork(100000, 1000);
+        bt.trainNetwork(100000, 1);
 
         net.deactivateAll();
         net.setInputOperation(nodeMap -> BackpropTrainer.applyInputToNode(nodeMap, repeater.inputData, counter++));

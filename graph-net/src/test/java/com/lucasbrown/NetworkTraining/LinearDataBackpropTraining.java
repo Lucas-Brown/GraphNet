@@ -6,16 +6,21 @@ import com.lucasbrown.GraphNetwork.Global.Network.NodeBuilder;
 import com.lucasbrown.GraphNetwork.Global.Trainers.BackpropTrainer;
 import com.lucasbrown.GraphNetwork.Global.Trainers.NewtonTrainer;
 import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
+import com.lucasbrown.GraphNetwork.Local.Nodes.ComplexNode;
 import com.lucasbrown.GraphNetwork.Local.Nodes.INode;
 import com.lucasbrown.GraphNetwork.Local.Nodes.ITrainable;
 import com.lucasbrown.GraphNetwork.Local.Nodes.InputNode;
 import com.lucasbrown.GraphNetwork.Local.Nodes.OutputNode;
 import com.lucasbrown.GraphNetwork.Local.Nodes.SimpleNode;
 import com.lucasbrown.NetworkTraining.ApproximationTools.ErrorFunction;
+import com.lucasbrown.NetworkTraining.DataSetTraining.BernoulliDistribution;
+import com.lucasbrown.NetworkTraining.DataSetTraining.BernoulliDistributionAdjuster;
 import com.lucasbrown.NetworkTraining.DataSetTraining.BetaDistribution;
 import com.lucasbrown.NetworkTraining.DataSetTraining.BetaDistributionAdjuster;
 import com.lucasbrown.NetworkTraining.DataSetTraining.BetaDistributionAdjuster2;
+import com.lucasbrown.NetworkTraining.DataSetTraining.FlatRateFilter;
 import com.lucasbrown.NetworkTraining.DataSetTraining.NoAdjustments;
+import com.lucasbrown.NetworkTraining.DataSetTraining.NormalBernoulliFilterAdjuster;
 import com.lucasbrown.NetworkTraining.DataSetTraining.NormalPeakFilter;
 import com.lucasbrown.NetworkTraining.DataSetTraining.OpenFilter;
 import com.lucasbrown.NetworkTraining.DataSetTraining.NormalBetaFilterAdjuster;
@@ -56,10 +61,10 @@ public class LinearDataBackpropTraining {
         NodeBuilder nodeBuilder = new NodeBuilder(net);
 
         nodeBuilder.setActivationFunction(ActivationFunction.LINEAR);
-        nodeBuilder.setNodeConstructor(SimpleNode::new);
+        nodeBuilder.setNodeConstructor(ComplexNode::new);
         nodeBuilder.setOutputDistSupplier(NormalDistribution::getStandardNormalDistribution);
-        nodeBuilder.setProbabilityDistSupplier(BetaDistribution::getUniformBetaDistribution);
-        nodeBuilder.setProbabilityDistAdjusterSupplier(BetaDistributionAdjuster::new);
+        nodeBuilder.setProbabilityDistSupplier(BernoulliDistribution::getEvenDistribution);
+        nodeBuilder.setProbabilityDistAdjusterSupplier(BernoulliDistributionAdjuster::new);
 
         nodeBuilder.setAsInputNode();
         InputNode in = (InputNode) nodeBuilder.build();
@@ -75,15 +80,15 @@ public class LinearDataBackpropTraining {
         out.setName("Output");
 
         ArcBuilder arcBuilder = new ArcBuilder(net);
-        arcBuilder.setFilterSupplier(NormalPeakFilter::getStandardNormalBetaFilter);
-        arcBuilder.setFilterAdjusterSupplier(NormalBetaFilterAdjuster2::new);
-        // arcBuilder.setFilterSupplier(OpenFilter::new);
-        // arcBuilder.setFilterAdjusterSupplier(NoAdjustments::new);
+        // arcBuilder.setFilterSupplier(NormalPeakFilter::getStandardNormalBetaFilter);
+        // arcBuilder.setFilterAdjusterSupplier(NormalBernoulliFilterAdjuster::new);
+        arcBuilder.setFilterSupplier(() -> new FlatRateFilter(0.5));
+        arcBuilder.setFilterAdjusterSupplier(NoAdjustments::new);
 
         arcBuilder.build(in, hidden);
         arcBuilder.build(hidden, out);
 
-        NewtonTrainer bt = new NewtonTrainer(net, new ErrorFunction.MeanSquaredError(), false);
+        NewtonTrainer bt = new NewtonTrainer(net, new ErrorFunction.MeanSquaredError());
         bt.epsilon = 1;
 
         bt.setTrainingData(linear.inputData, linear.outputData);

@@ -74,12 +74,23 @@ public class SimpleNode extends TrainableNodeBase {
 
     @Override
     public int getNumberOfVariables() {
-        return weights.length + 1;
+        return weights.length == 0 ? 0 : weights.length + 1;
     }
 
     @Override
     public int getLinearIndexOfWeight(int key, int weight_index) {
-        return weight_index;
+        int lin_idx = 0;
+        while(key > 0){
+            if((key & 0b1) == 1){
+                weight_index--;
+            }
+            if(weight_index < 0){
+                return lin_idx;
+            }
+            lin_idx++;
+            key = key >> 0b1;
+        }
+        return -1;
     }
 
     @Override

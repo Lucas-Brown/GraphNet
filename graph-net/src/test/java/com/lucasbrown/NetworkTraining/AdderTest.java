@@ -94,16 +94,16 @@ public class AdderTest {
         out.setName("Output");
 
         ArcBuilder arcBuilder = new ArcBuilder(net);
-        arcBuilder.setFilterSupplier(OpenFilter::new);
-        arcBuilder.setFilterAdjusterSupplier(NoAdjustments::new);
-        // arcBuilder.setFilterSupplier(NormalPeakFilter::getStandardNormalBetaFilter);
-        // arcBuilder.setFilterAdjusterSupplier(NormalBetaFilterAdjuster2::new);
+        // arcBuilder.setFilterSupplier(OpenFilter::new);
+        // arcBuilder.setFilterAdjusterSupplier(NoAdjustments::new);
+        arcBuilder.setFilterSupplier(NormalPeakFilter::getStandardNormalBetaFilter);
+        arcBuilder.setFilterAdjusterSupplier(NormalBetaFilterAdjuster2::new);
 
         arcBuilder.build(in1, out);
         arcBuilder.build(in2, out);
         arcBuilder.build(in3, out);
 
-        BackpropTrainer bt = new BackpropTrainer(net, new ErrorFunction.MeanSquaredError(), false);
+        NewtonTrainer bt = new NewtonTrainer(net, new ErrorFunction.MeanSquaredError());
         bt.epsilon = 1;
 
         bt.setTrainingData(adder.inputData, adder.outputData);
