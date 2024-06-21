@@ -97,7 +97,7 @@ public class RepeaterTest {
         arcBuilder.build(hidden, out);
 
 
-        NewtonTrainer bt = new NewtonTrainer(net, new ErrorFunction.MeanSquaredError());
+        NewtonTrainer bt = new NewtonTrainer(net, new ErrorFunction.LogarithmicError());
         bt.epsilon = 1;
 
         bt.setTrainingData(repeater.inputData, repeater.outputData);
