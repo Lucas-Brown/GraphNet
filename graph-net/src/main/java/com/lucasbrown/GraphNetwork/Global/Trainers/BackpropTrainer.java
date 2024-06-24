@@ -1,9 +1,7 @@
 package com.lucasbrown.GraphNetwork.Global.Trainers;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map.Entry;
 
@@ -13,90 +11,26 @@ import com.lucasbrown.GraphNetwork.Local.Outcome;
 import com.lucasbrown.GraphNetwork.Local.Nodes.IInputNode;
 import com.lucasbrown.GraphNetwork.Local.Nodes.INode;
 import com.lucasbrown.GraphNetwork.Local.Nodes.ITrainable;
-import com.lucasbrown.GraphNetwork.Local.Nodes.InputNode;
 import com.lucasbrown.GraphNetwork.Local.Nodes.OutputNode;
-import com.lucasbrown.NetworkTraining.History;
 import com.lucasbrown.NetworkTraining.ApproximationTools.ErrorFunction;
-import com.lucasbrown.NetworkTraining.ApproximationTools.WeightedAverage;
 import com.lucasbrown.NetworkTraining.DataSetTraining.IExpectationAdjuster;
 
-public class BackpropTrainer {
+public class BackpropTrainer extends Trainer{
 
     public double epsilon = 0.01;
-    private WeightedAverage total_error;
-
-    private int timestep;
-    private final GraphNetwork network;
-    private final History networkHistory;
-    private final ErrorFunction errorFunction;
-
-    private Double[][] inputs;
-    private Double[][] targets;
-
-    private ArrayList<OutputNode> outputNodes;
-    private HashSet<ITrainable> allNodes;
-
     private boolean normalizeError;
 
     public BackpropTrainer(GraphNetwork network, ErrorFunction errorFunction, boolean normalizeError) {
-        this.network = network;
-        this.errorFunction = errorFunction;
+        super(network, errorFunction);
         this.normalizeError = normalizeError;
-        networkHistory = new History(network);
-
-        castAllToTrainable();
-
-        network.setInputOperation(this::applyInputToNode);
-        outputNodes = network.getOutputNodes();
-
-        total_error = new WeightedAverage();
     }
 
-    private void castAllToTrainable() {
-        ArrayList<INode> nodes = network.getNodes();
-        allNodes = new HashSet<>(nodes.size());
-        for (INode node : nodes) {
-            allNodes.add((ITrainable) node);
-        }
-    }
-
-    /**
-     * input and target dimension : [timestep][node]
-     * 
-     * @param inputs
-     * @param targets
-     */
-    public void setTrainingData(Double[][] inputs, Double[][] targets) {
-        this.inputs = inputs;
-        this.targets = targets;
-    }
-
-    public void trainNetwork(int steps, int print_interval) {
-        while (steps-- > 0) {
-            trainingStep(steps % print_interval == 0);
-        }
-    }
-
-    public void trainingStep(boolean print_forward) {
-        captureForward(print_forward);
-
+    @Override
+    protected void computeErrorOfNetwork(boolean print_forward) {
         computeErrorOfOutputs(print_forward);
         backpropagateErrors();
-        applyErrorSignals();
-        network.deactivateAll();
-        networkHistory.burnHistory();
     }
 
-    private void captureForward(boolean print_forward) {
-        for (timestep = 0; timestep < inputs.length; timestep++) {
-            network.trainingStep();
-            if (print_forward) {
-                System.out.println(network.toString() + " | Target = " + Arrays.toString(targets[timestep]));
-            }
-            networkHistory.captureState();
-        }
-        timestep--;
-    }
 
     private void computeErrorOfOutputs(boolean print_forward) {
         for (int time = timestep; time > 0; time--) {
@@ -143,7 +77,7 @@ public class BackpropTrainer {
 
     private void backpropagateErrors() {
         ArrayList<INode> nodes = network.getNodes();
-        while (timestep >= 0) {
+        while (timestep > 0) {
             HashMap<INode, ArrayList<Outcome>> state = networkHistory.getStateAtTimestep(timestep);
             for (Entry<INode, ArrayList<Outcome>> e : state.entrySet()) {
                 INode node = nodes.get(e.getKey().getID());
@@ -159,18 +93,14 @@ public class BackpropTrainer {
         outcomesAtTIme.forEach(outcome -> adjustProbabilitiesForOutcome(node, outcome));
     }
 
-    private void applyErrorSignals() {
+
+    @Override
+    protected void applyErrorSignals() {
         allNodes.forEach(this::applyErrorSignalsToNode);
-        allNodes.forEach(ITrainable::applyDistributionUpdate);
-        allNodes.forEach(ITrainable::applyFilterUpdate);
     }
 
     private void applyErrorSignalsToNode(ITrainable node) {
         applyErrorSignals(node, networkHistory.getHistoryOfNode(node));
-    }
-
-    private void applyInputToNode(HashMap<Integer, ? extends IInputNode> inputNodeMap) {
-        applyInputToNode(inputNodeMap, inputs, timestep);
     }
 
     /**
@@ -266,17 +196,6 @@ public class BackpropTrainer {
             }
         }
 
-    }
-
-    public static void applyInputToNode(HashMap<Integer, ? extends IInputNode> inputNodeMap, Double[][] input,
-            int counter) {
-        InputNode[] sortedNodes = inputNodeMap.values().stream().sorted().toArray(InputNode[]::new);
-
-        for (int i = 0; i < sortedNodes.length; i++) {
-            if (input[counter][i] != null) {
-                sortedNodes[i].acceptUserForwardSignal(input[counter][i]);
-            }
-        }
     }
 
     public void applyErrorSignals(ITrainable node, List<ArrayList<Outcome>> allOutcomes) {

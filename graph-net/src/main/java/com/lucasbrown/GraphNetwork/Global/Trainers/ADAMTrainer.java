@@ -15,28 +15,37 @@ import com.lucasbrown.NetworkTraining.ApproximationTools.ErrorFunction;
 
 import jsat.linear.DenseMatrix;
 import jsat.linear.DenseVector;
-import jsat.linear.Matrix;
-import jsat.linear.SingularValueDecomposition;
 import jsat.linear.Vec;
 
-public class NewtonTrainer extends Trainer {
+public class ADAMTrainer extends Trainer {
 
-    public double epsilon = 0.01;
+    public double alpha = 0.001;
+    public double epsilon = 1E-8;
+    public double beta_1 = 0.99;
+    public double beta_2 = 0.999;
 
+    private int t;
     private int totalNumOfVariables;
     private HashMap<ITrainable, Integer> vectorNodeOffset;
 
     private Vec parameterDeltas;
     private Vec errorDerivative;
-    private Matrix errorHessian;
 
-    // consider a mask instead?
-    private boolean[] isColumnEmpty;
+    private Vec m; // biased first-moment estimate
+    private Vec v; // biased second-moment estimate
+    private Vec m_hat; // bias corrected first-moment
+    private Vec v_hat; // bias corrected second-moment
 
-    public NewtonTrainer(GraphNetwork network, ErrorFunction errorFunction) {
+    public ADAMTrainer(GraphNetwork network, ErrorFunction errorFunction) {
         super(network, errorFunction);
 
+        t = 0;
         InitializeOffsetMap();
+
+        m = new DenseVector(totalNumOfVariables);
+        v = new DenseVector(totalNumOfVariables);
+        m_hat = new DenseVector(totalNumOfVariables);
+        v_hat = new DenseVector(totalNumOfVariables);
     }
 
     private void InitializeOffsetMap() {
@@ -86,8 +95,7 @@ public class NewtonTrainer extends Trainer {
 
         // Compute the Jacobians and Hessians
         for (Outcome outcome : outcomes) {
-            Vec z_jacobi = computeJacobian(node, outcome);
-            computeHessian(node, outcome, z_jacobi);
+            computeJacobian(node, outcome);
         }
     }
 
@@ -126,146 +134,25 @@ public class NewtonTrainer extends Trainer {
 
     }
 
-    /**
-     * 
-     * @param node
-     * @param outcome
-     * @param probabilityVolume
-     */
-    protected void computeHessian(ITrainable node, Outcome outcome, Vec z_jacobi) {
-        int key = outcome.binary_string;
-        double[] weights = node.getWeights(key);
-
-        // use the net value jacobian to compute the activation jacobian
-        ActivationFunction activator = node.getActivationFunction();
-        double activation_derivative = activator.derivative(outcome.netValue);
-        double activation_second_derivative = activator.secondDerivative(outcome.netValue);
-
-        // construct hessian
-        Matrix JJT = new DenseMatrix(totalNumOfVariables, totalNumOfVariables);
-        Matrix.OuterProductUpdate(JJT, z_jacobi, z_jacobi, 1);
-        Matrix jacobi_chain = new DenseMatrix(totalNumOfVariables, totalNumOfVariables);
-
-        for (int i = 0; i < outcome.sourceOutcomes.length; i++) {
-            int idx = getLinearIndexOfWeight(node, key, i);
-            Outcome so = outcome.sourceOutcomes[i];
-            Vec jac = so.errorJacobian;
-            jacobi_chain.getColumnView(idx).mutableAdd(jac);
-        }
-
-        jacobi_chain.mutableAdd(jacobi_chain.transpose());
-
-        for (int i = 0; i < outcome.sourceOutcomes.length; i++) {
-            Outcome so = outcome.sourceOutcomes[i];
-            jacobi_chain.mutableAdd(so.errorHessian.multiply(weights[i]));
-        }
-
-        // finalize Hessian
-        outcome.errorHessian = JJT.multiply(activation_second_derivative);
-        outcome.errorHessian.mutableAdd(jacobi_chain.multiply(activation_derivative));
-    }
-
     protected void computeDelta(boolean print_forward) {
         errorDerivative = new DenseVector(totalNumOfVariables);
-        errorHessian = new DenseMatrix(totalNumOfVariables, totalNumOfVariables);
 
         computeErrorOfOutput(print_forward);
-
-        // double check hesssian symmetry
-        for (int i = 0; i < totalNumOfVariables; i++) {
-            for (int j = i + 1; j < totalNumOfVariables; j++) {
-                assert errorHessian.get(i, j) == errorHessian.get(j, i);
-            }
-        }
-
-        // computeDeltaSeparateZeros();
-        computeDeltaWithZeros();
-
+        ADAM_step();
     }
 
-    private void computeDeltaWithZeros() {
-        Matrix eta_Matrix = DenseMatrix.eye(totalNumOfVariables).multiply(0);
-        SingularValueDecomposition decomposition = new SingularValueDecomposition(errorHessian.add(eta_Matrix));
+    private void ADAM_step() {
+        t++;
+        m = m.multiply(beta_1).add(errorDerivative.multiply(1 - beta_1));
+        v = v.multiply(beta_2).add(errorDerivative.pairwiseMultiply(errorDerivative).multiply(1 - beta_2));
+        m_hat = m.divide(1 - Math.pow(beta_1, t));
+        v_hat = v.divide(1 - Math.pow(beta_2, t));
 
-        parameterDeltas = decomposition.solve(errorDerivative);
-        parameterDeltas.mutableMultiply(epsilon);
-
-        // ensure that we aim for the minimum instead of the maximum
-        // for (int i = 0; i < parameterDeltas.rows(); i++) {
-        // parameterDeltas.set(i, 0,
-        // Math.abs(parameterDeltas.get(i, 0)) * Math.signum(errorDerivative.get(i,
-        // 0)));
-        // }
-    }
-
-    private void computeDeltaSeparateZeros() {
-        Vec errorDerivativeNonZero = removeZeroColumns();
-
-        SingularValueDecomposition decomposition = new SingularValueDecomposition(errorHessian);
-
-        // if the matrix can't be practically inverted, use a simple gradient step
-        // if(Math.abs(decomposition.det()) < 1E-6){
-        // parameterDeltas = errorDerivative.multiply(epsilon/inputs.length);
-        // return;
-        // }
-
-        Vec non_zero_deltas = decomposition.solve(errorDerivativeNonZero);
-        non_zero_deltas.mutableMultiply(epsilon);
-
-        // ensure that we aim for the minimum instead of the maximum
-        for (int i = 0; i < non_zero_deltas.length(); i++) {
-            non_zero_deltas.set(i,
-                    Math.abs(non_zero_deltas.get(i)) * Math.signum(errorDerivativeNonZero.get(i)));
-        }
-
-        // recombine deltas
         parameterDeltas = new DenseVector(totalNumOfVariables);
-        int non_empty_idx = 0;
         for (int i = 0; i < totalNumOfVariables; i++) {
-            double value;
-            if (isColumnEmpty[i]) {
-                value = errorDerivative.get(i) * epsilon * 0.001;
-            } else {
-                value = non_zero_deltas.get(non_empty_idx++);
-            }
-
-            parameterDeltas.set(i, value);
+            double denom = Math.sqrt(v_hat.get(i)) + epsilon;
+            parameterDeltas.set(i, alpha * m_hat.get(i) / denom);
         }
-    }
-
-    private Vec removeZeroColumns() {
-
-        isColumnEmpty = new boolean[totalNumOfVariables];
-        int n_nnz = 0;
-        for (int i = 0; i < totalNumOfVariables; i++) {
-            isColumnEmpty[i] = errorHessian.getColumn(i).nnz() == 0;
-            if (!isColumnEmpty[i]) {
-                n_nnz++;
-            }
-        }
-
-        Vec new_derivative = new DenseVector(n_nnz);
-        Matrix new_hessian = new DenseMatrix(n_nnz, n_nnz);
-
-        int non_zero_index = 0;
-        for (int i = 0; i < totalNumOfVariables; i++) {
-            if (!isColumnEmpty[i]) {
-                new_derivative.set(non_zero_index, errorDerivative.get(i));
-
-                Vec new_vec = new_hessian.getColumnView(non_zero_index);
-                Vec old_vec = errorHessian.getColumn(i);
-                int non_zero_index_2 = 0;
-                for (int j = 0; j < totalNumOfVariables; j++) {
-                    if (!isColumnEmpty[j]) {
-                        new_vec.set(non_zero_index_2++, old_vec.get(j));
-                    }
-                }
-                non_zero_index++;
-            }
-        }
-
-        errorHessian = new_hessian;
-        return new_derivative;
     }
 
     private double getProbabilityVolume(ArrayList<Outcome> outcomes) {
@@ -314,17 +201,10 @@ public class NewtonTrainer extends Trainer {
             // }
 
             double error_derivative = errorFunction.error_derivative(outcome.activatedValue, target);
-            double error_second_derivative = errorFunction.error_second_derivative(outcome.activatedValue, target);
             double prob = outcome.probability / probabilityVolume;
 
             // accumulate jacobians
             errorDerivative.mutableAdd(outcome.errorJacobian.multiply(prob * error_derivative));
-
-            // accumulate hessian
-            Matrix JJT = new DenseMatrix(totalNumOfVariables, totalNumOfVariables);
-            Matrix.OuterProductUpdate(JJT, outcome.errorJacobian, outcome.errorJacobian, 1);
-            errorHessian.mutableAdd(JJT.multiply(prob * error_second_derivative));
-            errorHessian.mutableAdd(outcome.errorHessian.multiply(prob * error_derivative));
 
             double error = errorFunction.error(outcome.activatedValue, target);
             // assert Double.isFinite(errorFunction.error(outcome.activatedValue, target));
@@ -352,5 +232,4 @@ public class NewtonTrainer extends Trainer {
         System.arraycopy(allDeltas, startIdx, gradient, 0, length);
         return gradient;
     }
-
 }

@@ -1,12 +1,14 @@
 package com.lucasbrown.NetworkTraining;
 
-import com.lucasbrown.GraphNetwork.Global.ArcBuilder;
-import com.lucasbrown.GraphNetwork.Global.BackpropTrainer;
-import com.lucasbrown.GraphNetwork.Global.GraphNetwork;
-import com.lucasbrown.GraphNetwork.Global.NodeBuilder;
+import com.lucasbrown.GraphNetwork.Global.Network.ArcBuilder;
+import com.lucasbrown.GraphNetwork.Global.Network.GraphNetwork;
+import com.lucasbrown.GraphNetwork.Global.Network.NodeBuilder;
+import com.lucasbrown.GraphNetwork.Global.Trainers.ADAMTrainer;
+import com.lucasbrown.GraphNetwork.Global.Trainers.BackpropTrainer;
 import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
 import com.lucasbrown.GraphNetwork.Local.Nodes.ComplexNode;
 import com.lucasbrown.GraphNetwork.Local.Nodes.INode;
+import com.lucasbrown.GraphNetwork.Local.Nodes.ITrainable;
 import com.lucasbrown.GraphNetwork.Local.Nodes.InputNode;
 import com.lucasbrown.GraphNetwork.Local.Nodes.OutputNode;
 import com.lucasbrown.GraphNetwork.Local.Nodes.SimpleNode;
@@ -84,8 +86,8 @@ public class FibonacciNetworkTest {
         InputNode in = (InputNode) nodeBuilder.build();
 
         nodeBuilder.setAsHiddenNode();
-        INode hidden1 = nodeBuilder.build();
-        INode hidden2 = nodeBuilder.build();
+        ITrainable hidden1 = (ITrainable) nodeBuilder.build();
+        ITrainable hidden2 = (ITrainable) nodeBuilder.build();
 
         nodeBuilder.setAsOutputNode();
         OutputNode out = (OutputNode) nodeBuilder.build();
@@ -108,11 +110,17 @@ public class FibonacciNetworkTest {
         arcBuilder.build(hidden1, out);
 
 
-        BackpropTrainer bt = new BackpropTrainer(net, new ErrorFunction.MeanSquaredError());
-        bt.epsilon = 0.001;
+        ADAMTrainer adam = new ADAMTrainer(net, new ErrorFunction.MeanSquaredError());
+        adam.alpha = 0.1;
+        adam.epsilon = 0.1;
 
-        bt.setTrainingData(fibNet.inputData, fibNet.outputData);
-        bt.trainNetwork(100000, 1);
+        adam.setTrainingData(fibNet.inputData, fibNet.outputData);
+        adam.trainNetwork(10000, 100);
+
+        adam.alpha = 0.0001;
+        adam.epsilon = 1E-8;
+
+        adam.trainNetwork(10000, 100);
 
         net.deactivateAll();
         net.setInputOperation(nodeMap -> BackpropTrainer.applyInputToNode(nodeMap, fibNet.inputData, counter++));

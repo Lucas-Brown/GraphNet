@@ -4,10 +4,10 @@ import java.util.Objects;
 import java.util.Random;
 import java.util.stream.Stream;
 
-import com.lucasbrown.GraphNetwork.Global.ArcBuilder;
-import com.lucasbrown.GraphNetwork.Global.BackpropTrainer;
-import com.lucasbrown.GraphNetwork.Global.GraphNetwork;
-import com.lucasbrown.GraphNetwork.Global.NodeBuilder;
+import com.lucasbrown.GraphNetwork.Global.Network.ArcBuilder;
+import com.lucasbrown.GraphNetwork.Global.Network.GraphNetwork;
+import com.lucasbrown.GraphNetwork.Global.Network.NodeBuilder;
+import com.lucasbrown.GraphNetwork.Global.Trainers.BackpropTrainer;
 import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
 import com.lucasbrown.GraphNetwork.Local.Arc;
 import com.lucasbrown.GraphNetwork.Local.Nodes.ComplexNode;
@@ -69,7 +69,7 @@ public class PeakTest {
 
         arcBuilder.build(in, out);
 
-        BackpropTrainer bt = new BackpropTrainer(net, new ErrorFunction.MeanSquaredError());
+        BackpropTrainer bt = new BackpropTrainer(net, new ErrorFunction.MeanSquaredError(), false);
         bt.epsilon = 1;
 
         bt.setTrainingData(inputData, outputData);

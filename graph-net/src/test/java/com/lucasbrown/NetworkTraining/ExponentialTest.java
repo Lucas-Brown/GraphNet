@@ -3,6 +3,7 @@ package com.lucasbrown.NetworkTraining;
 import com.lucasbrown.GraphNetwork.Global.Network.ArcBuilder;
 import com.lucasbrown.GraphNetwork.Global.Network.GraphNetwork;
 import com.lucasbrown.GraphNetwork.Global.Network.NodeBuilder;
+import com.lucasbrown.GraphNetwork.Global.Trainers.ADAMTrainer;
 import com.lucasbrown.GraphNetwork.Global.Trainers.BackpropTrainer;
 import com.lucasbrown.GraphNetwork.Global.Trainers.NewtonTrainer;
 import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
@@ -42,20 +43,20 @@ public class ExponentialTest {
 
     private void initializeInputData() {
         inputData = new Double[N][1];
-        inputData[0] = new Double[]{2d};
-        for(int i = 1; i < N; i++){
-            inputData[i] = new Double[]{null}; 
+        inputData[0] = new Double[] { 2d };
+        for (int i = 1; i < N; i++) {
+            inputData[i] = new Double[] { null };
         }
     }
 
     private void initializeOutputData() {
         outputData = new Double[N][1];
-        outputData[0] = new Double[]{null};
-        outputData[1] = new Double[]{null};
-        outputData[2] = new Double[]{1d};
+        outputData[0] = new Double[] { null };
+        outputData[1] = new Double[] { null };
+        outputData[2] = new Double[] { 1d };
 
-        for(int i = 3; i < N; i++){
-            outputData[i] = new Double[]{outputData[i-1][0]*base};
+        for (int i = 3; i < N; i++) {
+            outputData[i] = new Double[] { outputData[i - 1][0] * base };
         }
     }
 
@@ -89,24 +90,30 @@ public class ExponentialTest {
         out.setName("Output");
 
         ArcBuilder arcBuilder = new ArcBuilder(net);
-        // arcBuilder.setFilterSupplier(NormalPeakFilter::getStandardNormalBetaFilter);
-        // arcBuilder.setFilterAdjusterSupplier(NormalBernoulliFilterAdjuster::new);
-        arcBuilder.setFilterSupplier(() -> new FlatRateFilter(1));
-        arcBuilder.setFilterAdjusterSupplier(NoAdjustments::new);
+        arcBuilder.setFilterSupplier(NormalPeakFilter::getStandardNormalBetaFilter);
+        arcBuilder.setFilterAdjusterSupplier(NormalBernoulliFilterAdjuster::new);
+        // arcBuilder.setFilterSupplier(() -> new FlatRateFilter(0.999));
+        // arcBuilder.setFilterAdjusterSupplier(NoAdjustments::new);
 
         arcBuilder.build(in, hidden);
         arcBuilder.build(hidden, hidden);
         arcBuilder.build(hidden, out);
 
+        ADAMTrainer adam = new ADAMTrainer(net, new ErrorFunction.MeanSquaredError());
+        adam.alpha = 1;
+        adam.epsilon = 0.001;
 
-        NewtonTrainer bt = new NewtonTrainer(net, new ErrorFunction.LogarithmicError(), false);
-        bt.epsilon = 0.001;
+        adam.setTrainingData(exponentialGrowth.inputData, exponentialGrowth.outputData);
+        adam.trainNetwork(100000, 1000);
 
-        bt.setTrainingData(exponentialGrowth.inputData, exponentialGrowth.outputData);
-        bt.trainNetwork(10000000, 1);
+        adam.alpha = 0.01;
+        adam.epsilon = 0.0000001;
+
+        adam.trainNetwork(100000, 1000);
 
         net.deactivateAll();
-        net.setInputOperation(nodeMap -> BackpropTrainer.applyInputToNode(nodeMap, exponentialGrowth.inputData, counter++));
+        net.setInputOperation(
+                nodeMap -> BackpropTrainer.applyInputToNode(nodeMap, exponentialGrowth.inputData, counter++));
         for (int i = 0; i < exponentialGrowth.inputData.length; i++) {
             net.trainingStep();
             System.out.println(net);

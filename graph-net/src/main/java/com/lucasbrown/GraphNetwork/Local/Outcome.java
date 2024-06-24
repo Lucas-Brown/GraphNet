@@ -4,6 +4,7 @@ import com.lucasbrown.GraphNetwork.Local.Nodes.INode;
 import com.lucasbrown.NetworkTraining.ApproximationTools.WeightedAverage;
 
 import jsat.linear.Matrix;
+import jsat.linear.Vec;
 
 public class Outcome {
     public int binary_string;
@@ -22,7 +23,7 @@ public class Outcome {
     public WeightedAverage errorDerivative = new WeightedAverage();
 
     // TODO: seperate training information
-    public Matrix errorJacobian;
+    public Vec errorJacobian;
     public Matrix errorHessian;
 
     @Override
