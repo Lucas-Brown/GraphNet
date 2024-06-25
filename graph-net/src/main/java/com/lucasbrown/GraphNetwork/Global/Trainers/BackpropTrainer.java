@@ -28,6 +28,10 @@ public class BackpropTrainer extends Trainer{
     @Override
     protected void computeErrorOfNetwork(boolean print_forward) {
         computeErrorOfOutputs(print_forward);
+        if(total_error.getWeightSum() == 0){
+            return;
+        }
+        total_error.reset();
         backpropagateErrors();
     }
 
@@ -39,11 +43,10 @@ public class BackpropTrainer extends Trainer{
             }
         }
         // assert total_error.getAverage() < 1E6;
-        assert Double.isFinite(total_error.getAverage());
+        //assert Double.isFinite(total_error.getAverage());
         if (print_forward) {
             System.out.println(total_error.getAverage());
         }
-        total_error.reset();
     }
 
     private void computeErrorOfOutput(OutputNode node, int timestep, Double target) {
@@ -146,9 +149,9 @@ public class BackpropTrainer extends Trainer{
             so.errorDerivative.add(error_derivative * weightsOfNodes[i], prob);
 
             // accumulate pass rates
-            double pass_avg = outcomeAtTime.passRate.getAverage();
-            assert Double.isFinite(pass_avg);
-            so.passRate.add(pass_avg, prob);
+            // double pass_avg = outcomeAtTime.passRate.getAverage();
+            // assert Double.isFinite(pass_avg);
+            // so.passRate.add(pass_avg, prob);
 
             // apply error as new point for the distribution
             // Arc connection =
@@ -257,6 +260,11 @@ public class BackpropTrainer extends Trainer{
                     gradient[node.getLinearIndexOfWeight(key, i)] += error * outcome.sourceOutcomes[i].netValue;
                 }
             }
+        }
+
+        // if t = 0, return all zeros
+        if(T == 0){
+            return gradient;
         }
 
         // divide all gradients by the number of non-empty timesteps

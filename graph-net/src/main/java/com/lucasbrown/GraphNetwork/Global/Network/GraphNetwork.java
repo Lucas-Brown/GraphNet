@@ -29,7 +29,7 @@ import com.lucasbrown.NetworkTraining.DataSetTraining.IFilter;
 public class GraphNetwork {
 
     // Temporary global variable for testing
-    public static final double N_MAX = 10000;
+    public static final double N_MAX = 1000;
 
     /**
      * A list of all nodes within the graph network

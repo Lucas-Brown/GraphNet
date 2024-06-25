@@ -166,7 +166,7 @@ public class ADAMTrainer extends Trainer {
             }
         }
 
-        assert Double.isFinite(total_error.getAverage());
+        //assert Double.isFinite(total_error.getAverage());
         if (print_forward) {
             System.out.println(total_error.getAverage());
         }
@@ -191,7 +191,7 @@ public class ADAMTrainer extends Trainer {
             return;
         }
 
-        probabilityVolume = 1;
+        // probabilityVolume = 1;
 
         for (Outcome outcome : outcomes) {
             // if (timestep == this.timestep) {

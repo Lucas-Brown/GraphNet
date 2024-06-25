@@ -130,48 +130,6 @@ public abstract class Trainer {
         }
     }
 
-    public void sendErrorsBackwards(ITrainable node, Outcome outcomeAtTime) {
-        if (node instanceof IInputNode || !outcomeAtTime.errorDerivative.hasValues()) {
-            return;
-        }
-
-        int binary_string = outcomeAtTime.binary_string;
-        double error_derivative = outcomeAtTime.errorDerivative.getAverage()
-                * node.getActivationFunction().derivative(outcomeAtTime.netValue);
-
-        double[] weightsOfNodes = node.getWeights(binary_string);
-
-        for (int i = 0; i < weightsOfNodes.length; i++) {
-            if (!outcomeAtTime.passRate.hasValues() || outcomeAtTime.probability == 0) {
-                continue;
-            }
-            Outcome so = outcomeAtTime.sourceOutcomes[i];
-
-            // Get the arc connectting the node to its source
-            Arc arc = node.getIncomingConnectionFrom(outcomeAtTime.sourceNodes[i]).get();
-
-            // use the arc to predict the probability of this event
-            double shifted_value = so.activatedValue - error_derivative;
-            double prob = outcomeAtTime.probability * arc.filter.getChanceToSend(shifted_value)
-                    / outcomeAtTime.sourceTransferProbabilities[i];
-
-            // accumulate error
-            so.errorDerivative.add(error_derivative * weightsOfNodes[i], prob);
-
-            // accumulate pass rates
-            double pass_avg = outcomeAtTime.passRate.getAverage();
-            assert Double.isFinite(pass_avg);
-            so.passRate.add(pass_avg, prob);
-
-            // apply error as new point for the distribution
-            // Arc connection =
-            // outcomeAtTime.sourceNodes[i].getOutgoingConnectionTo(this).get();
-            // connection.probDist.prepareReinforcement(outcomeAtTime.netValue -
-            // error_derivative);
-        }
-
-    }
-
     public void adjustProbabilitiesForOutcome(ITrainable node, Outcome outcome) {
         if (!outcome.passRate.hasValues() || outcome.probability == 0) {
             return;
@@ -198,6 +156,8 @@ public abstract class Trainer {
                         / outcome.sourceTransferProbabilities[i];
                 arc.filterAdjuster.prepareAdjustment(prob, new double[] { activated_value, pass_rate });
             }
+
+            outcome.sourceOutcomes[i].passRate.add(pass_rate, outcome.probability);
         }
 
     }

@@ -1,70 +1,43 @@
 package com.lucasbrown.NetworkTraining;
 
+import java.util.Random;
 import com.lucasbrown.GraphNetwork.Global.Network.ArcBuilder;
 import com.lucasbrown.GraphNetwork.Global.Network.GraphNetwork;
 import com.lucasbrown.GraphNetwork.Global.Network.NodeBuilder;
 import com.lucasbrown.GraphNetwork.Global.Trainers.ADAMTrainer;
 import com.lucasbrown.GraphNetwork.Global.Trainers.BackpropTrainer;
-import com.lucasbrown.GraphNetwork.Global.Trainers.NewtonTrainer;
 import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
 import com.lucasbrown.GraphNetwork.Local.Nodes.ComplexNode;
-import com.lucasbrown.GraphNetwork.Local.Nodes.INode;
 import com.lucasbrown.GraphNetwork.Local.Nodes.ITrainable;
 import com.lucasbrown.GraphNetwork.Local.Nodes.InputNode;
 import com.lucasbrown.GraphNetwork.Local.Nodes.OutputNode;
-import com.lucasbrown.GraphNetwork.Local.Nodes.SimpleNode;
 import com.lucasbrown.NetworkTraining.ApproximationTools.ErrorFunction;
 import com.lucasbrown.NetworkTraining.DataSetTraining.BernoulliDistribution;
 import com.lucasbrown.NetworkTraining.DataSetTraining.BernoulliDistributionAdjuster;
 import com.lucasbrown.NetworkTraining.DataSetTraining.BetaDistribution;
+import com.lucasbrown.NetworkTraining.DataSetTraining.BetaDistributionAdjuster;
 import com.lucasbrown.NetworkTraining.DataSetTraining.BetaDistributionAdjuster2;
-import com.lucasbrown.NetworkTraining.DataSetTraining.BetaDistributionFromData;
-import com.lucasbrown.NetworkTraining.DataSetTraining.FlatRateFilter;
-import com.lucasbrown.NetworkTraining.DataSetTraining.FlatRateFilterBetaAdjuster;
-import com.lucasbrown.NetworkTraining.DataSetTraining.IExpectationAdjuster;
-import com.lucasbrown.NetworkTraining.DataSetTraining.IFilter;
-import com.lucasbrown.NetworkTraining.DataSetTraining.ITrainableDistribution;
 import com.lucasbrown.NetworkTraining.DataSetTraining.NoAdjustments;
 import com.lucasbrown.NetworkTraining.DataSetTraining.NormalBernoulliFilterAdjuster;
 import com.lucasbrown.NetworkTraining.DataSetTraining.NormalPeakFilter;
-import com.lucasbrown.NetworkTraining.DataSetTraining.NormalBetaFilterAdjuster;
+import com.lucasbrown.NetworkTraining.DataSetTraining.OpenFilter;
 import com.lucasbrown.NetworkTraining.DataSetTraining.NormalBetaFilterAdjuster2;
 import com.lucasbrown.NetworkTraining.DataSetTraining.NormalDistribution;
-import com.lucasbrown.NetworkTraining.DataSetTraining.NormalDistributionFromData;
-import com.lucasbrown.NetworkTraining.DataSetTraining.OpenFilter;
 
-public class ExponentialTest {
+public class MultiLayerPeakTest {
 
     private static int counter = 0;
-    private static double base = 2;
-    private int N = 25;
-    private Double[][] inputData;
-    private Double[][] outputData;
 
-    private void initializeInputData() {
-        inputData = new Double[N][1];
-        inputData[0] = new Double[] { 2d };
-        for (int i = 1; i < N; i++) {
-            inputData[i] = new Double[] { null };
-        }
-    }
-
-    private void initializeOutputData() {
-        outputData = new Double[N][1];
-        outputData[0] = new Double[] { null };
-        outputData[1] = new Double[] { null };
-        outputData[2] = new Double[] { 1d };
-
-        for (int i = 3; i < N; i++) {
-            outputData[i] = new Double[] { outputData[i - 1][0] * base };
-        }
-    }
+    private static Double[][] inputData = new Double[][] {
+            new Double[] { -2d }, new Double[] { -1d }, new Double[] { -0.5d }, new Double[] { 0d },
+            new Double[] { 0.5d }, new Double[] { 1d }, new Double[] { 2d }, new Double[] { null },
+            new Double[] { null }};
+    private static Double[][] outputData = new Double[][] {
+            new Double[] { null }, new Double[] { null }, new Double[] { null }, new Double[] { null },
+            new Double[] { null }, new Double[] { 0.5d }, new Double[] { 1d }, new Double[] { 1.5d }, new Double[] { null },
+            new Double[] { null } };
 
     public static void main(String[] args) {
-        ExponentialTest exponentialGrowth = new ExponentialTest();
-        exponentialGrowth.initializeInputData();
-        exponentialGrowth.initializeOutputData();
-
         GraphNetwork net = new GraphNetwork();
 
         NodeBuilder nodeBuilder = new NodeBuilder(net);
@@ -77,44 +50,46 @@ public class ExponentialTest {
         nodeBuilder.setProbabilityDistAdjusterSupplier(BernoulliDistributionAdjuster::new);
 
         nodeBuilder.setAsInputNode();
+
         InputNode in = (InputNode) nodeBuilder.build();
 
         nodeBuilder.setAsHiddenNode();
-        ITrainable hidden = (ITrainable) nodeBuilder.build();
+
+        ITrainable hidden1 = (ITrainable) nodeBuilder.build();
+        ITrainable hidden2 = (ITrainable) nodeBuilder.build();
 
         nodeBuilder.setAsOutputNode();
+
         OutputNode out = (OutputNode) nodeBuilder.build();
 
         in.setName("Input");
-        hidden.setName("Hidden");
         out.setName("Output");
 
         ArcBuilder arcBuilder = new ArcBuilder(net);
         arcBuilder.setFilterSupplier(NormalPeakFilter::getStandardNormalBetaFilter);
         arcBuilder.setFilterAdjusterSupplier(NormalBernoulliFilterAdjuster::new);
-        // arcBuilder.setFilterSupplier(() -> new FlatRateFilter(0.999));
+        // arcBuilder.setFilterSupplier(OpenFilter::new);
         // arcBuilder.setFilterAdjusterSupplier(NoAdjustments::new);
 
-        arcBuilder.build(in, hidden);
-        arcBuilder.build(hidden, hidden);
-        arcBuilder.build(hidden, out);
+        arcBuilder.build(in, hidden1);
+        arcBuilder.build(hidden1, hidden2);
+        arcBuilder.build(hidden2, out);
 
-        ADAMTrainer adam = new ADAMTrainer(net, new ErrorFunction.MeanSquaredError());
-        adam.alpha = 0.1;
-        adam.epsilon = 0.01;
+        // ADAMTrainer adam = new ADAMTrainer(net, new ErrorFunction.MeanSquaredError());
+        // adam.alpha = 0.1;
+        // adam.epsilon = 0.01;
+        // adam.beta_1 = 0.9;
+        // adam.beta_2 = 0.99;
 
-        adam.setTrainingData(exponentialGrowth.inputData, exponentialGrowth.outputData);
+        BackpropTrainer adam = new BackpropTrainer(net, new ErrorFunction.MeanSquaredError(), true);
+
+        adam.setTrainingData(inputData, outputData);
+        adam.epsilon = 1;
+
         adam.trainNetwork(100000, 1000);
-
-        adam.alpha = 0.01;
-        adam.epsilon = 0.0000001;
-
-        adam.trainNetwork(100000, 1000);
-
         net.deactivateAll();
-        net.setInputOperation(
-                nodeMap -> BackpropTrainer.applyInputToNode(nodeMap, exponentialGrowth.inputData, counter++));
-        for (int i = 0; i < exponentialGrowth.inputData.length; i++) {
+        net.setInputOperation(nodeMap -> BackpropTrainer.applyInputToNode(nodeMap, inputData, counter++));
+        for (int i = 0; i < inputData.length; i++) {
             net.trainingStep();
             System.out.println(net);
         }

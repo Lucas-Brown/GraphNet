@@ -92,7 +92,8 @@ public class BetaDistributionAdjuster2 implements IExpectationAdjuster {
 
         N = Math.min(N_new, GraphNetwork.N_MAX);
 
-        assert Double.isFinite(alpha) & Double.isFinite(beta);
+        assert Double.isFinite(alpha) && alpha > 0;
+        assert Double.isFinite(beta) && beta > 0;
         newPoints.clear();
         distribution.applyAdjustments(this);
     }
