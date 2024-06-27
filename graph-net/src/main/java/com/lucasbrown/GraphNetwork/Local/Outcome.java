@@ -3,9 +3,6 @@ package com.lucasbrown.GraphNetwork.Local;
 import com.lucasbrown.GraphNetwork.Local.Nodes.INode;
 import com.lucasbrown.NetworkTraining.ApproximationTools.WeightedAverage;
 
-import jsat.linear.Matrix;
-import jsat.linear.Vec;
-
 public class Outcome {
     public int binary_string;
     public double netValue;
@@ -20,11 +17,7 @@ public class Outcome {
      * Accumulates the number of pass/fails for this signal.
      */
     public WeightedAverage passRate = new WeightedAverage();
-    public WeightedAverage errorDerivative = new WeightedAverage();
 
-    // TODO: seperate training information
-    public Vec errorJacobian;
-    public Matrix errorHessian;
 
     @Override
     public String toString() {

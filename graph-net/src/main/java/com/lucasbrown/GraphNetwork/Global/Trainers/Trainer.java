@@ -23,25 +23,21 @@ public abstract class Trainer {
 
     private int timestep;
     protected final GraphNetwork network;
-    protected final History networkHistory;
     protected final ErrorFunction errorFunction;
 
     protected Double[][] inputs;
     protected Double[][] targets;
 
     protected ArrayList<OutputNode> outputNodes;
-    protected HashSet<ITrainable> allNodes;
 
     protected WeightedAverage total_error;
 
     public Trainer(GraphNetwork network, ErrorFunction errorFunction) {
         this.network = network;
         this.errorFunction = errorFunction;
-        networkHistory = new History(network);
 
         castAllToTrainable();
 
-        network.setInputOperation(this::applyInputToNode);
         outputNodes = network.getOutputNodes();
         total_error = new WeightedAverage();
     }
@@ -82,16 +78,6 @@ public abstract class Trainer {
         networkHistory.burnHistory();
     }
 
-    private void captureForward(boolean print_forward) {
-        for (timestep = 0; timestep < inputs.length; timestep++) {
-            network.trainingStep();
-            if (print_forward) {
-                System.out.println(network.toString() + " | Target = " + Arrays.toString(targets[timestep]));
-            }
-            networkHistory.captureState();
-        }
-        timestep--;
-    }
 
     private void updateDistributions(){
         ArrayList<INode> nodes = network.getNodes();
@@ -116,9 +102,6 @@ public abstract class Trainer {
         allNodes.forEach(ITrainable::applyFilterUpdate);
     }
 
-    private void applyInputToNode(HashMap<Integer, ? extends IInputNode> inputNodeMap) {
-        applyInputToNode(inputNodeMap, inputs, timestep);
-    }
 
     /**
      * Use the outcomes to prepare weighted adjustments to the outcome distribution
@@ -162,18 +145,6 @@ public abstract class Trainer {
         }
 
     }
-
-    public static void applyInputToNode(HashMap<Integer, ? extends IInputNode> inputNodeMap, Double[][] input,
-            int counter) {
-        InputNode[] sortedNodes = inputNodeMap.values().stream().sorted().toArray(InputNode[]::new);
-
-        for (int i = 0; i < sortedNodes.length; i++) {
-            if (input[counter][i] != null) {
-                sortedNodes[i].acceptUserForwardSignal(input[counter][i]);
-            }
-        }
-    }
-
     protected abstract void computeErrorOfNetwork(boolean print_forward);
 
     protected abstract void applyErrorSignals() ;
