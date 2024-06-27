@@ -16,6 +16,7 @@ import com.lucasbrown.GraphNetwork.Local.Nodes.INode;
 import com.lucasbrown.GraphNetwork.Local.Nodes.IOutputNode;
 import com.lucasbrown.GraphNetwork.Local.Nodes.InputNode;
 import com.lucasbrown.GraphNetwork.Local.Nodes.OutputNode;
+import com.lucasbrown.NetworkTraining.IStateGenerator;
 import com.lucasbrown.NetworkTraining.DataSetTraining.IExpectationAdjuster;
 import com.lucasbrown.NetworkTraining.DataSetTraining.IFilter;
 
@@ -26,7 +27,7 @@ import com.lucasbrown.NetworkTraining.DataSetTraining.IFilter;
  * Current representation allows for both positive and negative reinforcement.
  * Only postive reinforcement is implemented currently.
  */
-public class GraphNetwork {
+public class GraphNetwork implements IStateGenerator<INode>{
 
     // Temporary global variable for testing
     public static final double N_MAX = 100;
@@ -207,5 +208,10 @@ public class GraphNetwork {
 
     private static int IntegerEntryComparator(Entry<Integer, ?> e1, Entry<Integer, ?> e2) {
         return Integer.compare(e1.getKey(), e2.getKey());
+    }
+
+    @Override
+    public ArrayList<INode> getStateRecords() {
+        return getActiveNodes();
     }
 }

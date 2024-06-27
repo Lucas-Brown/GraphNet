@@ -3,14 +3,16 @@ package com.lucasbrown.GraphNetwork.Global.Trainers;
 import java.util.HashMap;
 
 import com.lucasbrown.GraphNetwork.Global.Network.GraphNetwork;
+import com.lucasbrown.GraphNetwork.Local.Outcome;
 import com.lucasbrown.GraphNetwork.Local.Nodes.IInputNode;
+import com.lucasbrown.GraphNetwork.Local.Nodes.INode;
 import com.lucasbrown.GraphNetwork.Local.Nodes.InputNode;
 import com.lucasbrown.NetworkTraining.History;
 
 public class NetworkInputEvaluater {
 
     protected GraphNetwork network;
-    protected final History networkHistory;
+    protected final History<Outcome, INode> networkHistory;
 
     private int timestep;
     protected Double[][] inputs;
@@ -20,14 +22,14 @@ public class NetworkInputEvaluater {
         timestep = 0;
 
         network.setInputOperation(this::applyInputToNode);
-        networkHistory = new History(network);
+        networkHistory = new History<Outcome, INode>(network);
     }
 
     public void setInputData(Double[][] inputs) {
         this.inputs = inputs;
     }
 
-    public History computeNetworkInference() {
+    public History<Outcome, INode> computeNetworkInference() {
         if (inputs == null) {
             return null;
         }

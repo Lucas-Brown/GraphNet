@@ -10,8 +10,9 @@ import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
 import com.lucasbrown.GraphNetwork.Local.Arc;
 import com.lucasbrown.GraphNetwork.Local.Outcome;
 import com.lucasbrown.GraphNetwork.Local.Signal;
+import com.lucasbrown.NetworkTraining.IStateRecord;
 
-public interface INode extends Comparable<INode> {
+public interface INode extends Comparable<INode>, IStateRecord<Outcome>{
 
     public int getID();
 
@@ -109,13 +110,6 @@ public interface INode extends Comparable<INode> {
     public void sendForwardSignals();
 
     public void clearSignals();
-
-    /**
-     * Get a view of the internal state of this node
-     * 
-     * @return
-     */
-    public ArrayList<Outcome> getState();
 
     public double computeMergedSignalStrength(Collection<Signal> incomingSignals, int binary_string);
 

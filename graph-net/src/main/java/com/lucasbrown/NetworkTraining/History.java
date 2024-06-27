@@ -4,91 +4,79 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map.Entry;
-import java.util.Objects;
 import java.util.stream.Stream;
 
-import com.lucasbrown.GraphNetwork.Global.Network.GraphNetwork;
-import com.lucasbrown.GraphNetwork.Local.Outcome;
-import com.lucasbrown.GraphNetwork.Local.Nodes.INode;
+/**
+ * 
+ * T = Outcome
+ * V = Irecord 
+ */
+public class History<T, V extends IStateRecord<T>> {
 
-public class History {
-
-    public final GraphNetwork network;
+    public final IStateGenerator<V> stateGenerator;
 
     /**
-     * for each time, a map from node id to a list of outcomes
+     * for each time, a map from record id to a list of outcomes
      */
-    private ArrayList<HashMap<INode, ArrayList<Outcome>>> outcomesThroughTime;
+    private ArrayList<HashMap<V, ArrayList<T>>> outcomesThroughTime;
 
-    public History(GraphNetwork network) {
-        this.network = network;
+    public History(IStateGenerator<V> stateGenerator) {
+        this.stateGenerator = stateGenerator;
         outcomesThroughTime = new ArrayList<>();
     }
 
     public void captureState() {
-        ArrayList<INode> nodes = network.getActiveNodes();
-        HashMap<INode, ArrayList<Outcome>> state = new HashMap<>(nodes.size());
-        for (INode node : nodes) {
-            ArrayList<Outcome> outcomes = node.getState();
-            state.put(node, outcomes);
-
-            
-            // assertion to make sure all references to previous nodes are maintained
-            for(Outcome outcome: outcomes){
-                if(outcome.sourceOutcomes == null){
-                    continue;
-                }
-                for(int i = 0 ; i < outcome.sourceOutcomes.length; i++){
-                    boolean containsReference = false;
-                    ArrayList<Outcome> sourceOutcomes = getStateOfNode(outcomesThroughTime.size()-1, outcome.sourceNodes[i]);
-                    for(Outcome so : sourceOutcomes){
-                        containsReference |= outcome.sourceOutcomes[i] == so;
-                    }
-                    assert containsReference;
-                }
-            }
+        ArrayList<V> records = stateGenerator.getStateRecords();
+        HashMap<V, ArrayList<T>> states = new HashMap<>(records.size());
+        for (V key : records) {
+            ArrayList<T> state = key.getState();
+            states.put(key, state);
         }
 
-        outcomesThroughTime.add(state);
+        outcomesThroughTime.add(states);
 
     }
 
-    public HashMap<INode, ArrayList<Outcome>> getStateAtTimestep(int timestep) {
+    public int getNumberOfTimesteps(){
+        return outcomesThroughTime.size();
+    }
+
+    public HashMap<V, ArrayList<T>> getStateAtTimestep(int timestep) {
         return outcomesThroughTime.get(timestep);
     }
 
-    public ArrayList<Outcome> getStateOfNode(int timestep, INode node) {
-        return outcomesThroughTime.get(timestep).get(node);
+    public ArrayList<T> getStateOfRecord(int timestep, V key) {
+        return outcomesThroughTime.get(timestep).get(key);
     }
 
-    public List<ArrayList<Outcome>> getHistoryOfNode(INode node) {
+    public List<ArrayList<T>> getHistoryOfRecord(V key) {
         return outcomesThroughTime.stream()
-                .map(map -> map.get(node))
-                .map(list -> list == null ? new ArrayList<Outcome>(0) : list)
+                .map(map -> map.get(key))
+                .map(list -> list == null ? new ArrayList<T>(0) : list)
                 .toList();
     }
 
-    public List<Outcome> getAllOutcomesOfNode(INode node) {
-        return outcomesThroughTime.stream().flatMap(node_map -> node_map.get(node).stream()).toList();
+    public List<T> getAllOutcomesOfRecord(V key) {
+        return outcomesThroughTime.stream().flatMap(record_map -> record_map.get(key).stream()).toList();
     }
 
-    public HashMap<Integer, ArrayList<Outcome>> getOutcomesOfKeyFromNode(INode node) {
-        List<Outcome> all_outcomes = getAllOutcomesOfNode(node);
-        HashMap<Integer, ArrayList<Outcome>> keyMap = new HashMap<>(8, 2);
-        for (Outcome out : all_outcomes) {
-            ArrayList<Outcome> outcomesForKey = keyMap.get(out.binary_string);
-            if (outcomesForKey == null) {
-                outcomesForKey = new ArrayList<>();
-                outcomesForKey.add(out);
-                keyMap.put(out.binary_string, outcomesForKey);
-            } else {
-                outcomesForKey.add(out);
-            }
-        }
-        return keyMap;
-    }
+    // public HashMap<Integer, ArrayList<T>> getOutcomesOfKeyFromrecord(V record) {
+    //     List<T> all_outcomes = getAllOutcomesOfrecord(record);
+    //     HashMap<Integer, ArrayList<Outcome>> keyMap = new HashMap<>(8, 2);
+    //     for (T out : all_outcomes) {
+    //         ArrayList<T> outcomesForKey = keyMap.get(out.binary_string);
+    //         if (outcomesForKey == null) {
+    //             outcomesForKey = new ArrayList<>();
+    //             outcomesForKey.add(out);
+    //             keyMap.put(out.binary_string, outcomesForKey);
+    //         } else {
+    //             outcomesForKey.add(out);
+    //         }
+    //     }
+    //     return keyMap;
+    // }
 
-    public Stream<ArrayList<Outcome>> getAnonymousHistoryStream(){
+    public Stream<ArrayList<T>> getAnonymousHistoryStream(){
         return outcomesThroughTime.stream().flatMap(map -> map.values().stream());
     }
 
@@ -106,11 +94,11 @@ public class History {
             sb.append("Time Step ");
             sb.append(t);
             sb.append("\n\t");
-            for (Entry<INode, ArrayList<Outcome>> nodeOutcome : outcomesThroughTime.get(t).entrySet()) {
-                sb.append("Node ");
-                sb.append(nodeOutcome.getKey().getID());
+            for (Entry<V, ArrayList<T>> record : outcomesThroughTime.get(t).entrySet()) {
+                sb.append("record ");
+                sb.append(record.getKey().toString());
                 sb.append(": ");
-                sb.append(nodeOutcome.getValue().stream().sorted(Outcome::descendingProbabilitiesComparator).limit(2).toList().toString());
+                sb.append(record.getValue().stream().toString());
                 sb.append("\n\t");
             }
             sb.append("\n\n");
