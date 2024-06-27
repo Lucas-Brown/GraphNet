@@ -37,7 +37,7 @@ public class BackpropTrainer extends Trainer{
 
 
     private void computeErrorOfOutputs(boolean print_forward) {
-        for (int time = timestep; time > 0; time--) {
+        for (int time = targets.length-1; time > 0; time--) {
             for (int i = 0; i < outputNodes.size(); i++) {
                 computeErrorOfOutput(outputNodes.get(i), time, targets[time][i]);
             }
@@ -80,20 +80,17 @@ public class BackpropTrainer extends Trainer{
 
     private void backpropagateErrors() {
         ArrayList<INode> nodes = network.getNodes();
-        while (timestep > 0) {
-            HashMap<INode, ArrayList<Outcome>> state = networkHistory.getStateAtTimestep(timestep);
+        for (int time = targets.length - 1; time > 0; time--) {
+            HashMap<INode, ArrayList<Outcome>> state = networkHistory.getStateAtTimestep(time);
             for (Entry<INode, ArrayList<Outcome>> e : state.entrySet()) {
                 INode node = nodes.get(e.getKey().getID());
                 updateNodeForTimestep((ITrainable) node, e.getValue());
             }
-            timestep--;
         }
     }
 
     private void updateNodeForTimestep(ITrainable node, ArrayList<Outcome> outcomesAtTIme) {
-        prepareOutputDistributionAdjustments(node, outcomesAtTIme);
         outcomesAtTIme.forEach(outcome -> sendErrorsBackwards(node, outcome));
-        outcomesAtTIme.forEach(outcome -> adjustProbabilitiesForOutcome(node, outcome));
     }
 
 
@@ -106,21 +103,7 @@ public class BackpropTrainer extends Trainer{
         applyErrorSignals(node, networkHistory.getHistoryOfNode(node));
     }
 
-    /**
-     * Use the outcomes to prepare weighted adjustments to the outcome distribution
-     */
-    public void prepareOutputDistributionAdjustments(ITrainable node, ArrayList<Outcome> allOutcomes) {
-        IExpectationAdjuster adjuster = node.getOutputDistributionAdjuster();
-        for (Outcome o : allOutcomes) {
-            // weigh the outcomes by their probability of occurring
-            // double error = o.errorOfOutcome.hasValues() ? o.errorOfOutcome.getAverage() :
-            // 0;
-            double error = 0;
-            adjuster.prepareAdjustment(o.probability, new double[] { o.activatedValue - error });
-        }
-    }
-
-    public void sendErrorsBackwards(ITrainable node, Outcome outcomeAtTime) {
+    private void sendErrorsBackwards(ITrainable node, Outcome outcomeAtTime) {
         if (node instanceof IInputNode || !outcomeAtTime.errorDerivative.hasValues()) {
             return;
         }
@@ -162,46 +145,7 @@ public class BackpropTrainer extends Trainer{
 
     }
 
-    public void adjustProbabilitiesForOutcome(ITrainable node, Outcome outcome) {
-        if (!outcome.passRate.hasValues() || outcome.probability == 0) {
-            return;
-        }
-        double pass_rate = outcome.passRate.getAverage();
-
-        // Add another point for the net firing chance distribution
-        IExpectationAdjuster adjuster = node.getSignalChanceDistributionAdjuster();
-        adjuster.prepareAdjustment(outcome.probability, new double[] { pass_rate });
-
-        // no source nodes to adjust
-        if(node instanceof IInputNode){
-            return;
-        }
-
-        // Reinforce the filter with the pass rate for each point
-        for (int i = 0; i < outcome.sourceNodes.length; i++) {
-            INode sourceNode = outcome.sourceNodes[i];
-
-            double error_derivative = outcome.errorDerivative.getAverage();
-            Arc arc = node.getIncomingConnectionFrom(sourceNode).get(); // should be guaranteed to exist
-
-            // if the error is not defined and the pass rate is 0, then zero error should be
-            // expected
-            if (Double.isNaN(error_derivative) && pass_rate == 0) {
-                error_derivative = 0;
-            }
-            assert !Double.isNaN(error_derivative);
-
-            if (arc.filterAdjuster != null) {
-                double shifted_value = outcome.sourceOutcomes[i].activatedValue - error_derivative;
-                double prob = outcome.probability * arc.filter.getChanceToSend(shifted_value)
-                        / outcome.sourceTransferProbabilities[i];
-                arc.filterAdjuster.prepareAdjustment(prob, new double[] { shifted_value, pass_rate });
-            }
-        }
-
-    }
-
-    public void applyErrorSignals(ITrainable node, List<ArrayList<Outcome>> allOutcomes) {
+    private void applyErrorSignals(ITrainable node, List<ArrayList<Outcome>> allOutcomes) {
         double[] gradient = computeGradient(node, allOutcomes);
         for (int i = 0; i < gradient.length; i++) {
             gradient[i] *= epsilon;

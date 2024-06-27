@@ -20,7 +20,7 @@ public class NormalPeakFilter implements IFilter{
     }
 
     public NormalPeakFilter(double mean, double variance){
-        this(mean, variance, 0);
+        this(mean, variance, 10);
     }
 
     public double getMean(){

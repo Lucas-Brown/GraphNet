@@ -78,7 +78,7 @@ public class NormalBetaFilterAdjuster implements IExpectationAdjuster, Function 
      */
     @Override
     public void prepareAdjustment(double weight, double[] newData) {
-        prepareAdjustment(weight, newData[0], newData[1], newData[2]);
+        prepareAdjustment(weight, newData[0], newData[1]);
     }
 
     /**
@@ -91,8 +91,8 @@ public class NormalBetaFilterAdjuster implements IExpectationAdjuster, Function 
      * @param b      The beta observation (0 to 1) of the data point.
      * @param prob   The probability density of this point being selected
      */
-    public void prepareAdjustment(double weight, double x, double b, double prob) {
-        adjustementPoints.add(new WeightedPoint<FilterPoint>(weight, new FilterPoint(x, b, prob)));
+    public void prepareAdjustment(double weight, double x, double b) {
+        adjustementPoints.add(new WeightedPoint<FilterPoint>(weight, new FilterPoint(x, b)));
     }
 
     /**
@@ -115,6 +115,10 @@ public class NormalBetaFilterAdjuster implements IExpectationAdjuster, Function 
      */
     @Override
     public void applyAdjustments() {
+        if(adjustementPoints.isEmpty()){
+            return;
+        }
+
         // Retrieve the current filter parameters
         mean = filter.getMean();
         variance = filter.getVariance();
@@ -234,7 +238,7 @@ public class NormalBetaFilterAdjuster implements IExpectationAdjuster, Function 
      */
     public double getWeightedLogLikelihoodOfPoint(WeightedPoint<FilterPoint> point, double shift, double scale) {
         FilterPoint fp = point.value;
-        return point.weight * getLogLikelihoodOfPoint(fp.x, fp.b, fp.prob, shift, scale);
+        return point.weight * getLogLikelihoodOfPoint(fp.x, fp.b, shift, scale);
     }
 
     /**
@@ -250,10 +254,10 @@ public class NormalBetaFilterAdjuster implements IExpectationAdjuster, Function 
      * @param scale The scaling factor applied to the variance of the filter.
      * @return The log-likelihood of observing this data point.
      */
-    public double getLogLikelihoodOfPoint(double x, double b, double prob, double shift, double scale) {
+    public double getLogLikelihoodOfPoint(double x, double b, double shift, double scale) {
         // Calculate the full likelihood of observing x given the adjusted filter
         // parameters
-        double full_send = prob*NormalPeakFilter.likelihood(x, mean + shift, scale * variance);
+        double full_send = NormalPeakFilter.likelihood(x, mean + shift, scale * variance);
 
         // Handle different cases of the beta observation (b):
         if (b == 1) {
@@ -365,9 +369,6 @@ public class NormalBetaFilterAdjuster implements IExpectationAdjuster, Function 
         // The success rate
         public double b;
 
-        // The probability density that this point was generated
-        public double prob;
-
         /**
          * Constructs a filter point from a x value and success rate pair
          * 
@@ -375,16 +376,14 @@ public class NormalBetaFilterAdjuster implements IExpectationAdjuster, Function 
          * @param b The success rate
          * @param b The probability density
          */
-        public FilterPoint(double x, double b, double prob) {
+        public FilterPoint(double x, double b) {
             this.x = x;
             this.b = b;
-            this.prob = prob;
         }
 
         @Override
         public String toString() {
-            return "value: " + Double.toString(x) + "\tb: " + Double.toString(b) + "\tprobability: "
-                    + Double.toString(prob);
+            return "value: " + Double.toString(x) + "\tb: " + Double.toString(b);
         }
     }
 

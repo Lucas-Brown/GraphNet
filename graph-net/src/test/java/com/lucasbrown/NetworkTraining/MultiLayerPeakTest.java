@@ -19,6 +19,7 @@ import com.lucasbrown.NetworkTraining.DataSetTraining.BetaDistributionAdjuster;
 import com.lucasbrown.NetworkTraining.DataSetTraining.BetaDistributionAdjuster2;
 import com.lucasbrown.NetworkTraining.DataSetTraining.NoAdjustments;
 import com.lucasbrown.NetworkTraining.DataSetTraining.NormalBernoulliFilterAdjuster;
+import com.lucasbrown.NetworkTraining.DataSetTraining.NormalBetaFilterAdjuster;
 import com.lucasbrown.NetworkTraining.DataSetTraining.NormalPeakFilter;
 import com.lucasbrown.NetworkTraining.DataSetTraining.OpenFilter;
 import com.lucasbrown.NetworkTraining.DataSetTraining.NormalBetaFilterAdjuster2;
@@ -26,18 +27,56 @@ import com.lucasbrown.NetworkTraining.DataSetTraining.NormalDistribution;
 
 public class MultiLayerPeakTest {
 
+    private static Random rng = new Random();
     private static int counter = 0;
+    private static int n_depth = 3;
+    private static int N = 100;
 
-    private static Double[][] inputData = new Double[][] {
+    private Double[][] inputData = new Double[][] {
             new Double[] { -2d }, new Double[] { -1d }, new Double[] { -0.5d }, new Double[] { 0d },
             new Double[] { 0.5d }, new Double[] { 1d }, new Double[] { 2d }, new Double[] { null },
-            new Double[] { null }};
-    private static Double[][] outputData = new Double[][] {
+            new Double[] { null }, new Double[] { null } };
+    private Double[][] outputData = new Double[][] {
             new Double[] { null }, new Double[] { null }, new Double[] { null }, new Double[] { null },
-            new Double[] { null }, new Double[] { 0.5d }, new Double[] { 1d }, new Double[] { 1.5d }, new Double[] { null },
-            new Double[] { null } };
+            new Double[] { null }, new Double[] { 0.5d }, new Double[] { 1d }, new Double[] { 1.5d },
+            new Double[] { null }, new Double[] { null } };
+
+    private MultiLayerPeakTest(){
+        initializeInputData();
+        initializeOutputData();
+    }
+
+
+    private void initializeInputData() {
+        inputData = new Double[N][1];
+        int i;
+        for(i = 0; i < N-n_depth; i++){
+            inputData[i] = new Double[]{ rng.nextGaussian() }; 
+        }
+        for(;i < N; i++){
+            inputData[i] = new Double[]{null};
+        }
+    }
+
+    private void initializeOutputData() {
+        outputData = new Double[N][1];
+        int i;
+        for(i = 0; i < n_depth; i++){
+            outputData[i] = new Double[]{null};
+        }
+        for(; i < N; i++){
+            outputData[i] = new Double[]{gaussNull(inputData[i-n_depth][0])};
+        }
+    }
+
+    private static Double gaussNull(double x){
+        double chance = Math.exp(-x*x/((1)*2));
+        return rng.nextDouble() < chance ? x + 1 : null;
+    }
 
     public static void main(String[] args) {
+        MultiLayerPeakTest ptest = new MultiLayerPeakTest();
+
         GraphNetwork net = new GraphNetwork();
 
         NodeBuilder nodeBuilder = new NodeBuilder(net);
@@ -46,8 +85,10 @@ public class MultiLayerPeakTest {
         nodeBuilder.setNodeConstructor(ComplexNode::new);
         nodeBuilder.setOutputDistSupplier(NormalDistribution::getStandardNormalDistribution);
         // nodeBuilder.setOutputDistAdjusterSupplier(NormalDistributionFromData::new);
-        nodeBuilder.setProbabilityDistSupplier(BernoulliDistribution::getEvenDistribution);
-        nodeBuilder.setProbabilityDistAdjusterSupplier(BernoulliDistributionAdjuster::new);
+        nodeBuilder.setProbabilityDistSupplier(BetaDistribution::getUniformBetaDistribution);
+        nodeBuilder.setProbabilityDistAdjusterSupplier(BetaDistributionAdjuster::new);
+        // nodeBuilder.setProbabilityDistSupplier(BernoulliDistribution::getEvenDistribution);
+        // nodeBuilder.setProbabilityDistAdjusterSupplier(BernoulliDistributionAdjuster::new);
 
         nodeBuilder.setAsInputNode();
 
@@ -67,7 +108,8 @@ public class MultiLayerPeakTest {
 
         ArcBuilder arcBuilder = new ArcBuilder(net);
         arcBuilder.setFilterSupplier(NormalPeakFilter::getStandardNormalBetaFilter);
-        arcBuilder.setFilterAdjusterSupplier(NormalBernoulliFilterAdjuster::new);
+        arcBuilder.setFilterAdjusterSupplier(NormalBetaFilterAdjuster::new);
+        // arcBuilder.setFilterAdjusterSupplier(NormalBernoulliFilterAdjuster::new);
         // arcBuilder.setFilterSupplier(OpenFilter::new);
         // arcBuilder.setFilterAdjusterSupplier(NoAdjustments::new);
 
@@ -75,7 +117,8 @@ public class MultiLayerPeakTest {
         arcBuilder.build(hidden1, hidden2);
         arcBuilder.build(hidden2, out);
 
-        // ADAMTrainer adam = new ADAMTrainer(net, new ErrorFunction.MeanSquaredError());
+        // ADAMTrainer adam = new ADAMTrainer(net, new
+        // ErrorFunction.MeanSquaredError());
         // adam.alpha = 0.1;
         // adam.epsilon = 0.01;
         // adam.beta_1 = 0.9;
@@ -83,13 +126,13 @@ public class MultiLayerPeakTest {
 
         BackpropTrainer adam = new BackpropTrainer(net, new ErrorFunction.MeanSquaredError(), true);
 
-        adam.setTrainingData(inputData, outputData);
+        adam.setTrainingData(ptest.inputData, ptest.outputData);
         adam.epsilon = 1;
 
-        adam.trainNetwork(100000, 1000);
+        adam.trainNetwork(20000, 10);
         net.deactivateAll();
-        net.setInputOperation(nodeMap -> BackpropTrainer.applyInputToNode(nodeMap, inputData, counter++));
-        for (int i = 0; i < inputData.length; i++) {
+        net.setInputOperation(nodeMap -> BackpropTrainer.applyInputToNode(nodeMap, ptest.inputData, counter++));
+        for (int i = 0; i < ptest.inputData.length; i++) {
             net.trainingStep();
             System.out.println(net);
         }

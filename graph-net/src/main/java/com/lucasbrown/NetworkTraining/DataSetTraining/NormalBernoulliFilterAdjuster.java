@@ -112,6 +112,10 @@ public class NormalBernoulliFilterAdjuster implements IExpectationAdjuster, Func
      */
     @Override
     public void applyAdjustments() {
+        if(adjustementPoints.isEmpty()){
+            return;
+        }
+
         // Retrieve the current filter parameters
         mean = filter.getMean();
         variance = filter.getVariance();
@@ -202,6 +206,8 @@ public class NormalBernoulliFilterAdjuster implements IExpectationAdjuster, Func
     public double getLogLikelihood(double shift, double scale) {
         double expected = getExpectedValueOfLikelihood(shift, scale);
         double sum = getSumOfWeightedPoints(shift, scale);
+        assert Double.isFinite(expected);
+        assert Double.isFinite(sum);
         return expected + sum;
     }
 

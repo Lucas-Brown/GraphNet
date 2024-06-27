@@ -32,7 +32,6 @@ import com.lucasbrown.NetworkTraining.DataSetTraining.OpenFilter;
 
 public class PeakTest {
 
-    private static Random rng = new Random();
     private static int counter = 0;
 
     private int N = 100;
@@ -74,7 +73,7 @@ public class PeakTest {
 
         bt.setTrainingData(inputData, outputData);
 
-        bt.trainNetwork(10000, 100);
+        bt.trainNetwork(100, 10);
         net.deactivateAll();
         net.setInputOperation(nodeMap -> BackpropTrainer.applyInputToNode(nodeMap, inputData, counter++));
         for (int i = 0; i < inputData.length; i++) {

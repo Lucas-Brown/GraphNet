@@ -6,6 +6,13 @@
     "configurations": [
         {
             "type": "java",
+            "name": "MultiLayerPeakTest",
+            "request": "launch",
+            "mainClass": "com.lucasbrown.NetworkTraining.MultiLayerPeakTest",
+            "projectName": "graph-net"
+        },
+        {
+            "type": "java",
             "name": "PeakTest",
             "request": "launch",
             "mainClass": "com.lucasbrown.NetworkTraining.PeakTest",

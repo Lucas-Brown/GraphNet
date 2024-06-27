@@ -21,7 +21,7 @@ import com.lucasbrown.NetworkTraining.DataSetTraining.IExpectationAdjuster;
 
 public abstract class Trainer {
 
-    protected int timestep;
+    private int timestep;
     protected final GraphNetwork network;
     protected final History networkHistory;
     protected final ErrorFunction errorFunction;
@@ -157,7 +157,8 @@ public abstract class Trainer {
                 arc.filterAdjuster.prepareAdjustment(prob, new double[] { activated_value, pass_rate });
             }
 
-            outcome.sourceOutcomes[i].passRate.add(pass_rate, outcome.probability);
+            double rate = Math.min(pass_rate/outcome.sourceTransferProbabilities[i], 1);
+            outcome.sourceOutcomes[i].passRate.add(rate, outcome.probability);
         }
 
     }
