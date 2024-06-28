@@ -18,6 +18,11 @@ public class Outcome {
      */
     public WeightedAverage passRate = new WeightedAverage();
 
+    /**
+     * A pointer for any data used during the training process
+     */
+    public Object trainingData;
+
 
     @Override
     public String toString() {

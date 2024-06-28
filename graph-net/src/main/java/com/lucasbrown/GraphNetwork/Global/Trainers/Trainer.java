@@ -19,36 +19,32 @@ import com.lucasbrown.NetworkTraining.ApproximationTools.ErrorFunction;
 import com.lucasbrown.NetworkTraining.ApproximationTools.WeightedAverage;
 import com.lucasbrown.NetworkTraining.DataSetTraining.IExpectationAdjuster;
 
-public abstract class Trainer {
+import jsat.linear.Vec;
 
-    private int timestep;
-    protected final GraphNetwork network;
-    protected final ErrorFunction errorFunction;
+public class Trainer {
+
+    private WeightsLinearizer linearizer;
+    private NetworkInputEvaluater networkEvaluater;
+    private ISolver weightsSolver;
+    private ISolver probabilitySolver;
+
+    private Vec weightsDeltas;
+    private Vec probabilityDeltas;
 
     protected Double[][] inputs;
     protected Double[][] targets;
 
-    protected ArrayList<OutputNode> outputNodes;
-
     protected WeightedAverage total_error;
 
-    public Trainer(GraphNetwork network, ErrorFunction errorFunction) {
-        this.network = network;
-        this.errorFunction = errorFunction;
+    public Trainer(GraphNetwork network, ISolver weightsSolver) {
+        this.weightsSolver = weightsSolver;
 
-        castAllToTrainable();
+        linearizer = new WeightsLinearizer(network);
+        networkEvaluater = new NetworkInputEvaluater(network);
 
-        outputNodes = network.getOutputNodes();
         total_error = new WeightedAverage();
     }
 
-    private void castAllToTrainable() {
-        ArrayList<INode> nodes = network.getNodes();
-        allNodes = new HashSet<>(nodes.size());
-        for (INode node : nodes) {
-            allNodes.add((ITrainable) node);
-        }
-    }
 
     /**
      * input and target dimension : [timestep][node]
@@ -68,14 +64,29 @@ public abstract class Trainer {
     }
 
     public void trainingStep(boolean print_forward) {
-        captureForward(print_forward);
+        History<Outcome, INode> history = networkEvaluater.computeNetworkInference();
+        weightsDeltas = weightsSolver.solve(history);
+        probabilityDeltas = probabilitySolver.solve(history);
+        
+        applyWeightDeltas();
+        applyProbabilityDeltas();
+    }
 
-        computeErrorOfNetwork(print_forward);
-        updateDistributions();
-        applyErrorSignals();
-        applyDistributionUpdate();
-        network.deactivateAll();
-        networkHistory.burnHistory();
+    private void applyWeightDeltas() {
+        linearizer.allNodes.forEach(this::applyErrorSignalsToNode);
+    }
+
+    protected void applyErrorSignalsToNode(ITrainable node) {
+        double[] allDeltas = weightsDeltas.arrayCopy();
+        double[] gradient = linearizer.nodeSlice(node, allDeltas);
+        node.applyDelta(gradient);
+    }
+
+    
+
+    private void applyProbabilityDeltas() {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'applyProbabilityDeltas'");
     }
 
 
@@ -145,7 +156,4 @@ public abstract class Trainer {
         }
 
     }
-    protected abstract void computeErrorOfNetwork(boolean print_forward);
-
-    protected abstract void applyErrorSignals() ;
 }

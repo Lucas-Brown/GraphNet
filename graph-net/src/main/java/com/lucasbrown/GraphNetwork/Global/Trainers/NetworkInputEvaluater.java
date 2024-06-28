@@ -33,6 +33,7 @@ public class NetworkInputEvaluater {
         if (inputs == null) {
             return null;
         }
+        network.deactivateAll();
         networkHistory.burnHistory();
         captureForward();
         return networkHistory;

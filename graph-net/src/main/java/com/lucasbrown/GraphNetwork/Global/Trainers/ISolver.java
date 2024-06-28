@@ -6,8 +6,7 @@ import com.lucasbrown.NetworkTraining.History;
 
 import jsat.linear.Vec;
 
-public interface IGradient {
+public interface ISolver {
 
-    public Vec computeGradient(History<Outcome, INode> networkHistory);
-
+    public Vec solve(History<Outcome, INode> history);
 }
