@@ -3,7 +3,9 @@ package com.lucasbrown.GraphNetwork.Local.Nodes;
 import com.lucasbrown.GraphNetwork.Global.Network.GraphNetwork;
 import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
 import com.lucasbrown.GraphNetwork.Local.Arc;
+import com.lucasbrown.NetworkTraining.ApproximationTools.IterableTools;
 import com.lucasbrown.NetworkTraining.DataSetTraining.IExpectationAdjuster;
+import com.lucasbrown.NetworkTraining.DataSetTraining.IFilter;
 import com.lucasbrown.NetworkTraining.DataSetTraining.ITrainableDistribution;
 
 public abstract class TrainableNodeBase extends NodeBase implements ITrainable {
@@ -25,6 +27,8 @@ public abstract class TrainableNodeBase extends NodeBase implements ITrainable {
 
     public IExpectationAdjuster chanceAdjuster;
 
+    private int numInputParams = 0; 
+
     public TrainableNodeBase(GraphNetwork network, final ActivationFunction activationFunction,
             ITrainableDistribution outputDistribution,
             ITrainableDistribution signalChanceDistribution) {
@@ -42,6 +46,12 @@ public abstract class TrainableNodeBase extends NodeBase implements ITrainable {
         this.outputAdjuster = outputAdjuster;
         this.signalChanceDistribution = signalChanceDistribution;
         this.chanceAdjuster = chanceAdjuster;
+    }
+
+    @Override 
+    public boolean addIncomingConnection(Arc connection){
+        numInputParams += connection.filter.getNumberOfAdjustableParameters();
+        return super.addIncomingConnection(connection);
     }
 
     @Override
@@ -76,6 +86,22 @@ public abstract class TrainableNodeBase extends NodeBase implements ITrainable {
             if (connection.filterAdjuster != null) {
                 connection.filterAdjuster.applyAdjustments();
             }
+        }
+    }
+    
+    @Override
+    public int getNumberOfParameters() {
+        return numInputParams;
+    }
+
+    @Override
+    public void setParameters(double[] params) {
+        int param_count = 0;
+        for(Arc arc : incoming){
+            IFilter filter = arc.filter;
+            int count = filter.getNumberOfAdjustableParameters();
+            double[] new_params = IterableTools.slice(params, param_count, count);
+            filter.setAdjustableParameters(new_params);
         }
     }
 }

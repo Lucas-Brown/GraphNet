@@ -25,6 +25,11 @@ public class NetworkInputEvaluater {
         networkHistory = new History<Outcome, INode>(network);
     }
 
+    public NetworkInputEvaluater(GraphNetwork network, Double[][] inputs){
+        this(network);
+        setInputData(inputs);
+    }
+
     public void setInputData(Double[][] inputs) {
         this.inputs = inputs;
     }

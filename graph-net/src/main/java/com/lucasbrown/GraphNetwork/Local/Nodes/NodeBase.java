@@ -134,6 +134,7 @@ public abstract class NodeBase implements INode {
     public int getNumInputCombinations() {
         return numInputCombinations;
     }
+    
 
     /**
      * 
@@ -329,15 +330,20 @@ public abstract class NodeBase implements INode {
         // node/signal
         ArrayList<Signal> signalSet = sortSignalByID(setPair.u);
         List<INode> nodeSet = signalSet.stream().map(signal -> signal.sendingNode).toList();
+        outcome.node = this;
         outcome.binary_string = nodeSetToBinStr(nodeSet);
         outcome.netValue = computeMergedSignalStrength(signalSet, outcome.binary_string);
         outcome.activatedValue = activationFunction.activator(outcome.netValue);
         outcome.probability = getProbabilityOfSignalSet(signalSet, setPair.v);
         outcome.sourceTransferProbabilities = signalSet.stream().mapToDouble(Signal::getFiringProbability).toArray();
-        outcome.sourceNodes = nodeSet.toArray(new INode[nodeSet.size()]);
         outcome.sourceKeys = signalSet.stream().mapToInt(Signal::getSourceKey).toArray();
-        outcome.sourceOutcomes = signalSet.stream().map(signal -> signal.sourceOutcome).toArray(Outcome[]::new);
+        outcome.sourceOutcomes = outcomesFromSignal(signalSet);
+        outcome.allRootOutcomes = outcomesFromSignal(setPair.v);
         return outcome;
+    }
+
+    private static Outcome[] outcomesFromSignal(Collection<Signal> signals){
+        return signals.stream().map(signal -> signal.sourceOutcome).toArray(Outcome[]::new);
     }
 
     public ArrayList<Signal> sortSignalByID(Collection<Signal> toSort) {

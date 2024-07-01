@@ -19,5 +19,20 @@ public class OpenFilter implements IFilter {
     public void applyAdjustments(IExpectationAdjuster adjuster) {
         // Do nothing
     }
+
+    @Override
+    public int getNumberOfAdjustableParameters() {
+        return 0;
+    }
+
+    @Override
+    public double[] getAdjustableParameters() {
+        return new double[0];
+    }
+
+    @Override
+    public void setAdjustableParameters(double[] params) {
+        // do nothing
+    }
     
 }

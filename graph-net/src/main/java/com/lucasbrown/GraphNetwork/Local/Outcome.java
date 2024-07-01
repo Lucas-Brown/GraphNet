@@ -3,15 +3,20 @@ package com.lucasbrown.GraphNetwork.Local;
 import com.lucasbrown.GraphNetwork.Local.Nodes.INode;
 import com.lucasbrown.NetworkTraining.ApproximationTools.WeightedAverage;
 
+/**
+ * A massive collection of everything that anyone could ever need to know about a node at a given timestep 
+ */
 public class Outcome {
+
+    public INode node;
     public int binary_string;
     public double netValue;
     public double activatedValue;
     public double probability;
     public double[] sourceTransferProbabilities;
-    public INode[] sourceNodes;
     public int[] sourceKeys;
     public Outcome[] sourceOutcomes;
+    public Outcome[] allRootOutcomes;
 
     /**
      * Accumulates the number of pass/fails for this signal.

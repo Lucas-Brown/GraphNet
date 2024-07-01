@@ -9,6 +9,12 @@ import java.util.Set;
 
 public class IterableTools {
 
+    public static double[] slice(double[] dArr, int start, int count){
+        double[] slice = new double[count];
+        System.arraycopy(dArr, start, slice, 0, count);
+        return slice;
+    }
+
     public static final double[][] array2DCopy(double[][] toCopy) {
         final double[][] copy = new double[toCopy.length][];
         for (int i = 0; i < copy.length; i++) {

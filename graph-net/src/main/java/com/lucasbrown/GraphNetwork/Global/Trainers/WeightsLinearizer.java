@@ -7,6 +7,7 @@ import java.util.HashSet;
 import com.lucasbrown.GraphNetwork.Global.Network.GraphNetwork;
 import com.lucasbrown.GraphNetwork.Local.Nodes.INode;
 import com.lucasbrown.GraphNetwork.Local.Nodes.ITrainable;
+import com.lucasbrown.NetworkTraining.ApproximationTools.IterableTools;
 
 public class WeightsLinearizer {
     
@@ -57,10 +58,6 @@ public class WeightsLinearizer {
      * @return
      */
     public double[] nodeSlice(ITrainable node, double[] allDeltas) {
-        int startIdx = vectorNodeOffset.get(node);
-        int length = node.getNumberOfVariables();
-        double[] gradient = new double[length];
-        System.arraycopy(allDeltas, startIdx, gradient, 0, length);
-        return gradient;
+        return IterableTools.slice(allDeltas, vectorNodeOffset.get(node), node.getNumberOfVariables());
     }
 }

@@ -29,5 +29,20 @@ public class FlatRateFilter implements IFilter {
     public void applyAdjustments(IExpectationAdjuster adjuster) {
         rate = adjuster.getUpdatedParameters()[0];
     }
+
+    @Override
+    public int getNumberOfAdjustableParameters() {
+        return 1;
+    }
+
+    @Override
+    public double[] getAdjustableParameters() {
+        return new double[]{rate};
+    }
+
+    @Override
+    public void setAdjustableParameters(double[] params) {
+        rate = params[0];
+    }
     
 }

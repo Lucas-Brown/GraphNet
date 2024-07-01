@@ -31,6 +31,10 @@ public class Arc {
         this.filterAdjuster = filterAdjuster;
     }
 
+    public IFilter getFilter(){
+        return filter;
+    }
+
     public int getSendingID() {
         return sending.getID();
     }

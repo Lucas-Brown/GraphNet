@@ -4,27 +4,24 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map.Entry;
 
-import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
 import com.lucasbrown.GraphNetwork.Local.Outcome;
 import com.lucasbrown.GraphNetwork.Local.Nodes.INode;
 import com.lucasbrown.GraphNetwork.Local.Nodes.ITrainable;
 import com.lucasbrown.GraphNetwork.Local.Nodes.InputNode;
 import com.lucasbrown.NetworkTraining.History;
+import com.lucasbrown.NetworkTraining.DataSetTraining.IFilter;
 
 import jsat.linear.DenseVector;
 import jsat.linear.Vec;
 
-/**
- * Computes the gradient using a forward pass
- */
-public class ForwardNetworkGradient implements INetworkGradient  {
+public class ForwardFilterGradient implements INetworkGradient{
 
-    protected WeightsLinearizer linearizer;
+    protected FilterLinearizer linearizer;
     protected History<Outcome, INode> networkHistory;
 
     private ArrayList<HashMap<Outcome, Vec>> gradientsThroughTime;
 
-    public ForwardNetworkGradient(WeightsLinearizer linearizer) {
+    public ForwardFilterGradient(FilterLinearizer linearizer) {
         this.linearizer = linearizer;
     }
 
@@ -40,7 +37,8 @@ public class ForwardNetworkGradient implements INetworkGradient  {
 
         return gradientsThroughTime;
     }
-
+    
+    
     private HashMap<Outcome, Vec> getGradientAtTime(int timestep) {
         HashMap<Outcome, Vec> gradientMap = new HashMap<>();
         HashMap<INode, ArrayList<Outcome>> outcomeMap = networkHistory.getStateAtTimestep(timestep);
@@ -54,38 +52,44 @@ public class ForwardNetworkGradient implements INetworkGradient  {
     }
 
     protected Vec computeGradientOfOutcome(ITrainable node, Outcome outcome) {
+        Vec gradient = new DenseVector(linearizer.totalNumOfVariables);
+        outcome.trainingData = gradient;
+
         // the Jacobian and Hessian of the input matrix will always be zero
         if (node instanceof InputNode) {
-            outcome.trainingData = new DenseVector(linearizer.totalNumOfVariables);
             return (Vec) outcome.trainingData;
         }
 
-        Vec z_jacobi = new DenseVector(linearizer.totalNumOfVariables);
-        int key = outcome.binary_string;
-        double[] weights = node.getWeights(key);
+        for (int i = 0; i < outcome.allRootOutcomes.length; i++) {
+            // get the contributions for each outcome;
+            Outcome rootOutcome = outcome.allRootOutcomes[i];
 
-        // construct the jacobian for the net value (z)
-        // starting with the direct derivative of z
-        for (int i = 0; i < outcome.sourceOutcomes.length; i++) {
-            int idx = linearizer.getLinearIndexOfWeight(node, key, i);
-            z_jacobi.set(idx, outcome.sourceOutcomes[i].activatedValue);
+            // root derivative component
+            Vec root_gradient = (Vec) rootOutcome.trainingData;
+            root_gradient = root_gradient.multiply(1/rootOutcome.probability);
+
+            // distribution derivative
+            IFilter filter = node.getIncomingConnectionFrom(rootOutcome.node).get().filter;
+            double[] filter_derivative;
+
+            // if the filter is not a part of the inclusion set, invert the probability
+            if(((outcome.binary_string >> i) & 0b1) == 0){
+                filter_derivative = filter.getNegatedLogarithmicDerivative(rootOutcome.activatedValue); 
+            }
+            else{
+                filter_derivative = filter.getLogarithmicDerivative(rootOutcome.activatedValue); 
+            }
+            
+            // add the derivative to the gradient
+            root_gradient = linearizer.addToVector(filter, filter_derivative, root_gradient);
+
+            // scale the root gradient and add to the total
+            gradient.mutableAdd(root_gradient.multiply(outcome.probability));
         }
-        int bias_idx = linearizer.getLinearIndexOfBias(node, key);
-        z_jacobi.set(bias_idx, 1);
 
-        // incorporate previous jacobians
-        for (int i = 0; i < weights.length; i++) {
-            Vec weighed_jacobi = (Vec) outcome.sourceOutcomes[i].trainingData;
-            weighed_jacobi.mutableMultiply(weights[i]);
-            z_jacobi.mutableAdd(weighed_jacobi);
-        }
-
-        // apply to activated jacobi
-        ActivationFunction activator = node.getActivationFunction();
-        double activation_derivative = activator.derivative(outcome.netValue);
-        Vec gradient = z_jacobi.multiply(activation_derivative);
-
-        outcome.trainingData = gradient;
         return gradient;
+
     }
+
+    
 }

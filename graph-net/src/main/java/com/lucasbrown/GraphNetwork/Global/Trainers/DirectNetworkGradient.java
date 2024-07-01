@@ -13,7 +13,7 @@ import com.lucasbrown.NetworkTraining.ApproximationTools.ErrorFunction;
 import jsat.linear.DenseVector;
 import jsat.linear.Vec;
 
-public class DirectGradient implements IGradient{
+public class DirectNetworkGradient implements IGradient{
 
     private Double[][] targets;
     private ErrorFunction errorFunction;
@@ -23,7 +23,7 @@ public class DirectGradient implements IGradient{
     private Vec gradient;
     private int totalNumOfVariables;
 
-    public DirectGradient(GraphNetwork network, INetworkGradient networkGradientEvaluater, Double[][] targets, ErrorFunction errorFunction, int totalNumOfVariables, boolean normalize){
+    public DirectNetworkGradient(GraphNetwork network, INetworkGradient networkGradientEvaluater, Double[][] targets, ErrorFunction errorFunction, int totalNumOfVariables, boolean normalize){
         this.targets = targets;
         this.errorFunction = errorFunction;
         this.networkGradientEvaluater = networkGradientEvaluater;
@@ -61,13 +61,6 @@ public class DirectGradient implements IGradient{
             return;
         }
 
-        if (target == null) {
-            for (Outcome outcome : outcomesAtTime) {
-                outcome.passRate.add(0, 1);
-            }
-            return;
-        }
-
         double probabilityVolume = getProbabilityVolume(outcomesAtTime);
         
         if (probabilityVolume == 0) {
@@ -79,8 +72,6 @@ public class DirectGradient implements IGradient{
         }
 
         for (Outcome outcome : outcomesAtTime) {
-            outcome.passRate.add(1, 1);
-
             double error_derivative = errorFunction.error_derivative(outcome.activatedValue, target);
             double prob = outcome.probability / probabilityVolume;
 

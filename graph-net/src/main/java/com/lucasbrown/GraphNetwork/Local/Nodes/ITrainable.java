@@ -21,6 +21,14 @@ public interface ITrainable extends INode {
      */
     public int getNumberOfVariables();
 
+    
+    /**
+     * Get the total number of incoming distribution parameters
+     * 
+     * @return
+     */
+    public int getNumberOfParameters();
+
     /**
      * Returns the unique index of the key-weight pair
      * 
@@ -63,5 +71,7 @@ public interface ITrainable extends INode {
     public void applyFilterUpdate();
 
     public void applyDelta(double[] gradient);
+
+    public void setParameters(double[] params);
 
 }
