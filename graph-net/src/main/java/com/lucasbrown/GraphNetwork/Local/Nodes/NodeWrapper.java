@@ -241,4 +241,14 @@ public class NodeWrapper implements ITrainable {
         return INode.areNodesEqual(this, (INode) o);
     }
 
+    @Override
+    public int getNumberOfParameters() {
+        return wrappingNode.getNumberOfParameters();
+    }
+
+    @Override
+    public void setParameters(double[] params) {
+        wrappingNode.setParameters(params);
+    }
+
 }

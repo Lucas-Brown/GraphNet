@@ -7,17 +7,20 @@ import java.util.HashSet;
 import com.lucasbrown.GraphNetwork.Global.Network.GraphNetwork;
 import com.lucasbrown.GraphNetwork.Local.Nodes.INode;
 import com.lucasbrown.GraphNetwork.Local.Nodes.ITrainable;
+import com.lucasbrown.GraphNetwork.Local.Nodes.OutputNode;
 import com.lucasbrown.NetworkTraining.ApproximationTools.IterableTools;
 
 public class WeightsLinearizer {
     
     public final HashMap<ITrainable, Integer> vectorNodeOffset;
     public final HashSet<ITrainable> allNodes;
+    public final ArrayList<OutputNode> outputNodes; 
     public final int totalNumOfVariables;
 
     public WeightsLinearizer(GraphNetwork network){
         ArrayList<INode> nodes = network.getNodes();
         allNodes = new HashSet<>(nodes.size());
+        outputNodes = network.getOutputNodes();
         vectorNodeOffset = new HashMap<>(nodes.size());
         castAllToTrainable(nodes);
         totalNumOfVariables = InitializeOffsetMap();
@@ -58,6 +61,6 @@ public class WeightsLinearizer {
      * @return
      */
     public double[] nodeSlice(ITrainable node, double[] allDeltas) {
-        return IterableTools.slice(allDeltas, vectorNodeOffset.get(node), node.getNumberOfVariables());
+        return IterableTools.slice(allDeltas, (int) vectorNodeOffset.get(node), node.getNumberOfVariables());
     }
 }

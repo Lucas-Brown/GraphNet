@@ -3,7 +3,7 @@ package com.lucasbrown.NetworkTraining;
 import com.lucasbrown.GraphNetwork.Global.Network.ArcBuilder;
 import com.lucasbrown.GraphNetwork.Global.Network.GraphNetwork;
 import com.lucasbrown.GraphNetwork.Global.Network.NodeBuilder;
-import com.lucasbrown.GraphNetwork.Global.Trainers.ADAMTrainer;
+import com.lucasbrown.GraphNetwork.Global.Trainers.ADAMSolver;
 import com.lucasbrown.GraphNetwork.Global.Trainers.BackpropTrainer;
 import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
 import com.lucasbrown.GraphNetwork.Local.Nodes.ComplexNode;
@@ -110,7 +110,7 @@ public class FibonacciNetworkTest {
         arcBuilder.build(hidden1, out);
 
 
-        ADAMTrainer adam = new ADAMTrainer(net, new ErrorFunction.MeanSquaredError());
+        ADAMSolver adam = new ADAMSolver(net, new ErrorFunction.MeanSquaredError());
         adam.alpha = 0.1;
         adam.epsilon = 0.1;
 

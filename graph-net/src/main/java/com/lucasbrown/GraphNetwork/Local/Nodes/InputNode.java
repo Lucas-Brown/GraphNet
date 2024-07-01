@@ -46,6 +46,7 @@ public class InputNode extends NodeWrapper implements IInputNode {
 
     private Outcome getOutcome() {
         Outcome outcome = new Outcome();
+        outcome.node = this;
         outcome.netValue = inputValue;
         outcome.activatedValue = getActivationFunction().activator(inputValue);
         outcome.binary_string = -1;

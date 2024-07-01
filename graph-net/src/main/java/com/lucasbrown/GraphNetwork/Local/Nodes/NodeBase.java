@@ -338,6 +338,8 @@ public abstract class NodeBase implements INode {
         outcome.sourceTransferProbabilities = signalSet.stream().mapToDouble(Signal::getFiringProbability).toArray();
         outcome.sourceKeys = signalSet.stream().mapToInt(Signal::getSourceKey).toArray();
         outcome.sourceOutcomes = outcomesFromSignal(signalSet);
+
+        outcome.root_bin_str = nodeSetToBinStr(setPair.v.stream().map(signal -> signal.sendingNode).toList());
         outcome.allRootOutcomes = outcomesFromSignal(setPair.v);
         return outcome;
     }

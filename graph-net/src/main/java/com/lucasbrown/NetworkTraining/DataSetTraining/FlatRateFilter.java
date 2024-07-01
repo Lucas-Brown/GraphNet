@@ -35,14 +35,38 @@ public class FlatRateFilter implements IFilter {
         return 1;
     }
 
+    private double alphaToRate(double x){
+        return 1/(1+Math.exp(-x));
+    } 
+
+    private double rateToAlpha(double x){
+        return Math.log(x/(1-x));
+    }
+
     @Override
     public double[] getAdjustableParameters() {
-        return new double[]{rate};
+        return new double[]{rateToAlpha(rate)};
     }
 
     @Override
     public void setAdjustableParameters(double[] params) {
-        rate = params[0];
+        rate = alphaToRate(params[0]);
+    }
+
+    @Override
+    public void applyAdjustableParameterUpdate(double[] delta) {
+        rate = alphaToRate(rateToAlpha(rate) - delta[0]);
+        assert rate >= 0 && rate <= 1;
+    }
+
+    @Override
+    public double[] getLogarithmicDerivative(double x) {
+        return new double[]{1-rate};
+    }
+
+    @Override
+    public double[] getNegatedLogarithmicDerivative(double x) {
+        return new double[]{-rate};
     }
     
 }

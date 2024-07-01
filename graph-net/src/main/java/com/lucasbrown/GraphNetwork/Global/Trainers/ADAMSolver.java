@@ -7,7 +7,7 @@ import com.lucasbrown.NetworkTraining.History;
 import jsat.linear.DenseVector;
 import jsat.linear.Vec;
 
-public class ADAMTrainer implements ISolver{
+public class ADAMSolver implements ISolver{
 
     protected IGradient gradientEvaluator;
     private int totalNumOfVariables;
@@ -26,7 +26,7 @@ public class ADAMTrainer implements ISolver{
     private Vec m_hat; // bias corrected first-moment
     private Vec v_hat; // bias corrected second-moment
 
-    public ADAMTrainer(IGradient gradientEvaluator, int totalNumOfVariables) {
+    public ADAMSolver(IGradient gradientEvaluator, int totalNumOfVariables) {
         this.gradientEvaluator = gradientEvaluator;
         this.totalNumOfVariables = totalNumOfVariables;
 

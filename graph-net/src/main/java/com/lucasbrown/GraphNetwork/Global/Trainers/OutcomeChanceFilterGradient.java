@@ -13,33 +13,21 @@ import com.lucasbrown.NetworkTraining.ApproximationTools.ErrorFunction;
 import jsat.linear.DenseVector;
 import jsat.linear.Vec;
 
-public class DirectNetworkGradient implements IGradient{
+public class OutcomeChanceFilterGradient implements IGradient{
 
     private Double[][] targets;
     private ErrorFunction errorFunction;
     private INetworkGradient networkGradientEvaluater;
     protected ArrayList<OutputNode> outputNodes;
-    private boolean normalize;
     private Vec gradient;
     private int totalNumOfVariables;
 
-    public DirectNetworkGradient(GraphNetwork network, INetworkGradient networkGradientEvaluater, Double[][] targets, ErrorFunction errorFunction, int totalNumOfVariables, boolean normalize){
+    public OutcomeChanceFilterGradient(GraphNetwork network, INetworkGradient networkGradientEvaluater, Double[][] targets, ErrorFunction errorFunction, int totalNumOfVariables){
         this.targets = targets;
         this.errorFunction = errorFunction;
         this.networkGradientEvaluater = networkGradientEvaluater;
-        this.normalize = normalize;
         this.totalNumOfVariables = totalNumOfVariables;
         outputNodes = network.getOutputNodes();
-    }
-    
-    @Override
-    public void setTargets(Double[][] targets) {
-        this.targets = targets;
-    }
-
-    @Override
-    public Double[][] getTargets() {
-        return targets;
     }
 
     @Override
@@ -55,43 +43,51 @@ public class DirectNetworkGradient implements IGradient{
                 HashMap<Outcome, Vec> gradientAtTime = networkGradient.get(timestep);
                 Double target = targets[timestep][i];
                 computeErrorOfOutput(outcomesAtTime, gradientAtTime, target);
+                for (double d : gradient.arrayCopy()) {
+                    assert Double.isFinite(d);
+                }
+                
             }
         }
         return gradient;
     }
-
-    
-    private double getProbabilityVolume(ArrayList<Outcome> outcomes) {
-        return outcomes.stream().mapToDouble(outcome -> outcome.probability).sum();
-    }
-
     
     protected void computeErrorOfOutput(ArrayList<Outcome> outcomesAtTime, HashMap<Outcome, Vec> gradientAtTime, Double target) {
-        if (outcomesAtTime == null | target == null) {
+        if(outcomesAtTime == null){
             return;
         }
-
-        double probabilityVolume = getProbabilityVolume(outcomesAtTime);
         
-        if (probabilityVolume == 0) {
-            return;
-        }
-
-        if(!normalize){
-            probabilityVolume = 1;
-        }
+        double probability = target == null ? 0 : 1; 
 
         for (Outcome outcome : outcomesAtTime) {
-            double error_derivative = errorFunction.error_derivative(outcome.activatedValue, target);
-            double prob = outcome.probability / probabilityVolume;
+
+            double error = errorFunction.error_derivative(outcome.probability, probability);
 
             // accumulate jacobians
             Vec networkDerivative = gradientAtTime.get(outcome);
-            gradient.mutableAdd(networkDerivative.multiply(prob * error_derivative));
-
+            gradient.mutableAdd(networkDerivative.multiply(error));
         }
 
     }
 
-    
+    @Override
+    public void setTargets(Double[][] targets) {
+        this.targets = targets;
+    }
+
+    @Override
+    public Double[][] getTargets() {
+        return targets;
+    }
+
+    public static double[][] targetsToProbabilies(Double[][] targets){
+        double[][] probs = new double[targets.length][];
+        for (int i = 0; i < probs.length; i++) {
+            probs[i] = new double[targets[i].length];
+            for (int j = 0; j < probs[i].length; j++) {
+                probs[i][j] = targets[i][j] == null ? 0 : 1;
+            }
+        }
+        return probs;
+    }
 }

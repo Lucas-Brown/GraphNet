@@ -3,35 +3,20 @@ package com.lucasbrown.NetworkTraining;
 import com.lucasbrown.GraphNetwork.Global.Network.ArcBuilder;
 import com.lucasbrown.GraphNetwork.Global.Network.GraphNetwork;
 import com.lucasbrown.GraphNetwork.Global.Network.NodeBuilder;
-import com.lucasbrown.GraphNetwork.Global.Trainers.ADAMTrainer;
-import com.lucasbrown.GraphNetwork.Global.Trainers.BackpropTrainer;
-import com.lucasbrown.GraphNetwork.Global.Trainers.NewtonTrainer;
+import com.lucasbrown.GraphNetwork.Global.Trainers.ADAMSolver;
+import com.lucasbrown.GraphNetwork.Global.Trainers.Trainer;
 import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
 import com.lucasbrown.GraphNetwork.Local.Nodes.ComplexNode;
-import com.lucasbrown.GraphNetwork.Local.Nodes.INode;
 import com.lucasbrown.GraphNetwork.Local.Nodes.ITrainable;
 import com.lucasbrown.GraphNetwork.Local.Nodes.InputNode;
 import com.lucasbrown.GraphNetwork.Local.Nodes.OutputNode;
-import com.lucasbrown.GraphNetwork.Local.Nodes.SimpleNode;
-import com.lucasbrown.NetworkTraining.ApproximationTools.ErrorFunction;
 import com.lucasbrown.NetworkTraining.DataSetTraining.BernoulliDistribution;
 import com.lucasbrown.NetworkTraining.DataSetTraining.BernoulliDistributionAdjuster;
-import com.lucasbrown.NetworkTraining.DataSetTraining.BetaDistribution;
-import com.lucasbrown.NetworkTraining.DataSetTraining.BetaDistributionAdjuster2;
-import com.lucasbrown.NetworkTraining.DataSetTraining.BetaDistributionFromData;
 import com.lucasbrown.NetworkTraining.DataSetTraining.FlatRateFilter;
-import com.lucasbrown.NetworkTraining.DataSetTraining.FlatRateFilterBetaAdjuster;
-import com.lucasbrown.NetworkTraining.DataSetTraining.IExpectationAdjuster;
-import com.lucasbrown.NetworkTraining.DataSetTraining.IFilter;
-import com.lucasbrown.NetworkTraining.DataSetTraining.ITrainableDistribution;
 import com.lucasbrown.NetworkTraining.DataSetTraining.NoAdjustments;
 import com.lucasbrown.NetworkTraining.DataSetTraining.NormalBernoulliFilterAdjuster;
 import com.lucasbrown.NetworkTraining.DataSetTraining.NormalPeakFilter;
-import com.lucasbrown.NetworkTraining.DataSetTraining.NormalBetaFilterAdjuster;
-import com.lucasbrown.NetworkTraining.DataSetTraining.NormalBetaFilterAdjuster2;
 import com.lucasbrown.NetworkTraining.DataSetTraining.NormalDistribution;
-import com.lucasbrown.NetworkTraining.DataSetTraining.NormalDistributionFromData;
-import com.lucasbrown.NetworkTraining.DataSetTraining.OpenFilter;
 
 public class ExponentialTest {
 
@@ -99,24 +84,30 @@ public class ExponentialTest {
         arcBuilder.build(hidden, hidden);
         arcBuilder.build(hidden, out);
 
-        ADAMTrainer adam = new ADAMTrainer(net, new ErrorFunction.MeanSquaredError());
-        adam.alpha = 0.1;
-        adam.epsilon = 0.01;
+        
+        Trainer trainer = Trainer.getDefaultTrainer(net, exponentialGrowth.inputData, exponentialGrowth.outputData);
+        // ADAMSolver weightSolver = (ADAMSolver) trainer.weightsSolver;
+        // weightSolver.alpha = 0.01;
+        // weightSolver.epsilon = 0.0001;
+        // weightSolver.beta_1 = 0.9;
+        // weightSolver.beta_2 = 0.99;
 
-        adam.setTrainingData(exponentialGrowth.inputData, exponentialGrowth.outputData);
-        adam.trainNetwork(100000, 1000);
+        // ADAMSolver probabilitySolver = (ADAMSolver) trainer.probabilitySolver;
+        // probabilitySolver.alpha = 0.01;
+        // probabilitySolver.epsilon = 0.0001;
+        // probabilitySolver.beta_1 = 0.9;
+        // probabilitySolver.beta_2 = 0.99;
 
-        adam.alpha = 0.01;
-        adam.epsilon = 0.0000001;
+        trainer.trainNetwork(100000, 1000);
 
-        adam.trainNetwork(100000, 1000);
+        // weightSolver.alpha = 0.01;
+        // weightSolver.epsilon = 0.0000001;
+        // probabilitySolver.alpha = 0.01;
+        // probabilitySolver.epsilon = 0.0000001;
+
+        // trainer.trainNetwork(100000, 1000);
 
         net.deactivateAll();
-        net.setInputOperation(
-                nodeMap -> BackpropTrainer.applyInputToNode(nodeMap, exponentialGrowth.inputData, counter++));
-        for (int i = 0; i < exponentialGrowth.inputData.length; i++) {
-            net.trainingStep();
-            System.out.println(net);
-        }
+       
     }
 }

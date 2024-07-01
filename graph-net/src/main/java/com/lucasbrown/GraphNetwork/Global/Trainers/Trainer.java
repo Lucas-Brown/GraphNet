@@ -1,9 +1,17 @@
 package com.lucasbrown.GraphNetwork.Global.Trainers;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map.Entry;
+import java.util.stream.Collectors;
+
 import com.lucasbrown.GraphNetwork.Global.Network.GraphNetwork;
 import com.lucasbrown.GraphNetwork.Local.Outcome;
 import com.lucasbrown.GraphNetwork.Local.Nodes.INode;
+import com.lucasbrown.GraphNetwork.Local.Nodes.IOutputNode;
 import com.lucasbrown.GraphNetwork.Local.Nodes.ITrainable;
+import com.lucasbrown.GraphNetwork.Local.Nodes.OutputNode;
 import com.lucasbrown.NetworkTraining.History;
 import com.lucasbrown.NetworkTraining.ApproximationTools.ErrorFunction;
 import com.lucasbrown.NetworkTraining.ApproximationTools.WeightedAverage;
@@ -13,11 +21,15 @@ import jsat.linear.Vec;
 
 public class Trainer implements ITrainer{
 
-    private WeightsLinearizer weightLinearizer;
-    private FilterLinearizer filterLinearizer;
-    private NetworkInputEvaluater networkEvaluater;
-    private ISolver weightsSolver;
-    private ISolver probabilitySolver;
+    private final GraphNetwork network;
+
+    public final WeightsLinearizer weightLinearizer;
+    public final FilterLinearizer filterLinearizer;
+    public final NetworkInputEvaluater networkEvaluater;
+    public final IGradient weightsGradient;
+    public final IGradient probabilityGradient;
+    public final ISolver weightsSolver;
+    public final ISolver probabilitySolver;
 
     private Vec weightsDeltas;
     private Vec probabilityDeltas;
@@ -27,13 +39,20 @@ public class Trainer implements ITrainer{
 
     protected WeightedAverage total_error;
 
-    public Trainer(NetworkInputEvaluater networkEvaluater, ISolver weightsSolver, ISolver probabilitySolver, WeightsLinearizer weightLinearizer, FilterLinearizer filterLinearizer) {
+    public Trainer(NetworkInputEvaluater networkEvaluater, IGradient weightsGradient, ISolver weightsSolver, IGradient probabilityGradient, ISolver probabilitySolver, WeightsLinearizer weightLinearizer, FilterLinearizer filterLinearizer) {
+        
+        this.weightsGradient = weightsGradient;
+        this.probabilityGradient = probabilityGradient;
         this.weightsSolver = weightsSolver;
         this.probabilitySolver = probabilitySolver;
 
         this.weightLinearizer = weightLinearizer;
         this.filterLinearizer = filterLinearizer;
         this.networkEvaluater = networkEvaluater;
+
+        network = networkEvaluater.network;
+        inputs = networkEvaluater.inputs;
+        targets = weightsGradient.getTargets();
 
         total_error = new WeightedAverage();
     }
@@ -47,6 +66,9 @@ public class Trainer implements ITrainer{
     public void setTrainingData(Double[][] inputs, Double[][] targets) {
         this.inputs = inputs;
         this.targets = targets;
+        networkEvaluater.setInputData(inputs);
+        weightsGradient.setTargets(targets);
+        probabilityGradient.setTargets(targets);
     }
 
     public void trainNetwork(int steps, int print_interval) {
@@ -57,11 +79,50 @@ public class Trainer implements ITrainer{
 
     public void trainingStep(boolean print_forward) {
         History<Outcome, INode> history = networkEvaluater.computeNetworkInference();
+        if(print_forward){
+            printNetwork(history);
+        }
+
         weightsDeltas = weightsSolver.solve(history);
         probabilityDeltas = probabilitySolver.solve(history);
 
         applyWeightDeltas();
         applyProbabilityDeltas();
+    }
+
+    private void printNetwork(History<Outcome, INode> history) {
+        int time_count = history.getNumberOfTimesteps();
+
+        StringBuilder sb = new StringBuilder();
+        ArrayList<OutputNode> nodes = network.getOutputNodes();
+
+        for (int t = 0; t < time_count; t++) {
+            sb.append("Time Step ");
+            sb.append(t);
+            sb.append("\n\t");
+
+            for (int i = 0; i < nodes.size(); i++) {
+                OutputNode node = nodes.get(i);
+                ArrayList<Outcome> outcomes = history.getStateOfRecord(t, node);
+
+                if(outcomes == null || outcomes.isEmpty()){
+                    continue;
+                }
+
+                sb.append(node.getName());
+                sb.append(": [");
+                sb.append(outcomes.stream()
+                        .sorted(Outcome::descendingProbabilitiesComparator)
+                        .limit(2)
+                        .map(Object::toString)
+                        .collect(Collectors.joining(",")));
+                sb.append("] | target = ");
+                sb.append(targets[t][i]);
+                sb.append("\n\t");
+            }
+            sb.append("\n");
+        }
+        System.out.println(sb.toString());
     }
 
     private void applyWeightDeltas() {
@@ -91,11 +152,11 @@ public class Trainer implements ITrainer{
         ErrorFunction erf = new ErrorFunction.MeanSquaredError();
 
         DirectNetworkGradient netGradient = new DirectNetworkGradient(network, new ForwardNetworkGradient(weightLinearizer), targets, erf, weightLinearizer.totalNumOfVariables, true); 
-        ADAMTrainer weightsTrainer = new ADAMTrainer(netGradient, weightLinearizer.totalNumOfVariables); 
+        ADAMSolver weightsSolver = new ADAMSolver(netGradient, weightLinearizer.totalNumOfVariables); 
 
-        DirectFilterGradient filterGradient = new DirectFilterGradient(network, new ForwardFilterGradient(filterLinearizer), targets, erf, filterLinearizer.totalNumOfVariables);
-        ADAMTrainer filterTrainer = new ADAMTrainer(filterGradient, filterLinearizer.totalNumOfVariables);
+        OutcomeChanceFilterGradient filterGradient = new OutcomeChanceFilterGradient(network, new ForwardFilterGradient(filterLinearizer), targets, erf, filterLinearizer.totalNumOfVariables);
+        ADAMSolver filterSolver = new ADAMSolver(filterGradient, filterLinearizer.totalNumOfVariables);
 
-        return new Trainer(networkEvaluater, weightsTrainer, filterTrainer, weightLinearizer, filterLinearizer);
+        return new Trainer(networkEvaluater, netGradient, weightsSolver, filterGradient, filterSolver, weightLinearizer, filterLinearizer);
     }
 }

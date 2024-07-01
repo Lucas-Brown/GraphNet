@@ -16,6 +16,8 @@ public class Outcome {
     public double[] sourceTransferProbabilities;
     public int[] sourceKeys;
     public Outcome[] sourceOutcomes;
+
+    public int root_bin_str;
     public Outcome[] allRootOutcomes;
 
     /**

@@ -57,12 +57,23 @@ public class ForwardFilterGradient implements INetworkGradient{
 
         // the Jacobian and Hessian of the input matrix will always be zero
         if (node instanceof InputNode) {
-            return (Vec) outcome.trainingData;
+            return gradient;
         }
 
-        for (int i = 0; i < outcome.allRootOutcomes.length; i++) {
+        
+        // if the probability is zero, then this contributes nothing to the final outcome
+        if(outcome.probability == 0){
+            return gradient;
+        }
+
+        int root_count = 0;
+        for (int i = 0; root_count < outcome.allRootOutcomes.length; i++) {
+            if(((outcome.root_bin_str >> i) & 0b1) == 0){
+                continue;
+            }
+
             // get the contributions for each outcome;
-            Outcome rootOutcome = outcome.allRootOutcomes[i];
+            Outcome rootOutcome = outcome.allRootOutcomes[root_count];
 
             // root derivative component
             Vec root_gradient = (Vec) rootOutcome.trainingData;
@@ -83,10 +94,19 @@ public class ForwardFilterGradient implements INetworkGradient{
             // add the derivative to the gradient
             root_gradient = linearizer.addToVector(filter, filter_derivative, root_gradient);
 
+            
+            for (double d : root_gradient.arrayCopy()) {
+                assert Double.isFinite(d);
+            }
+
             // scale the root gradient and add to the total
             gradient.mutableAdd(root_gradient.multiply(outcome.probability));
+            root_count++;
         }
 
+        for (double d : gradient.arrayCopy()) {
+            assert Double.isFinite(d);
+        }
         return gradient;
 
     }

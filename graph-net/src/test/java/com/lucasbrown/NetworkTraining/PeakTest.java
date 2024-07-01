@@ -7,7 +7,7 @@ import java.util.stream.Stream;
 import com.lucasbrown.GraphNetwork.Global.Network.ArcBuilder;
 import com.lucasbrown.GraphNetwork.Global.Network.GraphNetwork;
 import com.lucasbrown.GraphNetwork.Global.Network.NodeBuilder;
-import com.lucasbrown.GraphNetwork.Global.Trainers.BackpropTrainer;
+import com.lucasbrown.GraphNetwork.Global.Trainers.Trainer;
 import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
 import com.lucasbrown.GraphNetwork.Local.Arc;
 import com.lucasbrown.GraphNetwork.Local.Nodes.ComplexNode;
@@ -31,8 +31,6 @@ import com.lucasbrown.NetworkTraining.DataSetTraining.NormalDistributionFromData
 import com.lucasbrown.NetworkTraining.DataSetTraining.OpenFilter;
 
 public class PeakTest {
-
-    private static int counter = 0;
 
     private int N = 100;
     private static Double[][] inputData = new Double[][] { new Double[] {-1d}, new Double[] { 0d }, new Double[] { 1d }, new Double[]{ null } };
@@ -68,17 +66,8 @@ public class PeakTest {
 
         arcBuilder.build(in, out);
 
-        BackpropTrainer bt = new BackpropTrainer(net, new ErrorFunction.MeanSquaredError(), false);
-        bt.epsilon = 1;
+        Trainer trainer = Trainer.getDefaultTrainer(net, inputData, outputData);
 
-        bt.setTrainingData(inputData, outputData);
-
-        bt.trainNetwork(100, 10);
-        net.deactivateAll();
-        net.setInputOperation(nodeMap -> BackpropTrainer.applyInputToNode(nodeMap, inputData, counter++));
-        for (int i = 0; i < inputData.length; i++) {
-            net.trainingStep();
-            System.out.println(net);
-        }
+        trainer.trainNetwork(10000, 1000);
     }
 }

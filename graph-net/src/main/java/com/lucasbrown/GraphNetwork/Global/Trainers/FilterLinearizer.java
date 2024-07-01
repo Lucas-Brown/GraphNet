@@ -70,12 +70,12 @@ public class FilterLinearizer {
     }
 
     public Vec addToVector(IFilter filter, double[] filter_derivative, Vec vec) {
-        Vec new_vec = new DenseVector(totalNumOfVariables);
+        Vec new_vec = new DenseVector(vec);
         int start = vectorFilterOffset.get(filter);
         for (int i = 0; i < filter_derivative.length; i++) {
             int vec_idx = i + start;
-            new_vec.set(vec_idx, vec.get(vec_idx) + filter_derivative[i]);
+            new_vec.set(vec_idx, new_vec.get(vec_idx) + filter_derivative[i]);
         }
-        return vec;
+        return new_vec;
     }
 }

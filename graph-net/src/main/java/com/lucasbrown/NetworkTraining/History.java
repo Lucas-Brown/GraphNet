@@ -4,12 +4,13 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map.Entry;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
  * 
  * T = Outcome
- * V = Irecord 
+ * V = Irecord
  */
 public class History<T, V extends IStateRecord<T>> {
 
@@ -37,7 +38,7 @@ public class History<T, V extends IStateRecord<T>> {
 
     }
 
-    public int getNumberOfTimesteps(){
+    public int getNumberOfTimesteps() {
         return outcomesThroughTime.size();
     }
 
@@ -61,22 +62,22 @@ public class History<T, V extends IStateRecord<T>> {
     }
 
     // public HashMap<Integer, ArrayList<T>> getOutcomesOfKeyFromrecord(V record) {
-    //     List<T> all_outcomes = getAllOutcomesOfrecord(record);
-    //     HashMap<Integer, ArrayList<Outcome>> keyMap = new HashMap<>(8, 2);
-    //     for (T out : all_outcomes) {
-    //         ArrayList<T> outcomesForKey = keyMap.get(out.binary_string);
-    //         if (outcomesForKey == null) {
-    //             outcomesForKey = new ArrayList<>();
-    //             outcomesForKey.add(out);
-    //             keyMap.put(out.binary_string, outcomesForKey);
-    //         } else {
-    //             outcomesForKey.add(out);
-    //         }
-    //     }
-    //     return keyMap;
+    // List<T> all_outcomes = getAllOutcomesOfrecord(record);
+    // HashMap<Integer, ArrayList<Outcome>> keyMap = new HashMap<>(8, 2);
+    // for (T out : all_outcomes) {
+    // ArrayList<T> outcomesForKey = keyMap.get(out.binary_string);
+    // if (outcomesForKey == null) {
+    // outcomesForKey = new ArrayList<>();
+    // outcomesForKey.add(out);
+    // keyMap.put(out.binary_string, outcomesForKey);
+    // } else {
+    // outcomesForKey.add(out);
+    // }
+    // }
+    // return keyMap;
     // }
 
-    public Stream<ArrayList<T>> getAnonymousHistoryStream(){
+    public Stream<ArrayList<T>> getAnonymousHistoryStream() {
         return outcomesThroughTime.stream().flatMap(map -> map.values().stream());
     }
 
@@ -95,13 +96,15 @@ public class History<T, V extends IStateRecord<T>> {
             sb.append(t);
             sb.append("\n\t");
             for (Entry<V, ArrayList<T>> record : outcomesThroughTime.get(t).entrySet()) {
-                sb.append("record ");
                 sb.append(record.getKey().toString());
                 sb.append(": ");
-                sb.append(record.getValue().stream().toString());
+                sb.append(record.getValue().stream()
+                        .sorted()
+                        .map(Object::toString)
+                        .collect(Collectors.joining(",")));
                 sb.append("\n\t");
             }
-            sb.append("\n\n");
+            sb.append("\n");
         }
         return sb.toString();
     }

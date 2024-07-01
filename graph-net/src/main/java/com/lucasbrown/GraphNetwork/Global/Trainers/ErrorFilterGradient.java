@@ -13,7 +13,7 @@ import com.lucasbrown.NetworkTraining.ApproximationTools.ErrorFunction;
 import jsat.linear.DenseVector;
 import jsat.linear.Vec;
 
-public class DirectFilterGradient implements IGradient{
+public class ErrorFilterGradient implements IGradient{
 
     private Double[][] targets;
     private ErrorFunction errorFunction;
@@ -22,7 +22,7 @@ public class DirectFilterGradient implements IGradient{
     private Vec gradient;
     private int totalNumOfVariables;
 
-    public DirectFilterGradient(GraphNetwork network, INetworkGradient networkGradientEvaluater, Double[][] targets, ErrorFunction errorFunction, int totalNumOfVariables){
+    public ErrorFilterGradient(GraphNetwork network, INetworkGradient networkGradientEvaluater, Double[][] targets, ErrorFunction errorFunction, int totalNumOfVariables){
         this.targets = targets;
         this.errorFunction = errorFunction;
         this.networkGradientEvaluater = networkGradientEvaluater;
@@ -43,12 +43,20 @@ public class DirectFilterGradient implements IGradient{
                 HashMap<Outcome, Vec> gradientAtTime = networkGradient.get(timestep);
                 Double target = targets[timestep][i];
                 computeErrorOfOutput(outcomesAtTime, gradientAtTime, target);
+                for (double d : gradient.arrayCopy()) {
+                    assert Double.isFinite(d);
+                }
+                
             }
         }
         return gradient;
     }
     
     protected void computeErrorOfOutput(ArrayList<Outcome> outcomesAtTime, HashMap<Outcome, Vec> gradientAtTime, Double target) {
+        if(outcomesAtTime == null || target == null){
+            return;
+        }
+
         for (Outcome outcome : outcomesAtTime) {
 
             double error = -errorFunction.error(outcome.activatedValue, target);
@@ -58,6 +66,16 @@ public class DirectFilterGradient implements IGradient{
             gradient.mutableAdd(networkDerivative.multiply(error));
         }
 
+    }
+
+    @Override
+    public void setTargets(Double[][] targets) {
+        this.targets = targets;
+    }
+
+    @Override
+    public Double[][] getTargets() {
+        return targets;
     }
 
     // public static double[][] targetsToProbabilies(Double[][] targets){

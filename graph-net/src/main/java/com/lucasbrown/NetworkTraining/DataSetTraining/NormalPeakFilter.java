@@ -90,7 +90,7 @@ public class NormalPeakFilter implements IFilter {
         double[] exp_deriv = getLogarithmicDerivative(x);
 
         double temp = (x - mean) / variance;
-        double factor = 1 / (Math.exp(temp * temp / 2) - 1);
+        double factor = 0.99999 / (Math.exp(temp * temp / 2) - 0.99999); // set slightly off of 1 for numerical stability
 
         exp_deriv[0] *= factor;
         exp_deriv[1] *= factor;

@@ -10,4 +10,6 @@ public interface IGradient {
 
     public Vec computeGradient(History<Outcome, INode> networkHistory);
 
+    public void setTargets(Double[][] targets); 
+    public Double[][] getTargets();
 }
