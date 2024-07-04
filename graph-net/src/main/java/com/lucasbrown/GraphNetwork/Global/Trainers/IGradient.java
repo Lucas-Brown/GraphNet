@@ -10,6 +10,8 @@ public interface IGradient {
 
     public Vec computeGradient(History<Outcome, INode> networkHistory);
 
+    public double getTotalError(History<Outcome, INode> networkHistory);
+
     public void setTargets(Double[][] targets); 
     public Double[][] getTargets();
 }

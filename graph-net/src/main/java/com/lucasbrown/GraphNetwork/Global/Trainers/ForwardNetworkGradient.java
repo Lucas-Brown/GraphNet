@@ -68,15 +68,17 @@ public class ForwardNetworkGradient implements INetworkGradient  {
         // starting with the direct derivative of z
         for (int i = 0; i < outcome.sourceOutcomes.length; i++) {
             int idx = linearizer.getLinearIndexOfWeight(node, key, i);
+            assert z_jacobi.get(idx) == 0;
             z_jacobi.set(idx, outcome.sourceOutcomes[i].activatedValue);
         }
         int bias_idx = linearizer.getLinearIndexOfBias(node, key);
+        assert z_jacobi.get(bias_idx) == 0;
         z_jacobi.set(bias_idx, 1);
 
         // incorporate previous jacobians
         for (int i = 0; i < weights.length; i++) {
             Vec weighed_jacobi = (Vec) outcome.sourceOutcomes[i].trainingData;
-            weighed_jacobi.mutableMultiply(weights[i]);
+            weighed_jacobi = weighed_jacobi.multiply(weights[i]);
             z_jacobi.mutableAdd(weighed_jacobi);
         }
 

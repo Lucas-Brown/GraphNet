@@ -54,4 +54,30 @@ public interface ErrorFunction {
 
     }
 
+    
+    /**
+     * mean squared error
+     */
+    public static class AugmentedRelativeError implements ErrorFunction {
+
+        public double eps = 1;
+
+        @Override
+        public double error(double value, double target) {
+            double delta = value - target;
+            return delta*delta / 2 /(target*target + eps);
+        }
+
+        @Override
+        public double error_derivative(double value, double target) {
+            return (value - target)/(target*target + eps);
+        }
+        
+        @Override
+        public double error_second_derivative(double value, double target) {
+            return 1/(target*target + eps);
+        }
+
+    }
+
 }

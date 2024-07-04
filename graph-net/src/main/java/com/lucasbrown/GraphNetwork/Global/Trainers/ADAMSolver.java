@@ -1,9 +1,5 @@
 package com.lucasbrown.GraphNetwork.Global.Trainers;
 
-import com.lucasbrown.GraphNetwork.Local.Outcome;
-import com.lucasbrown.GraphNetwork.Local.Nodes.INode;
-import com.lucasbrown.NetworkTraining.History;
-
 import jsat.linear.DenseVector;
 import jsat.linear.Vec;
 
@@ -37,10 +33,8 @@ public class ADAMSolver implements ISolver{
         v_hat = new DenseVector(totalNumOfVariables);
     }
 
-
     @Override
-    public Vec solve(History<Outcome, INode> history) {
-        Vec errorDerivative = gradientEvaluator.computeGradient(history);
+    public Vec solve(Vec errorDerivative) {
         ADAM_step(errorDerivative);
         return parameterDeltas;
     }

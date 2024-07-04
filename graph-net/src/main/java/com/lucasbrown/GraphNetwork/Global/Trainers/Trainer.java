@@ -17,6 +17,7 @@ import com.lucasbrown.NetworkTraining.ApproximationTools.ErrorFunction;
 import com.lucasbrown.NetworkTraining.ApproximationTools.WeightedAverage;
 import com.lucasbrown.NetworkTraining.DataSetTraining.IFilter;
 
+import jsat.linear.DenseVector;
 import jsat.linear.Vec;
 
 public class Trainer implements ITrainer{
@@ -34,10 +35,8 @@ public class Trainer implements ITrainer{
     private Vec weightsDeltas;
     private Vec probabilityDeltas;
 
-    protected Double[][] inputs;
-    protected Double[][] targets;
-
-    protected WeightedAverage total_error;
+    protected Double[][][] inputs;
+    protected Double[][][] targets;
 
     public Trainer(NetworkInputEvaluater networkEvaluater, IGradient weightsGradient, ISolver weightsSolver, IGradient probabilityGradient, ISolver probabilitySolver, WeightsLinearizer weightLinearizer, FilterLinearizer filterLinearizer) {
         
@@ -51,10 +50,6 @@ public class Trainer implements ITrainer{
         this.networkEvaluater = networkEvaluater;
 
         network = networkEvaluater.network;
-        inputs = networkEvaluater.inputs;
-        targets = weightsGradient.getTargets();
-
-        total_error = new WeightedAverage();
     }
 
     /**
@@ -64,11 +59,19 @@ public class Trainer implements ITrainer{
      * @param targets
      */
     public void setTrainingData(Double[][] inputs, Double[][] targets) {
+        setTrainingData(new Double[][][]{inputs}, new Double[][][]{targets});
+    }
+
+    
+    /**
+     * input and target dimension : [timestep][node]
+     * 
+     * @param inputs
+     * @param targets
+     */
+    public void setTrainingData(Double[][][] inputs, Double[][][] targets) {
         this.inputs = inputs;
         this.targets = targets;
-        networkEvaluater.setInputData(inputs);
-        weightsGradient.setTargets(targets);
-        probabilityGradient.setTargets(targets);
     }
 
     public void trainNetwork(int steps, int print_interval) {
@@ -78,16 +81,47 @@ public class Trainer implements ITrainer{
     }
 
     public void trainingStep(boolean print_forward) {
-        History<Outcome, INode> history = networkEvaluater.computeNetworkInference();
+        History<Outcome, INode>[] histories = computeAllHistories();
         if(print_forward){
-            printNetwork(history);
+            printNetwork(histories[0]);
         }
 
-        weightsDeltas = weightsSolver.solve(history);
-        probabilityDeltas = probabilitySolver.solve(history);
+        Vec weightsGradient = aggregateWeightGradients(histories);
+        Vec probabilityGradient = aggregateProbabilityGradients(histories);
+
+        weightsDeltas = weightsSolver.solve(weightsGradient);
+        probabilityDeltas = probabilitySolver.solve(probabilityGradient);
 
         applyWeightDeltas();
         applyProbabilityDeltas();
+    }
+
+    public History<Outcome, INode>[] computeAllHistories(){
+        History<Outcome, INode>[] histories = new History[inputs.length];
+        for(int i = 0; i < inputs.length; i++){
+            networkEvaluater.setInputData(inputs[i]);
+            histories[i] = networkEvaluater.computeNetworkInference();
+        }
+        return histories;
+    }    
+
+    private Vec aggregateWeightGradients(History<Outcome, INode>[] histories){
+        Vec gradient = new DenseVector(weightLinearizer.totalNumOfVariables);
+        for(int i = 0; i < inputs.length; i++){
+            weightsGradient.setTargets(targets[i]);
+            Vec grad = weightsGradient.computeGradient(histories[i]);
+            gradient.mutableAdd(grad);
+        }
+        return gradient.divide(inputs.length);
+    }
+
+    private Vec aggregateProbabilityGradients(History<Outcome, INode>[] histories){
+        Vec gradient = new DenseVector(filterLinearizer.totalNumOfVariables);
+        for(int i = 0; i < inputs.length; i++){
+            probabilityGradient.setTargets(targets[i]);
+            gradient.mutableAdd(probabilityGradient.computeGradient(histories[i]));
+        }
+        return gradient.divide(inputs.length);
     }
 
     private void printNetwork(History<Outcome, INode> history) {
@@ -117,11 +151,17 @@ public class Trainer implements ITrainer{
                         .map(Object::toString)
                         .collect(Collectors.joining(",")));
                 sb.append("] | target = ");
-                sb.append(targets[t][i]);
+                sb.append(targets[0][t][i]);
                 sb.append("\n\t");
             }
             sb.append("\n");
         }
+
+        sb.append("Accuracy error : ");
+        sb.append(weightsGradient.getTotalError(history));
+        sb.append("\nConsistency error : ");
+        sb.append(probabilityGradient.getTotalError(history));
+        sb.append("\n");
         System.out.println(sb.toString());
     }
 
@@ -144,17 +184,17 @@ public class Trainer implements ITrainer{
         filter.applyAdjustableParameterUpdate(gradient);
     }
 
-    public static Trainer getDefaultTrainer(GraphNetwork network, Double[][] inputs, Double[][] targets){
+    public static Trainer getDefaultTrainer(GraphNetwork network){
         WeightsLinearizer weightLinearizer = new WeightsLinearizer(network);
         FilterLinearizer filterLinearizer = new FilterLinearizer(network);
-        NetworkInputEvaluater networkEvaluater = new NetworkInputEvaluater(network, inputs);
+        NetworkInputEvaluater networkEvaluater = new NetworkInputEvaluater(network);
 
-        ErrorFunction erf = new ErrorFunction.MeanSquaredError();
+        ErrorFunction erf = new ErrorFunction.AugmentedRelativeError();
 
-        DirectNetworkGradient netGradient = new DirectNetworkGradient(network, new ForwardNetworkGradient(weightLinearizer), targets, erf, weightLinearizer.totalNumOfVariables, true); 
+        DirectNetworkGradient netGradient = new DirectNetworkGradient(network, new ForwardNetworkGradient(weightLinearizer), null, erf, weightLinearizer.totalNumOfVariables, true); 
         ADAMSolver weightsSolver = new ADAMSolver(netGradient, weightLinearizer.totalNumOfVariables); 
 
-        OutcomeChanceFilterGradient filterGradient = new OutcomeChanceFilterGradient(network, new ForwardFilterGradient(filterLinearizer), targets, erf, filterLinearizer.totalNumOfVariables);
+        OutcomeChanceFilterGradient filterGradient = new OutcomeChanceFilterGradient(network, new ForwardFilterGradient(filterLinearizer), null, erf, filterLinearizer.totalNumOfVariables);
         ADAMSolver filterSolver = new ADAMSolver(filterGradient, filterLinearizer.totalNumOfVariables);
 
         return new Trainer(networkEvaluater, netGradient, weightsSolver, filterGradient, filterSolver, weightLinearizer, filterLinearizer);

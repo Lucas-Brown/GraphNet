@@ -7,26 +7,20 @@ import java.util.stream.Stream;
 import com.lucasbrown.GraphNetwork.Global.Network.ArcBuilder;
 import com.lucasbrown.GraphNetwork.Global.Network.GraphNetwork;
 import com.lucasbrown.GraphNetwork.Global.Network.NodeBuilder;
-import com.lucasbrown.GraphNetwork.Global.Trainers.BackpropTrainer;
-import com.lucasbrown.GraphNetwork.Global.Trainers.NewtonTrainer;
+import com.lucasbrown.GraphNetwork.Global.Trainers.Trainer;
 import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
 import com.lucasbrown.GraphNetwork.Local.Nodes.ComplexNode;
 import com.lucasbrown.GraphNetwork.Local.Nodes.InputNode;
 import com.lucasbrown.GraphNetwork.Local.Nodes.OutputNode;
-import com.lucasbrown.GraphNetwork.Local.Nodes.SimpleNode;
-import com.lucasbrown.NetworkTraining.ApproximationTools.ErrorFunction;
 import com.lucasbrown.NetworkTraining.DataSetTraining.BetaDistribution;
 import com.lucasbrown.NetworkTraining.DataSetTraining.BetaDistributionAdjuster2;
-import com.lucasbrown.NetworkTraining.DataSetTraining.NoAdjustments;
 import com.lucasbrown.NetworkTraining.DataSetTraining.NormalBetaFilterAdjuster2;
 import com.lucasbrown.NetworkTraining.DataSetTraining.NormalDistribution;
 import com.lucasbrown.NetworkTraining.DataSetTraining.NormalPeakFilter;
-import com.lucasbrown.NetworkTraining.DataSetTraining.OpenFilter;
 
 public class AdderTest {
 
     private static Random rng = new Random();
-    private static int counter = 0;
 
     private int N = 100;
     private Double[][] inputData = new Double[][] { new Double[] { 1d, null, null }, new Double[] { null, null, null },
@@ -103,17 +97,8 @@ public class AdderTest {
         arcBuilder.build(in2, out);
         arcBuilder.build(in3, out);
 
-        NewtonTrainer bt = new NewtonTrainer(net, new ErrorFunction.MeanSquaredError());
-        bt.epsilon = 1;
 
-        bt.setTrainingData(adder.inputData, adder.outputData);
-
-        bt.trainNetwork(10000, 1);
-        net.deactivateAll();
-        net.setInputOperation(nodeMap -> NewtonTrainer.applyInputToNode(nodeMap, adder.inputData, counter++));
-        for (int i = 0; i < adder.inputData.length; i++) {
-            net.trainingStep();
-            System.out.println(net);
-        }
+        Trainer trainer = Trainer.getDefaultTrainer(net, adder.inputData, adder.outputData);
+        trainer.trainNetwork(10000, 1000);
     }
 }

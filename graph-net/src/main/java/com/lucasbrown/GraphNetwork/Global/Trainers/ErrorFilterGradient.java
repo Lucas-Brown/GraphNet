@@ -5,56 +5,25 @@ import java.util.HashMap;
 
 import com.lucasbrown.GraphNetwork.Global.Network.GraphNetwork;
 import com.lucasbrown.GraphNetwork.Local.Outcome;
-import com.lucasbrown.GraphNetwork.Local.Nodes.INode;
-import com.lucasbrown.GraphNetwork.Local.Nodes.OutputNode;
-import com.lucasbrown.NetworkTraining.History;
 import com.lucasbrown.NetworkTraining.ApproximationTools.ErrorFunction;
 
 import jsat.linear.DenseVector;
 import jsat.linear.Vec;
 
-public class ErrorFilterGradient implements IGradient{
+public class ErrorFilterGradient extends GradientBase {
 
-    private Double[][] targets;
     private ErrorFunction errorFunction;
-    private INetworkGradient networkGradientEvaluater;
-    protected ArrayList<OutputNode> outputNodes;
-    private Vec gradient;
-    private int totalNumOfVariables;
 
     public ErrorFilterGradient(GraphNetwork network, INetworkGradient networkGradientEvaluater, Double[][] targets, ErrorFunction errorFunction, int totalNumOfVariables){
-        this.targets = targets;
+        super(network, networkGradientEvaluater, targets, totalNumOfVariables);
         this.errorFunction = errorFunction;
-        this.networkGradientEvaluater = networkGradientEvaluater;
-        this.totalNumOfVariables = totalNumOfVariables;
-        outputNodes = network.getOutputNodes();
     }
 
-    @Override
-    public Vec computeGradient(History<Outcome, INode> networkHistory) {
-        ArrayList<HashMap<Outcome, Vec>> networkGradient = networkGradientEvaluater.getGradient(networkHistory); 
-        gradient = new DenseVector(totalNumOfVariables);
-
-        for(int i = 0; i < outputNodes.size(); i++){
-            for(int timestep = 0; timestep < targets.length; timestep++)
-            {
-                INode outputNode = outputNodes.get(i);
-                ArrayList<Outcome> outcomesAtTime = networkHistory.getStateOfRecord(timestep, outputNode);
-                HashMap<Outcome, Vec> gradientAtTime = networkGradient.get(timestep);
-                Double target = targets[timestep][i];
-                computeErrorOfOutput(outcomesAtTime, gradientAtTime, target);
-                for (double d : gradient.arrayCopy()) {
-                    assert Double.isFinite(d);
-                }
-                
-            }
-        }
-        return gradient;
-    }
-    
-    protected void computeErrorOfOutput(ArrayList<Outcome> outcomesAtTime, HashMap<Outcome, Vec> gradientAtTime, Double target) {
+    protected Vec computeGradientOfOutput(ArrayList<Outcome> outcomesAtTime, HashMap<Outcome, Vec> gradientAtTime, Double target) {
+        Vec gradient = new DenseVector(totalNumOfVariables); 
+        
         if(outcomesAtTime == null || target == null){
-            return;
+            return gradient;
         }
 
         for (Outcome outcome : outcomesAtTime) {
@@ -66,26 +35,23 @@ public class ErrorFilterGradient implements IGradient{
             gradient.mutableAdd(networkDerivative.multiply(error));
         }
 
+        return gradient;
     }
 
     @Override
-    public void setTargets(Double[][] targets) {
-        this.targets = targets;
+    protected double computeErrorOfOutput(ArrayList<Outcome> outcomesAtTime, Double target) {
+        double error = 0;
+        
+        if(outcomesAtTime == null || target == null){
+            return error;
+        }
+
+        for (Outcome outcome : outcomesAtTime) {
+
+            error += errorFunction.error(outcome.activatedValue, target);
+        }
+
+        return error;
     }
 
-    @Override
-    public Double[][] getTargets() {
-        return targets;
-    }
-
-    // public static double[][] targetsToProbabilies(Double[][] targets){
-    //     double[][] probs = new double[targets.length][];
-    //     for (int i = 0; i < probs.length; i++) {
-    //         probs[i] = new double[targets[i].length];
-    //         for (int j = 0; j < probs[i].length; j++) {
-    //             probs[i][j] = targets[i][j] == null ? 0 : 1;
-    //         }
-    //     }
-    //     return probs;
-    // }
 }

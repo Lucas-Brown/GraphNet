@@ -5,79 +5,40 @@ import java.util.HashMap;
 
 import com.lucasbrown.GraphNetwork.Global.Network.GraphNetwork;
 import com.lucasbrown.GraphNetwork.Local.Outcome;
-import com.lucasbrown.GraphNetwork.Local.Nodes.INode;
-import com.lucasbrown.GraphNetwork.Local.Nodes.OutputNode;
-import com.lucasbrown.NetworkTraining.History;
 import com.lucasbrown.NetworkTraining.ApproximationTools.ErrorFunction;
 
 import jsat.linear.DenseVector;
 import jsat.linear.Vec;
 
-public class DirectNetworkGradient implements IGradient{
+public class DirectNetworkGradient extends GradientBase {
 
-    private Double[][] targets;
     private ErrorFunction errorFunction;
-    private INetworkGradient networkGradientEvaluater;
-    protected ArrayList<OutputNode> outputNodes;
     private boolean normalize;
-    private Vec gradient;
-    private int totalNumOfVariables;
 
-    public DirectNetworkGradient(GraphNetwork network, INetworkGradient networkGradientEvaluater, Double[][] targets, ErrorFunction errorFunction, int totalNumOfVariables, boolean normalize){
-        this.targets = targets;
+    public DirectNetworkGradient(GraphNetwork network, INetworkGradient networkGradientEvaluater, Double[][] targets,
+            ErrorFunction errorFunction, int totalNumOfVariables, boolean normalize) {
+        super(network, networkGradientEvaluater, targets, totalNumOfVariables);
         this.errorFunction = errorFunction;
-        this.networkGradientEvaluater = networkGradientEvaluater;
         this.normalize = normalize;
-        this.totalNumOfVariables = totalNumOfVariables;
-        outputNodes = network.getOutputNodes();
     }
-    
-    @Override
-    public void setTargets(Double[][] targets) {
-        this.targets = targets;
-    }
+
 
     @Override
-    public Double[][] getTargets() {
-        return targets;
-    }
+    protected Vec computeGradientOfOutput(ArrayList<Outcome> outcomesAtTime, HashMap<Outcome, Vec> gradientAtTime,
+            Double target) {
+        Vec gradient = new DenseVector(totalNumOfVariables);
 
-    @Override
-    public Vec computeGradient(History<Outcome, INode> networkHistory) {
-        ArrayList<HashMap<Outcome, Vec>> networkGradient = networkGradientEvaluater.getGradient(networkHistory); 
-        gradient = new DenseVector(totalNumOfVariables);
-
-        for(int i = 0; i < outputNodes.size(); i++){
-            for(int timestep = 0; timestep < targets.length; timestep++)
-            {
-                INode outputNode = outputNodes.get(i);
-                ArrayList<Outcome> outcomesAtTime = networkHistory.getStateOfRecord(timestep, outputNode);
-                HashMap<Outcome, Vec> gradientAtTime = networkGradient.get(timestep);
-                Double target = targets[timestep][i];
-                computeErrorOfOutput(outcomesAtTime, gradientAtTime, target);
-            }
-        }
-        return gradient;
-    }
-
-    
-    private double getProbabilityVolume(ArrayList<Outcome> outcomes) {
-        return outcomes.stream().mapToDouble(outcome -> outcome.probability).sum();
-    }
-
-    
-    protected void computeErrorOfOutput(ArrayList<Outcome> outcomesAtTime, HashMap<Outcome, Vec> gradientAtTime, Double target) {
         if (outcomesAtTime == null | target == null) {
-            return;
+            return gradient;
         }
 
-        double probabilityVolume = getProbabilityVolume(outcomesAtTime);
-        
+        double probabilityVolume = GradientBase.getProbabilityVolume(outcomesAtTime);
+
         if (probabilityVolume == 0) {
-            return;
+            return gradient;
         }
 
-        if(!normalize){
+        if (!normalize) {
             probabilityVolume = 1;
         }
 
@@ -91,7 +52,32 @@ public class DirectNetworkGradient implements IGradient{
 
         }
 
+        return gradient;
     }
 
-    
+    @Override
+    protected double computeErrorOfOutput(ArrayList<Outcome> outcomesAtTime, Double target) {
+        double error = 0;
+
+        if (outcomesAtTime == null | target == null) {
+            return error;
+        }
+
+        double probabilityVolume = GradientBase.getProbabilityVolume(outcomesAtTime);
+
+        if (probabilityVolume == 0) {
+            return error;
+        }
+
+        if (!normalize) {
+            probabilityVolume = 1;
+        }
+
+        for (Outcome outcome : outcomesAtTime) {
+            error += outcome.probability * errorFunction.error(outcome.activatedValue, target);
+        }
+
+        return error / probabilityVolume;
+    }
+
 }
