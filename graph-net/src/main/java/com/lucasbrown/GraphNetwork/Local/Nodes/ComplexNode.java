@@ -5,12 +5,12 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.stream.IntStream;
 
-import com.lucasbrown.GraphNetwork.Global.Network.GraphNetwork;
+import com.lucasbrown.GraphNetwork.Global.GraphNetwork;
 import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
-import com.lucasbrown.GraphNetwork.Local.Arc;
+import com.lucasbrown.GraphNetwork.Local.Edge;
 import com.lucasbrown.GraphNetwork.Local.Signal;
-import com.lucasbrown.NetworkTraining.DataSetTraining.IExpectationAdjuster;
-import com.lucasbrown.NetworkTraining.DataSetTraining.ITrainableDistribution;
+import com.lucasbrown.NetworkTraining.DistributionSolverMethods.IExpectationAdjuster;
+import com.lucasbrown.NetworkTraining.DistributionSolverMethods.ITrainableDistribution;
 
 /**
  * A node within a graph neural network.
@@ -48,7 +48,7 @@ public class ComplexNode extends TrainableNodeBase {
      * @return true
      */
     @Override
-    public boolean addIncomingConnection(Arc connection) {
+    public boolean addIncomingConnection(Edge connection) {
         appendWeightsAndBiases();
         return super.addIncomingConnection(connection);
     }

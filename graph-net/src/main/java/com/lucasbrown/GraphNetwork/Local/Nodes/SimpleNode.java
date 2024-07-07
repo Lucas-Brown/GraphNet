@@ -4,13 +4,13 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 
-import com.lucasbrown.GraphNetwork.Global.Network.GraphNetwork;
+import com.lucasbrown.GraphNetwork.Global.GraphNetwork;
 import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
-import com.lucasbrown.GraphNetwork.Local.Arc;
+import com.lucasbrown.GraphNetwork.Local.Edge;
 import com.lucasbrown.GraphNetwork.Local.Signal;
-import com.lucasbrown.NetworkTraining.ApproximationTools.IterableTools;
-import com.lucasbrown.NetworkTraining.DataSetTraining.IExpectationAdjuster;
-import com.lucasbrown.NetworkTraining.DataSetTraining.ITrainableDistribution;
+import com.lucasbrown.HelperClasses.IterableTools;
+import com.lucasbrown.NetworkTraining.DistributionSolverMethods.IExpectationAdjuster;
+import com.lucasbrown.NetworkTraining.DistributionSolverMethods.ITrainableDistribution;
 
 /**
  * A node within a graph neural network.
@@ -39,7 +39,7 @@ public class SimpleNode extends TrainableNodeBase {
      * @return true
      */
     @Override
-    public boolean addIncomingConnection(Arc connection) {
+    public boolean addIncomingConnection(Edge connection) {
         appendWeights();
         return super.addIncomingConnection(connection);
     }

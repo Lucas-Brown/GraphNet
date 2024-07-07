@@ -1,7 +1,7 @@
 package com.lucasbrown.GraphNetwork.Local;
 
 import com.lucasbrown.GraphNetwork.Local.Nodes.INode;
-import com.lucasbrown.NetworkTraining.ApproximationTools.WeightedAverage;
+import com.lucasbrown.HelperClasses.WeightedAverage;
 
 /**
  * A massive collection of everything that anyone could ever need to know about a node at a given timestep 

@@ -10,13 +10,13 @@ import java.util.Optional;
 import java.util.Random;
 import java.util.stream.Collectors;
 
-import com.lucasbrown.GraphNetwork.Global.Network.GraphNetwork;
+import com.lucasbrown.GraphNetwork.Global.GraphNetwork;
 import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
-import com.lucasbrown.GraphNetwork.Local.Arc;
+import com.lucasbrown.GraphNetwork.Local.Edge;
 import com.lucasbrown.GraphNetwork.Local.Outcome;
 import com.lucasbrown.GraphNetwork.Local.Signal;
-import com.lucasbrown.NetworkTraining.ApproximationTools.IterableTools;
-import com.lucasbrown.NetworkTraining.ApproximationTools.Pair;
+import com.lucasbrown.HelperClasses.IterableTools;
+import com.lucasbrown.HelperClasses.Structs.Pair;
 
 /**
  * A node within a graph neural network.
@@ -60,7 +60,7 @@ public abstract class NodeBase implements INode {
     /**
      * All incoming and outgoing node connections.
      */
-    protected final ArrayList<Arc> incoming, outgoing;
+    protected final ArrayList<Edge> incoming, outgoing;
 
     private int numInputCombinations;
 
@@ -86,8 +86,8 @@ public abstract class NodeBase implements INode {
         name = "INode " + id;
         this.network = network;
         this.activationFunction = activationFunction;
-        incoming = new ArrayList<Arc>();
-        outgoing = new ArrayList<Arc>();
+        incoming = new ArrayList<Edge>();
+        outgoing = new ArrayList<Edge>();
         orderedIDMap = new HashMap<>();
         numInputCombinations = 1;
 
@@ -153,14 +153,14 @@ public abstract class NodeBase implements INode {
      * @return true
      */
     @Override
-    public boolean addIncomingConnection(Arc connection) {
+    public boolean addIncomingConnection(Edge connection) {
         orderedIDMap.put(connection.getSendingID(), numInputCombinations);
         numInputCombinations *= 2;
         return incoming.add(connection);
     }
 
     @Override
-    public ArrayList<Arc> getAllIncomingConnections() {
+    public ArrayList<Edge> getAllIncomingConnections() {
         return new ArrayList<>(incoming);
     }
 
@@ -171,22 +171,22 @@ public abstract class NodeBase implements INode {
      * @return true
      */
     @Override
-    public boolean addOutgoingConnection(Arc connection) {
+    public boolean addOutgoingConnection(Edge connection) {
         return outgoing.add(connection);
     }
 
     @Override
-    public ArrayList<Arc> getAllOutgoingConnections() {
+    public ArrayList<Edge> getAllOutgoingConnections() {
         return new ArrayList<>(outgoing);
     }
 
     @Override
-    public Optional<Arc> getOutgoingConnectionTo(INode recievingNode) {
+    public Optional<Edge> getOutgoingConnectionTo(INode recievingNode) {
         return outgoing.stream().filter(arc -> arc.recieving.equals(recievingNode)).findAny();
     }
 
     @Override
-    public Optional<Arc> getIncomingConnectionFrom(INode sendingNode) {
+    public Optional<Edge> getIncomingConnectionFrom(INode sendingNode) {
         return incoming.stream().filter(arc -> arc.sending.equals(sendingNode)).findAny();
     }
 
@@ -250,8 +250,8 @@ public abstract class NodeBase implements INode {
      * @param binStr
      * @return
      */
-    public ArrayList<Arc> binStrToArcList(int binStr) {
-        ArrayList<Arc> arcs = new ArrayList<Arc>(incoming.size());
+    public ArrayList<Edge> binStrToArcList(int binStr) {
+        ArrayList<Edge> arcs = new ArrayList<Edge>(incoming.size());
         for (int i = 0; i < incoming.size(); i++) {
             if ((binStr & 0b1) == 1) {
                 arcs.add(incoming.get(i));
@@ -377,7 +377,7 @@ public abstract class NodeBase implements INode {
     @Override
     public void sendForwardSignals() {
         for (Outcome out : outcomes) {
-            for (Arc connection : outgoing) {
+            for (Edge connection : outgoing) {
                 connection.sendForwardSignal(out); // oh god
             }
         }
@@ -425,5 +425,9 @@ public abstract class NodeBase implements INode {
         if (!(o instanceof INode))
             return false;
         return INode.areNodesEqual(this, (INode) o);
+    }
+
+    public class SignalSetEvaluator{
+
     }
 }

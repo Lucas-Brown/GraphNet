@@ -4,19 +4,19 @@ import java.util.Objects;
 import java.util.Random;
 import java.util.stream.Stream;
 
-import com.lucasbrown.GraphNetwork.Global.Network.ArcBuilder;
-import com.lucasbrown.GraphNetwork.Global.Network.GraphNetwork;
-import com.lucasbrown.GraphNetwork.Global.Network.NodeBuilder;
-import com.lucasbrown.GraphNetwork.Global.Trainers.Trainer;
+import com.lucasbrown.GraphNetwork.Global.ArcBuilder;
+import com.lucasbrown.GraphNetwork.Global.GraphNetwork;
+import com.lucasbrown.GraphNetwork.Global.NodeBuilder;
 import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
+import com.lucasbrown.GraphNetwork.Local.Filters.NormalPeakFilter;
 import com.lucasbrown.GraphNetwork.Local.Nodes.ComplexNode;
 import com.lucasbrown.GraphNetwork.Local.Nodes.InputNode;
 import com.lucasbrown.GraphNetwork.Local.Nodes.OutputNode;
-import com.lucasbrown.NetworkTraining.DataSetTraining.BetaDistribution;
-import com.lucasbrown.NetworkTraining.DataSetTraining.BetaDistributionAdjuster2;
-import com.lucasbrown.NetworkTraining.DataSetTraining.NormalBetaFilterAdjuster2;
-import com.lucasbrown.NetworkTraining.DataSetTraining.NormalDistribution;
-import com.lucasbrown.NetworkTraining.DataSetTraining.NormalPeakFilter;
+import com.lucasbrown.NetworkTraining.DistributionSolverMethods.BetaDistribution;
+import com.lucasbrown.NetworkTraining.DistributionSolverMethods.BetaDistributionAdjuster2;
+import com.lucasbrown.NetworkTraining.DistributionSolverMethods.NormalBetaFilterAdjuster2;
+import com.lucasbrown.NetworkTraining.DistributionSolverMethods.NormalDistribution;
+import com.lucasbrown.NetworkTraining.Trainers.Trainer;
 
 public class AdderTest {
 

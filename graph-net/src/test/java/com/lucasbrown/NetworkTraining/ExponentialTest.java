@@ -11,28 +11,29 @@ import java.util.stream.IntStream;
 import org.junit.Assert;
 import org.junit.Test;
 
-import com.lucasbrown.GraphNetwork.Global.Network.ArcBuilder;
-import com.lucasbrown.GraphNetwork.Global.Network.GraphNetwork;
-import com.lucasbrown.GraphNetwork.Global.Network.NodeBuilder;
-import com.lucasbrown.GraphNetwork.Global.Trainers.ADAMSolver;
-import com.lucasbrown.GraphNetwork.Global.Trainers.ForwardNetworkGradient;
-import com.lucasbrown.GraphNetwork.Global.Trainers.Trainer;
-import com.lucasbrown.GraphNetwork.Global.Trainers.WeightsLinearizer;
+import com.lucasbrown.GraphNetwork.Global.ArcBuilder;
+import com.lucasbrown.GraphNetwork.Global.GraphNetwork;
+import com.lucasbrown.GraphNetwork.Global.NodeBuilder;
 import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
 import com.lucasbrown.GraphNetwork.Local.Outcome;
+import com.lucasbrown.GraphNetwork.Local.Filters.FlatRateFilter;
+import com.lucasbrown.GraphNetwork.Local.Filters.NormalPeakFilter;
+import com.lucasbrown.GraphNetwork.Local.Filters.OpenFilter;
 import com.lucasbrown.GraphNetwork.Local.Nodes.ComplexNode;
 import com.lucasbrown.GraphNetwork.Local.Nodes.INode;
 import com.lucasbrown.GraphNetwork.Local.Nodes.ITrainable;
 import com.lucasbrown.GraphNetwork.Local.Nodes.InputNode;
 import com.lucasbrown.GraphNetwork.Local.Nodes.OutputNode;
-import com.lucasbrown.NetworkTraining.DataSetTraining.BernoulliDistribution;
-import com.lucasbrown.NetworkTraining.DataSetTraining.BernoulliDistributionAdjuster;
-import com.lucasbrown.NetworkTraining.DataSetTraining.FlatRateFilter;
-import com.lucasbrown.NetworkTraining.DataSetTraining.NoAdjustments;
-import com.lucasbrown.NetworkTraining.DataSetTraining.NormalBernoulliFilterAdjuster;
-import com.lucasbrown.NetworkTraining.DataSetTraining.NormalDistribution;
-import com.lucasbrown.NetworkTraining.DataSetTraining.NormalPeakFilter;
-import com.lucasbrown.NetworkTraining.DataSetTraining.OpenFilter;
+import com.lucasbrown.NetworkTraining.DistributionSolverMethods.BernoulliDistribution;
+import com.lucasbrown.NetworkTraining.DistributionSolverMethods.BernoulliDistributionAdjuster;
+import com.lucasbrown.NetworkTraining.DistributionSolverMethods.NoAdjustments;
+import com.lucasbrown.NetworkTraining.DistributionSolverMethods.NormalBernoulliFilterAdjuster;
+import com.lucasbrown.NetworkTraining.DistributionSolverMethods.NormalDistribution;
+import com.lucasbrown.NetworkTraining.History.History;
+import com.lucasbrown.NetworkTraining.NetworkDerivatives.ForwardNetworkGradient;
+import com.lucasbrown.NetworkTraining.Solvers.ADAMSolver;
+import com.lucasbrown.NetworkTraining.Trainers.Trainer;
+import com.lucasbrown.NetworkTraining.Trainers.WeightsLinearizer;
 
 import jsat.linear.Vec;
 
@@ -144,7 +145,7 @@ public class ExponentialTest {
 
 
         trainer.networkEvaluater.setInputData(exponentialGrowth.inputData[0]);
-        History<Outcome, INode> history = trainer.networkEvaluater.computeNetworkInference();
+        NetworkHistory history = trainer.networkEvaluater.computeNetworkInference();
 
         // test to make sure the history aligns with the analytic form
         historyMatchesExpected(net, history, in, hidden, out);
@@ -186,7 +187,7 @@ public class ExponentialTest {
     }
 
     
-    private double getInitialValue(History<Outcome, INode> history, ITrainable hidden) {
+    private double getInitialValue(NetworkHistory history, ITrainable hidden) {
         HashMap<INode, ArrayList<Outcome>> secondRecord = history.getStateAtTimestep(1);
         ArrayList<Outcome> secondOutcomes = secondRecord.get(hidden);
 
@@ -194,7 +195,7 @@ public class ExponentialTest {
         return initialExponentialValue;
     }
 
-    private void historyMatchesExpected(GraphNetwork net, History<Outcome, INode> history, InputNode in, ITrainable hidden, OutputNode out) {
+    private void historyMatchesExpected(GraphNetwork net, NetworkHistory history, InputNode in, ITrainable hidden, OutputNode out) {
         HashMap<INode, ArrayList<Outcome>> firstRecord = history.getStateAtTimestep(0);
         ArrayList<Outcome> firstOutcomes = firstRecord.get(in);
         Assert.assertNotNull(firstOutcomes);
@@ -212,7 +213,7 @@ public class ExponentialTest {
     }
 
 
-    private void gradientMatchesExpected(GraphNetwork net, History<Outcome, INode> history, ArrayList<HashMap<Outcome, Vec>> gradient, WeightsLinearizer linearizer, ITrainable hidden) {
+    private void gradientMatchesExpected(GraphNetwork net, NetworkHistory history, ArrayList<HashMap<Outcome, Vec>> gradient, WeightsLinearizer linearizer, ITrainable hidden) {
         double initialExponentialValue = getInitialValue(history, hidden);
 
         for (int timestep = 1; timestep < history.getNumberOfTimesteps(); timestep++) {

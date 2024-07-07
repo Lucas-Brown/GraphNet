@@ -7,6 +7,8 @@ import java.util.List;
 
 import org.junit.Test;
 
+import com.lucasbrown.HelperClasses.IterableTools;
+
 public class ArrayToolsTest {
 
     private static final Double d0 = Double.valueOf(0);

@@ -3,8 +3,8 @@ import static org.junit.Assert.assertEquals;
 
 import org.junit.Test;
 
-import com.lucasbrown.NetworkTraining.ApproximationTools.LinearRange;
-import com.lucasbrown.NetworkTraining.ApproximationTools.MultiplicitiveRange;
+import com.lucasbrown.HelperClasses.Interpolation.LinearRange;
+import com.lucasbrown.HelperClasses.Interpolation.MultiplicitiveRange;
 
 public class RangeTest {
 

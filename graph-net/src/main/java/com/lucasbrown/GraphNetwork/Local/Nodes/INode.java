@@ -5,12 +5,12 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Optional;
 
-import com.lucasbrown.GraphNetwork.Global.Network.GraphNetwork;
+import com.lucasbrown.GraphNetwork.Global.GraphNetwork;
 import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
-import com.lucasbrown.GraphNetwork.Local.Arc;
+import com.lucasbrown.GraphNetwork.Local.Edge;
 import com.lucasbrown.GraphNetwork.Local.Outcome;
 import com.lucasbrown.GraphNetwork.Local.Signal;
-import com.lucasbrown.NetworkTraining.IStateRecord;
+import com.lucasbrown.NetworkTraining.History.IStateRecord;
 
 public interface INode extends Comparable<INode>, IStateRecord<Outcome>{
 
@@ -39,9 +39,9 @@ public interface INode extends Comparable<INode>, IStateRecord<Outcome>{
      * @param connection
      * @return true
      */
-    public boolean addIncomingConnection(Arc connection);
+    public boolean addIncomingConnection(Edge connection);
 
-    public Collection<Arc> getAllIncomingConnections();
+    public Collection<Edge> getAllIncomingConnections();
 
     /**
      * Add an outgoing connection to the node
@@ -49,9 +49,9 @@ public interface INode extends Comparable<INode>, IStateRecord<Outcome>{
      * @param connection
      * @return true
      */
-    public boolean addOutgoingConnection(Arc connection);
+    public boolean addOutgoingConnection(Edge connection);
 
-    public Collection<Arc> getAllOutgoingConnections();
+    public Collection<Edge> getAllOutgoingConnections();
 
     /**
      * Get the arc associated with the transfer from this node to the given
@@ -60,7 +60,7 @@ public interface INode extends Comparable<INode>, IStateRecord<Outcome>{
      * @param recievingNode
      * @return The arc if present, otherwise null
      */
-    public Optional<Arc> getOutgoingConnectionTo(INode recievingNode);
+    public Optional<Edge> getOutgoingConnectionTo(INode recievingNode);
 
     /**
      * Get the arc associated with the transfer from the given sending node to this
@@ -70,7 +70,7 @@ public interface INode extends Comparable<INode>, IStateRecord<Outcome>{
      * @param recievingNode
      * @return The arc if present, otherwise null
      */
-    public Optional<Arc> getIncomingConnectionFrom(INode sendingNode);
+    public Optional<Edge> getIncomingConnectionFrom(INode sendingNode);
 
     /**
      * Notify this node of a new incoming forward signal

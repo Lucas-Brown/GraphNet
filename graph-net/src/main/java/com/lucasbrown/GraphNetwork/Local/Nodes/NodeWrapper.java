@@ -5,13 +5,13 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Optional;
 
-import com.lucasbrown.GraphNetwork.Global.Network.GraphNetwork;
+import com.lucasbrown.GraphNetwork.Global.GraphNetwork;
 import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
-import com.lucasbrown.GraphNetwork.Local.Arc;
+import com.lucasbrown.GraphNetwork.Local.Edge;
 import com.lucasbrown.GraphNetwork.Local.Outcome;
 import com.lucasbrown.GraphNetwork.Local.Signal;
-import com.lucasbrown.NetworkTraining.DataSetTraining.IExpectationAdjuster;
-import com.lucasbrown.NetworkTraining.DataSetTraining.ITrainableDistribution;
+import com.lucasbrown.NetworkTraining.DistributionSolverMethods.IExpectationAdjuster;
+import com.lucasbrown.NetworkTraining.DistributionSolverMethods.ITrainableDistribution;
 
 public class NodeWrapper implements ITrainable {
 
@@ -78,12 +78,12 @@ public class NodeWrapper implements ITrainable {
      * @return true
      */
     @Override
-    public boolean addIncomingConnection(Arc connection) {
+    public boolean addIncomingConnection(Edge connection) {
         return wrappingNode.addIncomingConnection(connection);
     }
 
     @Override
-    public Collection<Arc> getAllIncomingConnections() {
+    public Collection<Edge> getAllIncomingConnections() {
         return wrappingNode.getAllIncomingConnections();
     }
 
@@ -94,23 +94,23 @@ public class NodeWrapper implements ITrainable {
      * @return true
      */
     @Override
-    public boolean addOutgoingConnection(Arc connection) {
+    public boolean addOutgoingConnection(Edge connection) {
         wrappingNode.addOutgoingConnection(connection);
         return false;
     }
 
     @Override
-    public Collection<Arc> getAllOutgoingConnections() {
+    public Collection<Edge> getAllOutgoingConnections() {
         return wrappingNode.getAllOutgoingConnections();
     }
 
     @Override
-    public Optional<Arc> getOutgoingConnectionTo(INode recievingNode) {
+    public Optional<Edge> getOutgoingConnectionTo(INode recievingNode) {
         return wrappingNode.getOutgoingConnectionTo(recievingNode);
     }
 
     @Override
-    public Optional<Arc> getIncomingConnectionFrom(INode sendingNode) {
+    public Optional<Edge> getIncomingConnectionFrom(INode sendingNode) {
         return wrappingNode.getIncomingConnectionFrom(sendingNode);
     }
 

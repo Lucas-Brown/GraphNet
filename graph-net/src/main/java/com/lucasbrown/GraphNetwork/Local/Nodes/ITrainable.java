@@ -1,7 +1,7 @@
 package com.lucasbrown.GraphNetwork.Local.Nodes;
 
-import com.lucasbrown.NetworkTraining.DataSetTraining.IExpectationAdjuster;
-import com.lucasbrown.NetworkTraining.DataSetTraining.ITrainableDistribution;
+import com.lucasbrown.NetworkTraining.DistributionSolverMethods.IExpectationAdjuster;
+import com.lucasbrown.NetworkTraining.DistributionSolverMethods.ITrainableDistribution;
 
 public interface ITrainable extends INode {
 

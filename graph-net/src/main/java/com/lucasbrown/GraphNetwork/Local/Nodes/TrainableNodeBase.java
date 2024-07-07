@@ -1,12 +1,12 @@
 package com.lucasbrown.GraphNetwork.Local.Nodes;
 
-import com.lucasbrown.GraphNetwork.Global.Network.GraphNetwork;
+import com.lucasbrown.GraphNetwork.Global.GraphNetwork;
 import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
-import com.lucasbrown.GraphNetwork.Local.Arc;
-import com.lucasbrown.NetworkTraining.ApproximationTools.IterableTools;
-import com.lucasbrown.NetworkTraining.DataSetTraining.IExpectationAdjuster;
-import com.lucasbrown.NetworkTraining.DataSetTraining.IFilter;
-import com.lucasbrown.NetworkTraining.DataSetTraining.ITrainableDistribution;
+import com.lucasbrown.GraphNetwork.Local.Edge;
+import com.lucasbrown.GraphNetwork.Local.Filters.IFilter;
+import com.lucasbrown.HelperClasses.IterableTools;
+import com.lucasbrown.NetworkTraining.DistributionSolverMethods.IExpectationAdjuster;
+import com.lucasbrown.NetworkTraining.DistributionSolverMethods.ITrainableDistribution;
 
 public abstract class TrainableNodeBase extends NodeBase implements ITrainable {
 
@@ -49,7 +49,7 @@ public abstract class TrainableNodeBase extends NodeBase implements ITrainable {
     }
 
     @Override 
-    public boolean addIncomingConnection(Arc connection){
+    public boolean addIncomingConnection(Edge connection){
         numInputParams += connection.filter.getNumberOfAdjustableParameters();
         return super.addIncomingConnection(connection);
     }
@@ -82,7 +82,7 @@ public abstract class TrainableNodeBase extends NodeBase implements ITrainable {
 
     @Override
     public void applyFilterUpdate() {
-        for (Arc connection : outgoing) {
+        for (Edge connection : outgoing) {
             if (connection.filterAdjuster != null) {
                 connection.filterAdjuster.applyAdjustments();
             }
@@ -97,7 +97,7 @@ public abstract class TrainableNodeBase extends NodeBase implements ITrainable {
     @Override
     public void setParameters(double[] params) {
         int param_count = 0;
-        for(Arc arc : incoming){
+        for(Edge arc : incoming){
             IFilter filter = arc.filter;
             int count = filter.getNumberOfAdjustableParameters();
             double[] new_params = IterableTools.slice(params, param_count, count);

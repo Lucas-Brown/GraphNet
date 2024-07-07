@@ -2,7 +2,7 @@ package com.lucasbrown.GraphNetwork.Local.Nodes;
 
 import java.util.ArrayList;
 
-import com.lucasbrown.GraphNetwork.Local.Arc;
+import com.lucasbrown.GraphNetwork.Local.Edge;
 import com.lucasbrown.GraphNetwork.Local.Outcome;
 
 /**
@@ -34,7 +34,7 @@ public class InputNode extends NodeWrapper implements IInputNode {
 
     @Override
     public void sendForwardSignals() {
-        for (Arc connection : getAllOutgoingConnections()) {
+        for (Edge connection : getAllOutgoingConnections()) {
             connection.sendForwardSignal(outcomes.get(0));
         }
     }
@@ -55,7 +55,7 @@ public class InputNode extends NodeWrapper implements IInputNode {
     }
 
     @Override
-    public boolean addIncomingConnection(Arc connection) {
+    public boolean addIncomingConnection(Edge connection) {
         throw new UnsupportedOperationException("Input nodes are not allowed to have any incoming connections.");
     }
 
