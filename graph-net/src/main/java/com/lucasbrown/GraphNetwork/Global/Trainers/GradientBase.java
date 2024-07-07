@@ -2,6 +2,7 @@ package com.lucasbrown.GraphNetwork.Global.Trainers;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.stream.Stream;
 
 import com.lucasbrown.GraphNetwork.Global.Network.GraphNetwork;
 import com.lucasbrown.GraphNetwork.Local.Outcome;
@@ -84,6 +85,10 @@ public abstract class GradientBase implements IGradient {
 
     public static double getProbabilityVolume(ArrayList<Outcome> outcomes) {
         return outcomes.stream().mapToDouble(outcome -> outcome.probability).sum();
+    }
+
+    public static double getProbabilityVolume(Outcome[] outcomes) {
+        return Stream.of(outcomes).mapToDouble(outcome -> outcome.probability).sum();
     }
 
     protected abstract Vec computeGradientOfOutput(ArrayList<Outcome> outcomesAtTime,

@@ -13,13 +13,11 @@ import jsat.linear.Vec;
 public class DirectNetworkGradient extends GradientBase {
 
     private ErrorFunction errorFunction;
-    private boolean normalize;
 
     public DirectNetworkGradient(GraphNetwork network, INetworkGradient networkGradientEvaluater, Double[][] targets,
-            ErrorFunction errorFunction, int totalNumOfVariables, boolean normalize) {
+            ErrorFunction errorFunction, int totalNumOfVariables) {
         super(network, networkGradientEvaluater, targets, totalNumOfVariables);
         this.errorFunction = errorFunction;
-        this.normalize = normalize;
     }
 
 
@@ -36,10 +34,6 @@ public class DirectNetworkGradient extends GradientBase {
 
         if (probabilityVolume == 0) {
             return gradient;
-        }
-
-        if (!normalize) {
-            probabilityVolume = 1;
         }
 
         for (Outcome outcome : outcomesAtTime) {
@@ -68,11 +62,7 @@ public class DirectNetworkGradient extends GradientBase {
         if (probabilityVolume == 0) {
             return error;
         }
-
-        if (!normalize) {
-            probabilityVolume = 1;
-        }
-
+        
         for (Outcome outcome : outcomesAtTime) {
             error += outcome.probability * errorFunction.error(outcome.activatedValue, target);
         }

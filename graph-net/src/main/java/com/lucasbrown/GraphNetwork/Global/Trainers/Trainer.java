@@ -83,7 +83,7 @@ public class Trainer implements ITrainer{
     public void trainingStep(boolean print_forward) {
         History<Outcome, INode>[] histories = computeAllHistories();
         if(print_forward){
-            printNetwork(histories[0]);
+            printNetwork(histories);
         }
 
         Vec weightsGradient = aggregateWeightGradients(histories);
@@ -124,7 +124,8 @@ public class Trainer implements ITrainer{
         return gradient.divide(inputs.length);
     }
 
-    private void printNetwork(History<Outcome, INode> history) {
+    private void printNetwork(History<Outcome, INode>[] histories) {
+        History<Outcome, INode> history = histories[0]; // print an example
         int time_count = history.getNumberOfTimesteps();
 
         StringBuilder sb = new StringBuilder();
@@ -158,11 +159,22 @@ public class Trainer implements ITrainer{
         }
 
         sb.append("Accuracy error : ");
-        sb.append(weightsGradient.getTotalError(history));
+        sb.append(getTotalError(histories, weightsGradient));
         sb.append("\nConsistency error : ");
-        sb.append(probabilityGradient.getTotalError(history));
+        probabilityGradient.setTargets(targets[0]);
+        sb.append(getTotalError(histories, probabilityGradient));
         sb.append("\n");
         System.out.println(sb.toString());
+    }
+
+    public double getTotalError(History<Outcome, INode>[] histories, IGradient errorEvaluator){
+        double error = 0;
+        for(int i = 0 ; i < histories.length ; i++){
+            History<Outcome, INode> history = histories[i];
+            errorEvaluator.setTargets(targets[i]);
+            error += errorEvaluator.getTotalError(history);
+        }
+        return error / histories.length;
     }
 
     private void applyWeightDeltas() {
@@ -191,7 +203,7 @@ public class Trainer implements ITrainer{
 
         ErrorFunction erf = new ErrorFunction.AugmentedRelativeError();
 
-        DirectNetworkGradient netGradient = new DirectNetworkGradient(network, new ForwardNetworkGradient(weightLinearizer), null, erf, weightLinearizer.totalNumOfVariables, true); 
+        DirectNetworkGradient netGradient = new DirectNetworkGradient(network, new ForwardNetworkGradient(weightLinearizer), null, erf, weightLinearizer.totalNumOfVariables); 
         ADAMSolver weightsSolver = new ADAMSolver(netGradient, weightLinearizer.totalNumOfVariables); 
 
         OutcomeChanceFilterGradient filterGradient = new OutcomeChanceFilterGradient(network, new ForwardFilterGradient(filterLinearizer), null, erf, filterLinearizer.totalNumOfVariables);

@@ -22,8 +22,6 @@ public class ForwardNetworkGradient implements INetworkGradient  {
     protected WeightsLinearizer linearizer;
     protected History<Outcome, INode> networkHistory;
 
-    private ArrayList<HashMap<Outcome, Vec>> gradientsThroughTime;
-
     public ForwardNetworkGradient(WeightsLinearizer linearizer) {
         this.linearizer = linearizer;
     }
@@ -32,7 +30,7 @@ public class ForwardNetworkGradient implements INetworkGradient  {
     public ArrayList<HashMap<Outcome, Vec>> getGradient(History<Outcome, INode> networkHistory) {
         this.networkHistory = networkHistory;
         int n_steps = networkHistory.getNumberOfTimesteps();
-        gradientsThroughTime = new ArrayList<>(n_steps);
+        ArrayList<HashMap<Outcome, Vec>> gradientsThroughTime = new ArrayList<>(n_steps);
 
         for(int timestep = 0; timestep < n_steps; timestep++){
             gradientsThroughTime.add(getGradientAtTime(timestep));

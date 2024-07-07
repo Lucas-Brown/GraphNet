@@ -98,7 +98,8 @@ public class AdderTest {
         arcBuilder.build(in3, out);
 
 
-        Trainer trainer = Trainer.getDefaultTrainer(net, adder.inputData, adder.outputData);
+        Trainer trainer = Trainer.getDefaultTrainer(net);
+        trainer.setTrainingData(adder.inputData, adder.outputData);
         trainer.trainNetwork(10000, 1000);
     }
 }

@@ -12,7 +12,7 @@ import com.lucasbrown.NetworkTraining.History;
 public class NetworkInputEvaluater {
 
     protected GraphNetwork network;
-    protected final History<Outcome, INode> networkHistory;
+    protected History<Outcome, INode> networkHistory;
 
     private int timestep;
     protected Double[][] inputs;
@@ -39,7 +39,7 @@ public class NetworkInputEvaluater {
             return null;
         }
         network.deactivateAll();
-        networkHistory.burnHistory();
+        networkHistory = new History<>(network);
         captureForward();
         return networkHistory;
     }

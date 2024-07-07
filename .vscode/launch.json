@@ -6,6 +6,13 @@
     "configurations": [
         {
             "type": "java",
+            "name": "Current File",
+            "request": "launch",
+            "mainClass": "${file}",
+            "vmArgs": "-enableassertions"
+        },
+        {
+            "type": "java",
             "name": "MultiLayerPeakTest",
             "request": "launch",
             "mainClass": "com.lucasbrown.NetworkTraining.MultiLayerPeakTest",
@@ -61,7 +68,7 @@
             "request": "launch",
             "mainClass": "com.lucasbrown.NetworkTraining.FibonacciNetworkTest",
             "projectName": "graph-net",
-            "vmArgs": "-enableassertions"
+            "vmArgs": "-enableassertions -Xmx3g"
         },
         {
             "type": "java",
@@ -159,13 +166,6 @@
             "request": "launch",
             "mainClass": "src.Tests.DistributionCorrectionTests",
             "projectName": "GraphNet_6831250",
-            "vmArgs": "-enableassertions"
-        },
-        {
-            "type": "java",
-            "name": "Current File",
-            "request": "launch",
-            "mainClass": "${file}",
             "vmArgs": "-enableassertions"
         },
         {

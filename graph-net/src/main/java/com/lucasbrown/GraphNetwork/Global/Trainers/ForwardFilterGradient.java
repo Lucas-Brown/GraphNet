@@ -2,6 +2,7 @@ package com.lucasbrown.GraphNetwork.Global.Trainers;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map.Entry;
 
 import com.lucasbrown.GraphNetwork.Local.Outcome;
@@ -77,7 +78,7 @@ public class ForwardFilterGradient implements INetworkGradient{
 
             // root derivative component
             Vec root_gradient = (Vec) rootOutcome.trainingData;
-            root_gradient = root_gradient.multiply(1/rootOutcome.probability);
+            root_gradient = root_gradient.divide(rootOutcome.probability);
 
             // distribution derivative
             IFilter filter = node.getIncomingConnectionFrom(rootOutcome.node).get().filter;
@@ -100,13 +101,14 @@ public class ForwardFilterGradient implements INetworkGradient{
             }
 
             // scale the root gradient and add to the total
-            gradient.mutableAdd(root_gradient.multiply(outcome.probability));
+            gradient.mutableAdd(root_gradient);
             root_count++;
         }
 
         for (double d : gradient.arrayCopy()) {
             assert Double.isFinite(d);
         }
+        gradient.mutableMultiply(outcome.probability);
         return gradient;
 
     }

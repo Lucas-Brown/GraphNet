@@ -10,48 +10,66 @@ import com.lucasbrown.GraphNetwork.Local.Nodes.ComplexNode;
 import com.lucasbrown.GraphNetwork.Local.Nodes.ITrainable;
 import com.lucasbrown.GraphNetwork.Local.Nodes.InputNode;
 import com.lucasbrown.GraphNetwork.Local.Nodes.OutputNode;
+import com.lucasbrown.GraphNetwork.Local.Nodes.SimpleNode;
+import com.lucasbrown.NetworkTraining.DataSetTraining.AmplifierFilter;
 import com.lucasbrown.NetworkTraining.DataSetTraining.BernoulliDistribution;
 import com.lucasbrown.NetworkTraining.DataSetTraining.BernoulliDistributionAdjuster;
 import com.lucasbrown.NetworkTraining.DataSetTraining.FlatRateFilter;
 import com.lucasbrown.NetworkTraining.DataSetTraining.NoAdjustments;
+import com.lucasbrown.NetworkTraining.DataSetTraining.NormalBernoulliFilterAdjuster;
 import com.lucasbrown.NetworkTraining.DataSetTraining.NormalDistribution;
+import com.lucasbrown.NetworkTraining.DataSetTraining.NormalPeakFilter;
+import com.lucasbrown.NetworkTraining.DataSetTraining.OpenFilter;
 
 public class FibonacciNetworkTest {
 
-    private static int counter = 0;
     private int offset = 2;
-    private int N = 20;
-    private Double[][] inputData;
-    private Double[][] outputData;
+    private int N = 10;
+    private Double[][][] inputData;
+    private Double[][][] outputData;
 
+    
     private void initializeInputData() {
-        inputData = new Double[N + offset][1];
-        inputData[0] = new Double[]{0d};
-        inputData[1] = new Double[]{1d};
-        for(int i = 2; i < N+offset; i++){
-            inputData[i] = new Double[]{null}; 
-        }
+        inputData = new Double[][][]{ createInput(0, 1), createInput(1, -1), createInput(1, 1) };
     }
 
+    private Double[][] createInput(double init_1, double init_2) {
+        Double[][] in = new Double[N + offset][1];
+        in[0] = new Double[] { init_1 };
+        in[1] = new Double[] { init_2 };
+        for (int i = offset; i < N + offset; i++) {
+            in[i] = new Double[] { null };
+        }
+        return in;
+    }
+    
     private void initializeOutputData() {
-        double[] sequence = fib();
-        outputData = new Double[N+offset][1];
-        int i = 0;
-        for(; i < offset; i++){
-            outputData[i] = new Double[]{null};
-        } 
-
-        for(; i < N+offset; i++){
-            outputData[i] = new Double[]{sequence[i-offset]};
+        outputData = new Double[inputData.length][][];
+        for(int i = 0; i < inputData.length; i++){
+            outputData[i] = createOutput(inputData[i]);
         }
     }
 
-    private double[] fib(){
+    private Double[][] createOutput(Double[][] input) {
+        double[] sequence = fib(input[0][0], input[1][0]);
+        Double[][] out = new Double[N + offset][1];
+        int i = 0;
+        for (; i < offset; i++) {
+            out[i] = new Double[] { null };
+        }
+
+        for (; i < N + offset; i++) {
+            out[i] = new Double[] { sequence[i - offset] };
+        }
+        return out;
+    }
+
+    private double[] fib(double init_1, double init_2) {
         double[] sequence = new double[N];
-        sequence[0] = 0;
-        sequence[1] = 1;
-        for(int i = 2; i < N; i++){
-            sequence[i] = sequence[i-1] + sequence[i-2];
+        sequence[0] = init_1;
+        sequence[1] = init_2;
+        for (int i = 2; i < N; i++) {
+            sequence[i] = sequence[i - 1] + sequence[i - 2];
         }
         return sequence;
     }
@@ -87,28 +105,28 @@ public class FibonacciNetworkTest {
         out.setName("Output");
 
         ArcBuilder arcBuilder = new ArcBuilder(net);
-        arcBuilder.setFilterSupplier(() -> new FlatRateFilter(0.99));
+        // arcBuilder.setFilterSupplier(() -> new AmplifierFilter(0.999, 1.5));
+        arcBuilder.setFilterSupplier(() -> new FlatRateFilter(0.5));
+        // arcBuilder.setFilterSupplier(OpenFilter::new);
         arcBuilder.setFilterAdjusterSupplier(NoAdjustments::new);
         // arcBuilder.setFilterSupplier(NormalPeakFilter::getStandardNormalBetaFilter);
         // arcBuilder.setFilterAdjusterSupplier(NormalBernoulliFilterAdjuster::new);
 
-        arcBuilder.build(in, hidden1);
+        arcBuilder.build(in, hidden1);  
         arcBuilder.build(hidden1, hidden2);
         arcBuilder.build(hidden2, hidden1);
         arcBuilder.build(hidden1, hidden1);
         arcBuilder.build(hidden1, out);
 
-
-        Trainer trainer = Trainer.getDefaultTrainer(net, fibNet.inputData, fibNet.outputData);
+        Trainer trainer = Trainer.getDefaultTrainer(net);
+        trainer.setTrainingData(fibNet.inputData, fibNet.outputData);
         // ADAMSolver weightSolver = (ADAMSolver) trainer.weightsSolver;
+        // weightSolver.alpha = 0.1;
 
-        
         // ADAMSolver probabilitySolver = (ADAMSolver) trainer.probabilitySolver;
-        // probabilitySolver.alpha = 1;
-        // probabilitySolver.epsilon = 0.001;
+        // probabilitySolver.alpha = 0.1;
 
-
-        trainer.trainNetwork(10000, 500);
+        trainer.trainNetwork(10000, 200);
         System.out.println();
     }
 }

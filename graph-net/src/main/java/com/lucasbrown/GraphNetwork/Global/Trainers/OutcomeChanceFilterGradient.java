@@ -25,35 +25,23 @@ public class OutcomeChanceFilterGradient extends GradientBase {
         if(outcomesAtTime == null || outcomesAtTime.isEmpty()){
             return gradient;
         }
-        
-        double probability = target == null ? 0 : 1; 
-
 
         for (Outcome outcome : outcomesAtTime) {
-
-            double error_derivative = errorFunction.error_derivative(outcome.probability, probability);
-
             // accumulate jacobians
-            Vec networkDerivative = gradientAtTime.get(outcome);
-            gradient.mutableAdd(networkDerivative.multiply(error_derivative));
+            gradient.mutableAdd(gradientAtTime.get(outcome));
         }
 
-        return gradient.divide(outcomesAtTime.size());
+        return target == null ? gradient : gradient.multiply(-1);
     }
 
     protected double computeErrorOfOutput(ArrayList<Outcome> outcomesAtTime, Double target) {
         if(outcomesAtTime == null || outcomesAtTime.isEmpty()){
             return 0;
         }
-
-        double probability = target == null ? 0 : 1; 
-
-
-        double error = 0;
-        for (Outcome outcome : outcomesAtTime) {
-            error += errorFunction.error(outcome.probability, probability);
-        }
-        return error/outcomesAtTime.size();
+        
+        double error = getProbabilityVolume(outcomesAtTime);
+        
+        return target == null ? error : 1 - error;
     }
 
     

@@ -3,6 +3,7 @@ package com.lucasbrown.NetworkTraining;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 
+import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.stream.IntStream;
@@ -31,18 +32,19 @@ import com.lucasbrown.NetworkTraining.DataSetTraining.NoAdjustments;
 import com.lucasbrown.NetworkTraining.DataSetTraining.NormalBernoulliFilterAdjuster;
 import com.lucasbrown.NetworkTraining.DataSetTraining.NormalDistribution;
 import com.lucasbrown.NetworkTraining.DataSetTraining.NormalPeakFilter;
+import com.lucasbrown.NetworkTraining.DataSetTraining.OpenFilter;
 
 import jsat.linear.Vec;
 
 public class ExponentialTest {
 
-    private static double base = -2;
-    private int N = 10;
+    private static double base = 2;
+    private int N = 50;
     private Double[][][] inputData;
     private Double[][][] outputData;
 
     private void initializeInputData() {
-        inputData = new Double[][][]{ createInput(1) };
+        inputData = new Double[][][]{ createInput(1), createInput(-2), createInput(0.3) };
     }
 
     private Double[][] createInput(double init_value){
@@ -101,7 +103,8 @@ public class ExponentialTest {
         ArcBuilder arcBuilder = new ArcBuilder(net);
         // arcBuilder.setFilterSupplier(NormalPeakFilter::getStandardNormalBetaFilter);
         // arcBuilder.setFilterAdjusterSupplier(NormalBernoulliFilterAdjuster::new);
-        arcBuilder.setFilterSupplier(() -> new FlatRateFilter(0.9999));
+        arcBuilder.setFilterSupplier(() -> new FlatRateFilter(0.999));
+        // arcBuilder.setFilterSupplier(OpenFilter::new);
         arcBuilder.setFilterAdjusterSupplier(NoAdjustments::new);
 
         arcBuilder.build(in, hidden);
@@ -238,11 +241,11 @@ public class ExponentialTest {
         GraphNetwork net = exponentialGrowth.initializeNetwork();
         Trainer trainer = Trainer.getDefaultTrainer(net);
         trainer.setTrainingData(exponentialGrowth.inputData, exponentialGrowth.outputData);
-        ADAMSolver weightSolver = (ADAMSolver) trainer.weightsSolver;
-        weightSolver.alpha = 1E-4;
-        weightSolver.epsilon = 1E-6;   
-        weightSolver.beta_1 = 0.99;
-        weightSolver.beta_2 = 0.999;
+        // ADAMSolver weightSolver = (ADAMSolver) trainer.weightsSolver;
+        // weightSolver.alpha = 1E-4;
+        // weightSolver.epsilon = 1E-6;   
+        // weightSolver.beta_1 = 0.99;
+        // weightSolver.beta_2 = 0.999;
 
         ADAMSolver probabilitySolver = (ADAMSolver) trainer.probabilitySolver;
         probabilitySolver.alpha = 0.1;

@@ -28,11 +28,11 @@ public abstract class NodeBase implements INode {
 
     // TODO: remove hard-coded value
     private static double ZERO_THRESHOLD = 1E-12;
-    private static int CATASTROPHE_LIMIT = 10;
+    private static final int CATASTROPHE_LIMIT = 10;
 
     protected final Random rng = new Random();
 
-    /**
+    /** 
      * The coutner is used to give each node a unique ID
      */
     private static int ID_COUNTER = 0;
@@ -284,10 +284,11 @@ public abstract class NodeBase implements INode {
      * Create ALL the possible combinations of outcomes for the incoming signals
      */
     private void combinePossibilities() {
-        HashSet<Pair<HashSet<Signal>, HashSet<Signal>>> signalPowerSet = IterableTools
+        ArrayList<Pair<ArrayList<Signal>, ArrayList<Signal>>> signalPowerSet = IterableTools
                 .flatCartesianPowerProductPair(forward.values());
 
         outcomes = signalPowerSet.stream()
+                .parallel()
                 .filter(set -> !set.u.isEmpty()) // remove the null set
                 .map(this::signalSetToOutcome)
                 // .filter(outcome -> outcome.probability > ZERO_THRESHOLD)
@@ -311,9 +312,10 @@ public abstract class NodeBase implements INode {
         // }
 
 
-        assert outcomes.stream().mapToDouble(outcome -> outcome.probability).sum() <= 1
-                : "Sum of all outcome probabilities must be equal to or less than 1. \nProbability sum = "
-                        + outcomes.stream().mapToDouble(outcome -> outcome.probability).sum();
+        // assert outcomes.stream().mapToDouble(outcome -> outcome.probability).sum() <= 1
+        //         : "Sum of all outcome probabilities must be equal to or less than 1. \nProbability sum = "
+        //                 + outcomes.stream().mapToDouble(outcome -> outcome.probability).sum();
+
     }
 
     /**

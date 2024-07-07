@@ -65,13 +65,13 @@ public class IterableTools {
      * @return a shallow copy of the input set
      */
     @SuppressWarnings("unchecked")
-    public static <T> HashSet<HashSet<T>> shallowCopy(HashSet<HashSet<T>> toCopy) {
+    public static <T> ArrayList<ArrayList<T>> shallowCopy(ArrayList<ArrayList<T>> toCopy) {
         // Create a new set to store the copied sets
-        HashSet<HashSet<T>> copy = new HashSet<>(toCopy.size());
+        ArrayList<ArrayList<T>> copy = new ArrayList<>(toCopy.size());
         // Iterate over each set in the input set
-        for (HashSet<T> t : toCopy) {
+        for (ArrayList<T> t : toCopy) {
             // Clone each set and add it to the copy set
-            copy.add((HashSet<T>) t.clone());
+            copy.add((ArrayList<T>) t.clone());
         }
         return copy;
     }
@@ -84,16 +84,16 @@ public class IterableTools {
      * @param collection the collection of sets
      * @return a set of pairs of subsets and their original sets
      */
-    public static <T> HashSet<Pair<HashSet<T>, HashSet<T>>> flatCartesianPowerProductPair(Collection<? extends Collection<T>> collection) {
+    public static <T> ArrayList<Pair<ArrayList<T>, ArrayList<T>>> flatCartesianPowerProductPair(Collection<? extends Collection<T>> collection) {
         // Generate the Cartesian product of the input collection
-        HashSet<HashSet<T>> cartesianProduct = flatCartesianProduct(collection);
+        ArrayList<ArrayList<T>> cartesianProduct = flatCartesianProduct(collection);
         // Initialize a set to store the result
-        HashSet<Pair<HashSet<T>, HashSet<T>>> flattened = new HashSet<>();
+        ArrayList<Pair<ArrayList<T>, ArrayList<T>>> flattened = new ArrayList<>();
 
         // Iterate over each set in the Cartesian product
-        for (HashSet<T> set : cartesianProduct) {
+        for (ArrayList<T> set : cartesianProduct) {
             // Generate the power set of the current set
-            HashSet<HashSet<T>> powerSet = powerSet(set);
+            ArrayList<ArrayList<T>> powerSet = powerSet(set);
             // Map each subset to a pair with its original set and add to the result
             flattened.addAll(powerSet.stream().map(powSet -> new Pair<>(powSet, set)).toList());
         }
@@ -108,14 +108,14 @@ public class IterableTools {
      * @param collection the collection of sets
      * @return a set of subsets of the Cartesian product
      */
-    public static <T> HashSet<HashSet<T>> flatCartesianPowerProduct(Collection<? extends Collection<T>> collection) {
+    public static <T> Collection<? extends Collection<T>> flatCartesianPowerProduct(Collection<? extends Collection<T>> collection) {
         // Generate the Cartesian product of the input collection
-        HashSet<HashSet<T>> cartesianProduct = flatCartesianProduct(collection);
+        Collection<? extends Collection<T>> cartesianProduct = flatCartesianProduct(collection);
         // Initialize a set to store the result
-        HashSet<HashSet<T>> flattened = new HashSet<>();
+        Collection<Collection<T>> flattened = new ArrayList<>();
 
         // Iterate over each set in the Cartesian product
-        for (HashSet<T> set : cartesianProduct) {
+        for (Collection<T> set : cartesianProduct) {
             // Generate the power set of the current set and add to the result
             flattened.addAll(powerSet(set));
         }
@@ -129,17 +129,17 @@ public class IterableTools {
      * @param set the input set
      * @return the power set of the input set
      */
-    public static <T> HashSet<HashSet<T>> powerSet(Set<T> set) {
+    public static <T> ArrayList<ArrayList<T>> powerSet(Collection<T> set) {
         // Initialize the power set with an empty set
-        HashSet<HashSet<T>> powerSet = new HashSet<>();
-        powerSet.add(new HashSet<>());
+        ArrayList<ArrayList<T>> powerSet = new ArrayList<>();
+        powerSet.add(new ArrayList<T>(1));
 
         // Iterate over each element in the input set
         for (T t : set) {
             // Create a copy of the current power set
-            HashSet<HashSet<T>> copy = shallowCopy(powerSet);
+            ArrayList<ArrayList<T>> copy = shallowCopy(powerSet);
             // Add the current element to each set in the copy
-            for (HashSet<T> tList : copy) {
+            for (Collection<T> tList : copy) {
                 tList.add(t);
             }
             // Add the modified sets to the power set
@@ -155,9 +155,9 @@ public class IterableTools {
      * @param collection the collection of sets
      * @return the Cartesian product of the input sets
      */
-    public static <T> HashSet<HashSet<T>> flatCartesianProduct(Collection<? extends Collection<T>> collection) {
+    public static <T> ArrayList<ArrayList<T>> flatCartesianProduct(Collection<? extends Collection<T>> collection) {
         // Initialize the Cartesian product
-        HashSet<HashSet<T>> cartesianProduct = new HashSet<>();
+        ArrayList<ArrayList<T>> cartesianProduct = new ArrayList<>();
 
         // If the input collection is empty, return an empty set
         if (collection.isEmpty())
@@ -167,7 +167,7 @@ public class IterableTools {
         Iterator<? extends Collection<T>> setItr = collection.iterator();
         // Initialize the Cartesian product with the first set in the collection
         for (T t : setItr.next()) {
-            HashSet<T> singleton = new HashSet<>(1);
+            ArrayList<T> singleton = new ArrayList<>(1);
             singleton.add(t);
             cartesianProduct.add(singleton);
         }
@@ -188,16 +188,16 @@ public class IterableTools {
      * @param s2  the second set
      * @return the Cartesian product of the input sets
      */
-    public static <T> HashSet<HashSet<T>> flatCartesianProduct(HashSet<? extends Collection<T>> s1, Collection<T> s2) {
+    public static <T> ArrayList<ArrayList<T>> flatCartesianProduct(ArrayList<? extends Collection<T>> s1, Collection<T> s2) {
         // Initialize the Cartesian product
-        HashSet<HashSet<T>> cartesianProduct = new HashSet<>();
+        ArrayList<ArrayList<T>> cartesianProduct = new ArrayList<>();
 
         // Iterate over each set in the first input set
         for (Collection<T> arr : s1) {
             // Iterate over each element in the second input set
             for (T t : s2) {
                 // Create a copy of the current set from the first input set
-                HashSet<T> sCopy = new HashSet<>(arr);
+                ArrayList<T> sCopy = new ArrayList<>(arr);
                 // Add the current element from the second input set to the copy
                 sCopy.add(t);
                 // Add the modified set to the Cartesian product

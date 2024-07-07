@@ -34,5 +34,20 @@ public class OpenFilter implements IFilter {
     public void setAdjustableParameters(double[] params) {
         // do nothing
     }
+
+    @Override
+    public void applyAdjustableParameterUpdate(double[] delta) {
+        // do nothing
+    }
+
+    @Override
+    public double[] getLogarithmicDerivative(double x) {
+        return new double[0];
+    }
+
+    @Override
+    public double[] getNegatedLogarithmicDerivative(double x) {
+        return new double[0];
+    }
     
 }
