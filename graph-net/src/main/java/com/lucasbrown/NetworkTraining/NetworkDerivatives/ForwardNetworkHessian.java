@@ -4,13 +4,11 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map.Entry;
 
-import com.lucasbrown.GraphNetwork.Global.GraphNetwork;
 import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
 import com.lucasbrown.GraphNetwork.Local.Outcome;
 import com.lucasbrown.GraphNetwork.Local.Nodes.INode;
-import com.lucasbrown.GraphNetwork.Local.Nodes.ITrainable;
 import com.lucasbrown.GraphNetwork.Local.Nodes.InputNode;
-import com.lucasbrown.NetworkTraining.History.History;
+import com.lucasbrown.GraphNetwork.Local.Nodes.ValueCombinators.SignalCombinator;
 import com.lucasbrown.NetworkTraining.History.NetworkHistory;
 import com.lucasbrown.NetworkTraining.Trainers.WeightsLinearizer;
 
@@ -35,7 +33,7 @@ public class ForwardNetworkHessian extends ForwardNetworkGradient implements INe
         int n_steps = networkHistory.getNumberOfTimesteps();
         hessianThroughTime = new ArrayList<>(n_steps);
 
-        for(int timestep = 0; timestep < n_steps; timestep++){
+        for (int timestep = 0; timestep < n_steps; timestep++) {
             hessianThroughTime.add(getHessianAtTime(timestep));
         }
 
@@ -46,8 +44,8 @@ public class ForwardNetworkHessian extends ForwardNetworkGradient implements INe
         HashMap<Outcome, Matrix> hessianMap = new HashMap<>();
         HashMap<INode, ArrayList<Outcome>> outcomeMap = networkHistory.getStateAtTimestep(timestep);
         for (Entry<INode, ArrayList<Outcome>> entry : outcomeMap.entrySet()) {
-            ITrainable node = (ITrainable) entry.getKey();
-            for(Outcome outcome : entry.getValue()){
+            INode node = entry.getKey();
+            for (Outcome outcome : entry.getValue()) {
                 hessianMap.put(outcome, getHessianOfOutcome(node, outcome));
             }
         }
@@ -60,7 +58,7 @@ public class ForwardNetworkHessian extends ForwardNetworkGradient implements INe
      * @param outcome
      * @param probabilityVolume
      */
-    protected Matrix getHessianOfOutcome(ITrainable node, Outcome outcome) {
+    protected Matrix getHessianOfOutcome(INode node, Outcome outcome) {
         castTrainingDataToHess(outcome);
         int totalNumOfVariables = linearizer.totalNumOfVariables;
         if (node instanceof InputNode) {
@@ -72,7 +70,8 @@ public class ForwardNetworkHessian extends ForwardNetworkGradient implements INe
         Vec z_jacobi = getZJacobi(node, outcome);
 
         int key = outcome.binary_string;
-        double[] weights = node.getWeights(key);
+        SignalCombinator combinator = node.getCombinator();
+        double[] weights = combinator.getWeights(key);
 
         // use the net value jacobian to compute the activation jacobian
         ActivationFunction activator = node.getActivationFunction();
@@ -105,20 +104,19 @@ public class ForwardNetworkHessian extends ForwardNetworkGradient implements INe
         return hessian;
     }
 
-    private void castTrainingDataToHess(Outcome outcome){
+    private void castTrainingDataToHess(Outcome outcome) {
         Vec jacobi = (Vec) outcome.trainingData;
         JacobiAndHess jah = new JacobiAndHess();
         jah.jacobian = jacobi;
         outcome.trainingData = jah;
     }
 
-    private Vec getZJacobi(ITrainable node, Outcome outcome){
+    private Vec getZJacobi(INode node, Outcome outcome) {
         double derivative = node.getActivationFunction().derivative(outcome.netValue);
         return ((JacobiAndHess) outcome.trainingData).jacobian.divide(derivative);
-    }    
+    }
 
-
-    private static class JacobiAndHess{
+    private static class JacobiAndHess {
         Vec jacobian;
         Matrix hessian;
     }

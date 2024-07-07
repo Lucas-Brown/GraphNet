@@ -2,14 +2,12 @@ package com.lucasbrown.NetworkTraining.NetworkDerivatives;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map.Entry;
 
 import com.lucasbrown.GraphNetwork.Local.Outcome;
 import com.lucasbrown.GraphNetwork.Local.Filters.IFilter;
+import com.lucasbrown.GraphNetwork.Local.Nodes.IInputNode;
 import com.lucasbrown.GraphNetwork.Local.Nodes.INode;
-import com.lucasbrown.GraphNetwork.Local.Nodes.ITrainable;
-import com.lucasbrown.GraphNetwork.Local.Nodes.InputNode;
 import com.lucasbrown.NetworkTraining.History.NetworkHistory;
 import com.lucasbrown.NetworkTraining.Trainers.FilterLinearizer;
 
@@ -45,7 +43,7 @@ public class ForwardFilterGradient implements INetworkGradient{
         HashMap<Outcome, Vec> gradientMap = new HashMap<>();
         HashMap<INode, ArrayList<Outcome>> outcomeMap = networkHistory.getStateAtTimestep(timestep);
         for (Entry<INode, ArrayList<Outcome>> entry : outcomeMap.entrySet()) {
-            ITrainable node = (ITrainable) entry.getKey();
+            INode node = entry.getKey();
             for(Outcome outcome : entry.getValue()){
                 gradientMap.put(outcome, computeGradientOfOutcome(node, outcome));
             }
@@ -53,12 +51,12 @@ public class ForwardFilterGradient implements INetworkGradient{
         return gradientMap;
     }
 
-    protected Vec computeGradientOfOutcome(ITrainable node, Outcome outcome) {
+    protected Vec computeGradientOfOutcome(INode node, Outcome outcome) {
         Vec gradient = new DenseVector(linearizer.totalNumOfVariables);
         outcome.trainingData = gradient;
 
         // the Jacobian and Hessian of the input matrix will always be zero
-        if (node instanceof InputNode) {
+        if (node instanceof IInputNode) {
             return gradient;
         }
 

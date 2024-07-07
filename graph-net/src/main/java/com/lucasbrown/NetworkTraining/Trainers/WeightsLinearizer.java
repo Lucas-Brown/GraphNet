@@ -6,37 +6,41 @@ import java.util.HashSet;
 
 import com.lucasbrown.GraphNetwork.Global.GraphNetwork;
 import com.lucasbrown.GraphNetwork.Local.Nodes.INode;
-import com.lucasbrown.GraphNetwork.Local.Nodes.ITrainable;
 import com.lucasbrown.GraphNetwork.Local.Nodes.OutputNode;
+import com.lucasbrown.GraphNetwork.Local.Nodes.ValueCombinators.TrainableCombinator;
 import com.lucasbrown.HelperClasses.IterableTools;
+import com.lucasbrown.HelperClasses.Structs.Pair;
+import com.lucasbrown.NetworkTraining.UntrainableNetworkException;
 
 public class WeightsLinearizer {
     
-    public final HashMap<ITrainable, Integer> vectorNodeOffset;
-    public final HashSet<ITrainable> allNodes;
+    public final HashMap<INode, Pair<Integer, TrainableCombinator>> vectorNodeOffset;
+    public final HashSet<INode> allNodes;
     public final ArrayList<OutputNode> outputNodes; 
     public final int totalNumOfVariables;
 
     public WeightsLinearizer(GraphNetwork network){
         ArrayList<INode> nodes = network.getNodes();
-        allNodes = new HashSet<>(nodes.size());
+        allNodes = new HashSet<>(network.getNodes());
         outputNodes = network.getOutputNodes();
         vectorNodeOffset = new HashMap<>(nodes.size());
-        castAllToTrainable(nodes);
+        verifyAllTrainable(nodes);
         totalNumOfVariables = InitializeOffsetMap();
     }
 
-    private void castAllToTrainable(ArrayList<INode> nodes) {
+    private void verifyAllTrainable(ArrayList<INode> nodes) {
         for (INode node : nodes) {
-            allNodes.add((ITrainable) node);
+            if(!(node.getCombinator() instanceof TrainableCombinator)){
+                throw new UntrainableNetworkException("Network contains a combinator that does not allow training.");
+            } 
         }
     }
     
     private int InitializeOffsetMap() {
         int totalNumOfVariables = 0;
-        for (ITrainable node : allNodes) {
-            vectorNodeOffset.put(node, totalNumOfVariables);
-            totalNumOfVariables += node.getNumberOfVariables();
+        for (INode node : allNodes) {
+            vectorNodeOffset.put(node, new Pair<>(totalNumOfVariables, (TrainableCombinator) node.getCombinator()));
+            totalNumOfVariables += node.getCombinator().getNumberOfVariables();
         }
         return totalNumOfVariables;
     } 
@@ -46,12 +50,14 @@ public class WeightsLinearizer {
         return totalNumOfVariables;
     }
 
-    public int getLinearIndexOfWeight(ITrainable node, int key, int weight_index) {
-        return vectorNodeOffset.get(node) + node.getLinearIndexOfWeight(key, weight_index);
+    public int getLinearIndexOfWeight(INode node, int key, int weight_index) {
+        Pair<Integer, TrainableCombinator> indexCombinPair = vectorNodeOffset.get(node);
+        return indexCombinPair.u + indexCombinPair.v.getLinearIndexOfWeight(key, weight_index);
     }
 
-    public int getLinearIndexOfBias(ITrainable node, int key) {
-        return vectorNodeOffset.get(node) + node.getLinearIndexOfBias(key);
+    public int getLinearIndexOfBias(INode node, int key) {
+        Pair<Integer, TrainableCombinator> indexCombinPair = vectorNodeOffset.get(node);
+        return indexCombinPair.u + indexCombinPair.v.getLinearIndexOfBias(key);
     }
 
     /**
@@ -60,7 +66,8 @@ public class WeightsLinearizer {
      * @param allDeltas
      * @return
      */
-    public double[] nodeSlice(ITrainable node, double[] allDeltas) {
-        return IterableTools.slice(allDeltas, (int) vectorNodeOffset.get(node), node.getNumberOfVariables());
+    public double[] nodeSlice(INode node, double[] allDeltas) {
+        Pair<Integer, TrainableCombinator> indexCombinPair = vectorNodeOffset.get(node);
+        return IterableTools.slice(allDeltas, (int) indexCombinPair.u, indexCombinPair.v.getNumberOfVariables());
     }
 }

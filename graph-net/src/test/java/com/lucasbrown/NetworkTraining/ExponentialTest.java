@@ -19,11 +19,11 @@ import com.lucasbrown.GraphNetwork.Local.Outcome;
 import com.lucasbrown.GraphNetwork.Local.Filters.FlatRateFilter;
 import com.lucasbrown.GraphNetwork.Local.Filters.NormalPeakFilter;
 import com.lucasbrown.GraphNetwork.Local.Filters.OpenFilter;
-import com.lucasbrown.GraphNetwork.Local.Nodes.ComplexNode;
 import com.lucasbrown.GraphNetwork.Local.Nodes.INode;
 import com.lucasbrown.GraphNetwork.Local.Nodes.ITrainable;
 import com.lucasbrown.GraphNetwork.Local.Nodes.InputNode;
 import com.lucasbrown.GraphNetwork.Local.Nodes.OutputNode;
+import com.lucasbrown.GraphNetwork.Local.Nodes.ValueCombinators.ComplexCombinator;
 import com.lucasbrown.NetworkTraining.DistributionSolverMethods.BernoulliDistribution;
 import com.lucasbrown.NetworkTraining.DistributionSolverMethods.BernoulliDistributionAdjuster;
 import com.lucasbrown.NetworkTraining.DistributionSolverMethods.NoAdjustments;
@@ -82,7 +82,7 @@ public class ExponentialTest {
         NodeBuilder nodeBuilder = new NodeBuilder(net);
 
         nodeBuilder.setActivationFunction(ActivationFunction.LINEAR);
-        nodeBuilder.setNodeConstructor(ComplexNode::new);
+        nodeBuilder.setNodeConstructor(ComplexCombinator::new);
         nodeBuilder.setOutputDistSupplier(NormalDistribution::getStandardNormalDistribution);
         // nodeBuilder.setOutputDistAdjusterSupplier(NormalDistributionFromData::new);
         nodeBuilder.setProbabilityDistSupplier(BernoulliDistribution::getEvenDistribution);

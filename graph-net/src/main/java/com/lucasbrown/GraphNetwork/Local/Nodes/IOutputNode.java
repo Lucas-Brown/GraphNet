@@ -16,6 +16,4 @@ public interface IOutputNode {
      *         otherwise returns null
      */
     public abstract Double getValueOrNull();
-
-    public abstract void acceptUserBackwardSignal(double value);
 }

@@ -1,16 +1,7 @@
-package com.lucasbrown.GraphNetwork.Local.Nodes;
+package com.lucasbrown.GraphNetwork.Local.Nodes.ValueCombinators;
 
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
-import java.util.stream.IntStream;
-
-import com.lucasbrown.GraphNetwork.Global.GraphNetwork;
-import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
-import com.lucasbrown.GraphNetwork.Local.Edge;
-import com.lucasbrown.GraphNetwork.Local.Signal;
-import com.lucasbrown.NetworkTraining.DistributionSolverMethods.IExpectationAdjuster;
-import com.lucasbrown.NetworkTraining.DistributionSolverMethods.ITrainableDistribution;
+import java.util.Random;
 
 /**
  * A node within a graph neural network.
@@ -18,7 +9,7 @@ import com.lucasbrown.NetworkTraining.DistributionSolverMethods.ITrainableDistri
  * Each node uses a @code NodeConnection to evaluate its own likelyhood of
  * sending a signal out to other connected nodes
  */
-public class ComplexNode extends TrainableNodeBase {
+public class ComplexCombinator extends TrainableCombinator {
 
     /**
      * Each possible combinations of inputs has a corresponding unique set of
@@ -31,26 +22,22 @@ public class ComplexNode extends TrainableNodeBase {
 
     protected int numWeights = 0;
 
-    public ComplexNode(final GraphNetwork network, final ActivationFunction activationFunction,
-            ITrainableDistribution outputDistribution, IExpectationAdjuster outputAdjuster,
-            ITrainableDistribution signalChanceDistribution, IExpectationAdjuster chanceAdjuster) {
-        super(network, activationFunction, outputDistribution, outputAdjuster, signalChanceDistribution,
-                chanceAdjuster);
+    private Random rng;
+
+    public ComplexCombinator(){
+        this(new Random());
+    }
+
+    public ComplexCombinator(Random random){
+        rng = random;
         weights = new double[1][1];
         biases = new double[1];
         weights[0] = new double[0];
     }
 
-    /**
-     * Add an incoming connection to the node
-     * 
-     * @param connection
-     * @return true
-     */
     @Override
-    public boolean addIncomingConnection(Edge connection) {
+    public void notifyNewIncomingConnection() {
         appendWeightsAndBiases();
-        return super.addIncomingConnection(connection);
     }
 
     /**
@@ -114,27 +101,6 @@ public class ComplexNode extends TrainableNodeBase {
         return numWeights + key - 1; // key = 0 aligns with the end of weights
     }
 
-    /**
-     * Compute the merged signal strength of a set of incoming signals
-     * 
-     * @param incomingSignals
-     * @return
-     */
-    @Override
-    public double computeMergedSignalStrength(Collection<Signal> incomingSignals, int binary_string) {
-
-        ArrayList<Signal> sortedSignals = sortSignalByID(incomingSignals);
-
-        double[] input_weights = weights[binary_string];
-
-        double strength = IntStream.range(0, input_weights.length)
-                .mapToDouble(i -> input_weights[i] * sortedSignals.get(i).getOutputStrength())
-                .sum();
-
-        strength += biases[binary_string];
-
-        return strength;
-    }
 
     @Override
     public void applyDelta(double[] gradient) {
@@ -142,7 +108,7 @@ public class ComplexNode extends TrainableNodeBase {
         int i = 0;
         int key = 1;
         int linear_index = 0;
-        while (key < getNumInputCombinations()) {
+        while (key < weights.length) {
             weights[key][i] -= gradient[linear_index];
             i++;
             linear_index++;

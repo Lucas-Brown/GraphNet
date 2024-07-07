@@ -1,12 +1,11 @@
 package com.lucasbrown.GraphNetwork.Local.Nodes;
 
 /**
- * A node which exposes it's value and can be sent a corrective (backward)
- * signal
+ * A node which exposes it's value 
  */
 public class OutputNode extends NodeWrapper implements IOutputNode {
 
-    public OutputNode(ITrainable node) {
+    public OutputNode(INode node) {
         super(node);
     }
 
@@ -29,11 +28,6 @@ public class OutputNode extends NodeWrapper implements IOutputNode {
     @Override
     public Double getValueOrNull() {
         return hasValidForwardSignal() ? 0d : null;
-    }
-
-    @Override
-    public void acceptUserBackwardSignal(double value) {
-        // super.recieveBackwardSignal(new Signal(this, null, -1, value, 1));
     }
 
 }

@@ -6,6 +6,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Random;
 import java.util.stream.Collectors;
@@ -15,16 +16,11 @@ import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
 import com.lucasbrown.GraphNetwork.Local.Edge;
 import com.lucasbrown.GraphNetwork.Local.Outcome;
 import com.lucasbrown.GraphNetwork.Local.Signal;
+import com.lucasbrown.GraphNetwork.Local.Nodes.ValueCombinators.SignalCombinator;
 import com.lucasbrown.HelperClasses.IterableTools;
 import com.lucasbrown.HelperClasses.Structs.Pair;
 
-/**
- * A node within a graph neural network.
- * Capable of sending and recieving signals from other nodes.
- * Each node uses a @code NodeConnection to evaluate its own likelyhood of
- * sending a signal out to other connected nodes
- */
-public abstract class NodeBase implements INode {
+public class Node implements INode{
 
     // TODO: remove hard-coded value
     private static double ZERO_THRESHOLD = 1E-12;
@@ -80,12 +76,15 @@ public abstract class NodeBase implements INode {
     protected ArrayList<Outcome> outcomes;
 
     protected boolean hasValidForwardSignal;
+    
+    private final SignalCombinator signalCombinator;
 
-    public NodeBase(GraphNetwork network, final ActivationFunction activationFunction) {
+    public Node(GraphNetwork network, final ActivationFunction activationFunction, final SignalCombinator signalCombinator) {
         id = ID_COUNTER++;
         name = "INode " + id;
-        this.network = network;
-        this.activationFunction = activationFunction;
+        this.network = Objects.requireNonNull(network);
+        this.activationFunction = Objects.requireNonNull(activationFunction);
+        this.signalCombinator = Objects.requireNonNull(signalCombinator);
         incoming = new ArrayList<Edge>();
         outgoing = new ArrayList<Edge>();
         orderedIDMap = new HashMap<>();
@@ -125,6 +124,11 @@ public abstract class NodeBase implements INode {
     @Override
     public ActivationFunction getActivationFunction() {
         return activationFunction;
+    }
+
+    @Override
+    public SignalCombinator getCombinator(){
+        return signalCombinator;
     }
 
     protected int getIndexOfIncomingNode(INode incoming) {
@@ -250,6 +254,7 @@ public abstract class NodeBase implements INode {
      * @param binStr
      * @return
      */
+    @Override
     public ArrayList<Edge> binStrToArcList(int binStr) {
         ArrayList<Edge> arcs = new ArrayList<Edge>(incoming.size());
         for (int i = 0; i < incoming.size(); i++) {
@@ -268,6 +273,7 @@ public abstract class NodeBase implements INode {
      * 
      * @throws InvalidAlgorithmParameterException
      */
+    @Override
     public void acceptSignals() throws InvalidAlgorithmParameterException {
         if (forwardNext.isEmpty()) {
             throw new InvalidAlgorithmParameterException(
@@ -334,7 +340,7 @@ public abstract class NodeBase implements INode {
         List<INode> nodeSet = signalSet.stream().map(signal -> signal.sendingNode).toList();
         outcome.node = this;
         outcome.binary_string = nodeSetToBinStr(nodeSet);
-        outcome.netValue = computeMergedSignalStrength(signalSet, outcome.binary_string);
+        outcome.netValue = signalCombinator.computeMergedSignalStrength(signalSet, outcome.binary_string);
         outcome.activatedValue = activationFunction.activator(outcome.netValue);
         outcome.probability = getProbabilityOfSignalSet(signalSet, setPair.v);
         outcome.sourceTransferProbabilities = signalSet.stream().mapToDouble(Signal::getFiringProbability).toArray();
@@ -384,16 +390,18 @@ public abstract class NodeBase implements INode {
         hasValidForwardSignal = false;
     }
 
+    @Override
     public ArrayList<Outcome> getState() {
         return outcomes;
     }
 
-    public int mappedIDComparator(Signal s1, Signal s2) {
+    private int mappedIDComparator(Signal s1, Signal s2) {
         int i1 = orderedIDMap.get(s1.sendingNode.getID());
         int i2 = orderedIDMap.get(s2.sendingNode.getID());
         return i1 - i2;
     }
 
+    @Override
     public void clearSignals() {
         hasValidForwardSignal = false;
         forward.clear();
@@ -427,7 +435,11 @@ public abstract class NodeBase implements INode {
         return INode.areNodesEqual(this, (INode) o);
     }
 
-    public class SignalSetEvaluator{
+    public static int CompareNodes(INode n1, INode n2) {
+        return n1.getID() - n2.getID();
+    }
 
+    public static boolean areNodesEqual(INode n1, INode n2) {
+        return n1.getID() == n2.getID();
     }
 }

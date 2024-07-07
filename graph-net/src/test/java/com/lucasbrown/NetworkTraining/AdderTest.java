@@ -9,9 +9,9 @@ import com.lucasbrown.GraphNetwork.Global.GraphNetwork;
 import com.lucasbrown.GraphNetwork.Global.NodeBuilder;
 import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
 import com.lucasbrown.GraphNetwork.Local.Filters.NormalPeakFilter;
-import com.lucasbrown.GraphNetwork.Local.Nodes.ComplexNode;
 import com.lucasbrown.GraphNetwork.Local.Nodes.InputNode;
 import com.lucasbrown.GraphNetwork.Local.Nodes.OutputNode;
+import com.lucasbrown.GraphNetwork.Local.Nodes.ValueCombinators.ComplexCombinator;
 import com.lucasbrown.NetworkTraining.DistributionSolverMethods.BetaDistribution;
 import com.lucasbrown.NetworkTraining.DistributionSolverMethods.BetaDistributionAdjuster2;
 import com.lucasbrown.NetworkTraining.DistributionSolverMethods.NormalBetaFilterAdjuster2;
@@ -66,7 +66,7 @@ public class AdderTest {
         NodeBuilder nodeBuilder = new NodeBuilder(net);
 
         nodeBuilder.setActivationFunction(ActivationFunction.LINEAR);
-        nodeBuilder.setNodeConstructor(ComplexNode::new);
+        nodeBuilder.setNodeConstructor(ComplexCombinator::new);
         nodeBuilder.setOutputDistSupplier(NormalDistribution::getStandardNormalDistribution);
         // nodeBuilder.setOutputDistAdjusterSupplier(NormalDistributionFromData::new);
         nodeBuilder.setProbabilityDistSupplier(BetaDistribution::getUniformBetaDistribution);

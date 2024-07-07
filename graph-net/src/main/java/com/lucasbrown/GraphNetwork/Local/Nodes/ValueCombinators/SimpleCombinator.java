@@ -1,16 +1,9 @@
-package com.lucasbrown.GraphNetwork.Local.Nodes;
+package com.lucasbrown.GraphNetwork.Local.Nodes.ValueCombinators;
 
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
+import java.util.Random;
 
-import com.lucasbrown.GraphNetwork.Global.GraphNetwork;
-import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
-import com.lucasbrown.GraphNetwork.Local.Edge;
-import com.lucasbrown.GraphNetwork.Local.Signal;
 import com.lucasbrown.HelperClasses.IterableTools;
-import com.lucasbrown.NetworkTraining.DistributionSolverMethods.IExpectationAdjuster;
-import com.lucasbrown.NetworkTraining.DistributionSolverMethods.ITrainableDistribution;
 
 /**
  * A node within a graph neural network.
@@ -18,30 +11,25 @@ import com.lucasbrown.NetworkTraining.DistributionSolverMethods.ITrainableDistri
  * Each node uses a @code NodeConnection to evaluate its own likelyhood of
  * sending a signal out to other connected nodes
  */
-public class SimpleNode extends TrainableNodeBase {
+public class SimpleCombinator extends TrainableCombinator {
 
+    private Random rng;
     protected double[] weights;
     protected double bias;
 
-    public SimpleNode(final GraphNetwork network, final ActivationFunction activationFunction,
-            ITrainableDistribution outputDistribution, IExpectationAdjuster outputAdjuster,
-            ITrainableDistribution signalChanceDistribution, IExpectationAdjuster chanceAdjuster) {
-        super(network, activationFunction, outputDistribution, outputAdjuster, signalChanceDistribution,
-                chanceAdjuster);
+    public SimpleCombinator(){
+        this(new Random());
+    }
+
+    public SimpleCombinator(Random random){
+        rng = random;
         weights = new double[0];
         bias = rng.nextGaussian();
     }
 
-    /**
-     * Add an incoming connection to the node
-     * 
-     * @param connection
-     * @return true
-     */
     @Override
-    public boolean addIncomingConnection(Edge connection) {
+    public void notifyNewIncomingConnection() {
         appendWeights();
-        return super.addIncomingConnection(connection);
     }
 
     /**
@@ -96,28 +84,6 @@ public class SimpleNode extends TrainableNodeBase {
     @Override
     public int getLinearIndexOfBias(int key) {
         return weights.length;
-    }
-
-    /**
-     * Compute the merged signal strength of a set of incoming signals
-     * 
-     * @param incomingSignals
-     * @return
-     */
-    @Override
-    public double computeMergedSignalStrength(Collection<Signal> incomingSignals, int binary_string) {
-
-        ArrayList<Signal> sortedSignals = sortSignalByID(incomingSignals);
-
-        double strength = bias;
-        double[] weights_of_signals = getWeights(binary_string);
-
-        for (int i = 0; i < weights_of_signals.length; i++) {
-            strength += sortedSignals.get(i).getOutputStrength() * weights_of_signals[i];
-        }
-
-        assert Double.isFinite(strength);
-        return strength;
     }
 
     @Override

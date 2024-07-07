@@ -10,14 +10,13 @@ import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
 import com.lucasbrown.GraphNetwork.Local.Edge;
 import com.lucasbrown.GraphNetwork.Local.Outcome;
 import com.lucasbrown.GraphNetwork.Local.Signal;
-import com.lucasbrown.NetworkTraining.DistributionSolverMethods.IExpectationAdjuster;
-import com.lucasbrown.NetworkTraining.DistributionSolverMethods.ITrainableDistribution;
+import com.lucasbrown.GraphNetwork.Local.Nodes.ValueCombinators.SignalCombinator;
 
-public class NodeWrapper implements ITrainable {
+public class NodeWrapper implements INode {
 
-    protected ITrainable wrappingNode;
+    protected INode wrappingNode;
 
-    public NodeWrapper(ITrainable node) {
+    public NodeWrapper(INode node) {
         wrappingNode = node;
     }
 
@@ -49,16 +48,6 @@ public class NodeWrapper implements ITrainable {
     @Override
     public ActivationFunction getActivationFunction() {
         return wrappingNode.getActivationFunction();
-    }
-
-    @Override
-    public ITrainableDistribution getOutputDistribution() {
-        return wrappingNode.getOutputDistribution();
-    }
-
-    @Override
-    public ITrainableDistribution getSignalChanceDistribution() {
-        return wrappingNode.getSignalChanceDistribution();
     }
 
     /**
@@ -140,16 +129,6 @@ public class NodeWrapper implements ITrainable {
     }
 
     @Override
-    public double[] getWeights(int bitStr) {
-        return wrappingNode.getWeights(bitStr);
-    }
-
-    @Override
-    public double getBias(int bitStr) {
-        return wrappingNode.getBias(bitStr);
-    }
-
-    @Override
     public void sendForwardSignals() {
         wrappingNode.sendForwardSignals();
     }
@@ -157,16 +136,6 @@ public class NodeWrapper implements ITrainable {
     @Override
     public ArrayList<Outcome> getState() {
         return wrappingNode.getState();
-    }
-
-    @Override
-    public void applyDistributionUpdate() {
-        wrappingNode.applyDistributionUpdate();
-    }
-
-    @Override
-    public void applyFilterUpdate() {
-        wrappingNode.applyFilterUpdate();
     }
 
     @Override
@@ -179,50 +148,6 @@ public class NodeWrapper implements ITrainable {
         wrappingNode.clearSignals();
     }
 
-    @Override
-    public double computeMergedSignalStrength(Collection<Signal> incomingSignals, int binary_string) {
-        return wrappingNode.computeMergedSignalStrength(incomingSignals, binary_string);
-    }
-
-    @Override
-    public void setWeights(int bitStr, double[] newWeights) {
-        wrappingNode.setBias(bitStr, bitStr);
-    }
-
-    @Override
-    public void setBias(int bitStr, double newBias) {
-        wrappingNode.setBias(bitStr, newBias);
-    }
-
-    @Override
-    public int getNumberOfVariables() {
-        return wrappingNode.getNumberOfVariables();
-    }
-
-    @Override
-    public int getLinearIndexOfWeight(int key, int weight_index) {
-        return wrappingNode.getLinearIndexOfWeight(key, weight_index);
-    }
-
-    @Override
-    public int getLinearIndexOfBias(int key) {
-        return wrappingNode.getLinearIndexOfBias(key);
-    }
-
-    @Override
-    public IExpectationAdjuster getOutputDistributionAdjuster() {
-        return wrappingNode.getOutputDistributionAdjuster();
-    }
-
-    @Override
-    public IExpectationAdjuster getSignalChanceDistributionAdjuster() {
-        return wrappingNode.getSignalChanceDistributionAdjuster();
-    }
-
-    @Override
-    public void applyDelta(double[] gradient) {
-        wrappingNode.applyDelta(gradient);
-    }
 
     @Override
     public int compareTo(INode o) {
@@ -242,13 +167,18 @@ public class NodeWrapper implements ITrainable {
     }
 
     @Override
-    public int getNumberOfParameters() {
-        return wrappingNode.getNumberOfParameters();
+    public int nodeSetToBinStr(Collection<INode> incomingNodes) {
+        return wrappingNode.nodeSetToBinStr(incomingNodes);
     }
 
     @Override
-    public void setParameters(double[] params) {
-        wrappingNode.setParameters(params);
+    public ArrayList<Edge> binStrToArcList(int binStr) {
+        return wrappingNode.binStrToArcList(binStr);
+    }
+
+    @Override
+    public SignalCombinator getCombinator(){
+        return wrappingNode.getCombinator();
     }
 
 }

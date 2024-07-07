@@ -6,8 +6,9 @@ import java.util.stream.Collectors;
 import com.lucasbrown.GraphNetwork.Global.GraphNetwork;
 import com.lucasbrown.GraphNetwork.Local.Outcome;
 import com.lucasbrown.GraphNetwork.Local.Filters.IFilter;
-import com.lucasbrown.GraphNetwork.Local.Nodes.ITrainable;
+import com.lucasbrown.GraphNetwork.Local.Nodes.INode;
 import com.lucasbrown.GraphNetwork.Local.Nodes.OutputNode;
+import com.lucasbrown.GraphNetwork.Local.Nodes.ValueCombinators.TrainableCombinator;
 import com.lucasbrown.NetworkTraining.History.NetworkHistory;
 import com.lucasbrown.NetworkTraining.NetworkDerivatives.ForwardFilterGradient;
 import com.lucasbrown.NetworkTraining.NetworkDerivatives.ForwardNetworkGradient;
@@ -21,7 +22,7 @@ import com.lucasbrown.NetworkTraining.Solvers.ISolver;
 import jsat.linear.DenseVector;
 import jsat.linear.Vec;
 
-public class Trainer implements ITrainer{
+public class Trainer implements ITrainer {
 
     private final GraphNetwork network;
 
@@ -39,8 +40,10 @@ public class Trainer implements ITrainer{
     protected Double[][][] inputs;
     protected Double[][][] targets;
 
-    public Trainer(NetworkInputEvaluater networkEvaluater, IGradient weightsGradient, ISolver weightsSolver, IGradient probabilityGradient, ISolver probabilitySolver, WeightsLinearizer weightLinearizer, FilterLinearizer filterLinearizer) {
-        
+    public Trainer(NetworkInputEvaluater networkEvaluater, IGradient weightsGradient, ISolver weightsSolver,
+            IGradient probabilityGradient, ISolver probabilitySolver, WeightsLinearizer weightLinearizer,
+            FilterLinearizer filterLinearizer) {
+
         this.weightsGradient = weightsGradient;
         this.probabilityGradient = probabilityGradient;
         this.weightsSolver = weightsSolver;
@@ -60,10 +63,9 @@ public class Trainer implements ITrainer{
      * @param targets
      */
     public void setTrainingData(Double[][] inputs, Double[][] targets) {
-        setTrainingData(new Double[][][]{inputs}, new Double[][][]{targets});
+        setTrainingData(new Double[][][] { inputs }, new Double[][][] { targets });
     }
 
-    
     /**
      * input and target dimension : [timestep][node]
      * 
@@ -83,7 +85,7 @@ public class Trainer implements ITrainer{
 
     public void trainingStep(boolean print_forward) {
         NetworkHistory[] histories = computeAllHistories();
-        if(print_forward){
+        if (print_forward) {
             printNetwork(histories);
         }
 
@@ -97,18 +99,18 @@ public class Trainer implements ITrainer{
         applyProbabilityDeltas();
     }
 
-    public NetworkHistory[] computeAllHistories(){
+    public NetworkHistory[] computeAllHistories() {
         NetworkHistory[] histories = new NetworkHistory[inputs.length];
-        for(int i = 0; i < inputs.length; i++){
+        for (int i = 0; i < inputs.length; i++) {
             networkEvaluater.setInputData(inputs[i]);
             histories[i] = networkEvaluater.computeNetworkInference();
         }
         return histories;
-    }    
+    }
 
-    private Vec aggregateWeightGradients(NetworkHistory[] histories){
+    private Vec aggregateWeightGradients(NetworkHistory[] histories) {
         Vec gradient = new DenseVector(weightLinearizer.totalNumOfVariables);
-        for(int i = 0; i < inputs.length; i++){
+        for (int i = 0; i < inputs.length; i++) {
             weightsGradient.setTargets(targets[i]);
             Vec grad = weightsGradient.computeGradient(histories[i]);
             gradient.mutableAdd(grad);
@@ -116,9 +118,9 @@ public class Trainer implements ITrainer{
         return gradient.divide(inputs.length);
     }
 
-    private Vec aggregateProbabilityGradients(NetworkHistory[] histories){
+    private Vec aggregateProbabilityGradients(NetworkHistory[] histories) {
         Vec gradient = new DenseVector(filterLinearizer.totalNumOfVariables);
-        for(int i = 0; i < inputs.length; i++){
+        for (int i = 0; i < inputs.length; i++) {
             probabilityGradient.setTargets(targets[i]);
             gradient.mutableAdd(probabilityGradient.computeGradient(histories[i]));
         }
@@ -141,7 +143,7 @@ public class Trainer implements ITrainer{
                 OutputNode node = nodes.get(i);
                 ArrayList<Outcome> outcomes = history.getStateOfRecord(t, node);
 
-                if(outcomes == null || outcomes.isEmpty()){
+                if (outcomes == null || outcomes.isEmpty()) {
                     continue;
                 }
 
@@ -168,9 +170,9 @@ public class Trainer implements ITrainer{
         System.out.println(sb.toString());
     }
 
-    public double getTotalError(NetworkHistory[] histories, IGradient errorEvaluator){
+    public double getTotalError(NetworkHistory[] histories, IGradient errorEvaluator) {
         double error = 0;
-        for(int i = 0 ; i < histories.length ; i++){
+        for (int i = 0; i < histories.length; i++) {
             NetworkHistory history = histories[i];
             errorEvaluator.setTargets(targets[i]);
             error += errorEvaluator.getTotalError(history);
@@ -182,10 +184,10 @@ public class Trainer implements ITrainer{
         weightLinearizer.allNodes.forEach(this::applyErrorSignalsToNode);
     }
 
-    private void applyErrorSignalsToNode(ITrainable node) {
+    private void applyErrorSignalsToNode(INode node) {
         double[] allDeltas = weightsDeltas.arrayCopy();
         double[] gradient = weightLinearizer.nodeSlice(node, allDeltas);
-        node.applyDelta(gradient);
+        ((TrainableCombinator) node.getCombinator()).applyDelta(gradient);
     }
 
     private void applyProbabilityDeltas() {
@@ -197,19 +199,22 @@ public class Trainer implements ITrainer{
         filter.applyAdjustableParameterUpdate(gradient);
     }
 
-    public static Trainer getDefaultTrainer(GraphNetwork network){
+    public static Trainer getDefaultTrainer(GraphNetwork network) {
         WeightsLinearizer weightLinearizer = new WeightsLinearizer(network);
         FilterLinearizer filterLinearizer = new FilterLinearizer(network);
         NetworkInputEvaluater networkEvaluater = new NetworkInputEvaluater(network);
 
         ErrorFunction erf = new ErrorFunction.AugmentedRelativeError();
 
-        DirectNetworkGradient netGradient = new DirectNetworkGradient(network, new ForwardNetworkGradient(weightLinearizer), null, erf, weightLinearizer.totalNumOfVariables); 
-        ADAMSolver weightsSolver = new ADAMSolver(netGradient, weightLinearizer.totalNumOfVariables); 
+        DirectNetworkGradient netGradient = new DirectNetworkGradient(network,
+                new ForwardNetworkGradient(weightLinearizer), null, erf, weightLinearizer.totalNumOfVariables);
+        ADAMSolver weightsSolver = new ADAMSolver(netGradient, weightLinearizer.totalNumOfVariables);
 
-        OutcomeChanceFilterGradient filterGradient = new OutcomeChanceFilterGradient(network, new ForwardFilterGradient(filterLinearizer), null, erf, filterLinearizer.totalNumOfVariables);
+        OutcomeChanceFilterGradient filterGradient = new OutcomeChanceFilterGradient(network,
+                new ForwardFilterGradient(filterLinearizer), null, erf, filterLinearizer.totalNumOfVariables);
         ADAMSolver filterSolver = new ADAMSolver(filterGradient, filterLinearizer.totalNumOfVariables);
 
-        return new Trainer(networkEvaluater, netGradient, weightsSolver, filterGradient, filterSolver, weightLinearizer, filterLinearizer);
+        return new Trainer(networkEvaluater, netGradient, weightsSolver, filterGradient, filterSolver, weightLinearizer,
+                filterLinearizer);
     }
 }

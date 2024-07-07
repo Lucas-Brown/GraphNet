@@ -7,11 +7,11 @@ import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
 import com.lucasbrown.GraphNetwork.Local.Filters.FlatRateFilter;
 import com.lucasbrown.GraphNetwork.Local.Filters.NormalPeakFilter;
 import com.lucasbrown.GraphNetwork.Local.Filters.OpenFilter;
-import com.lucasbrown.GraphNetwork.Local.Nodes.ComplexNode;
 import com.lucasbrown.GraphNetwork.Local.Nodes.ITrainable;
 import com.lucasbrown.GraphNetwork.Local.Nodes.InputNode;
 import com.lucasbrown.GraphNetwork.Local.Nodes.OutputNode;
 import com.lucasbrown.GraphNetwork.Local.Nodes.SimpleNode;
+import com.lucasbrown.GraphNetwork.Local.Nodes.ValueCombinators.ComplexCombinator;
 import com.lucasbrown.NetworkTraining.DataSetTraining.AmplifierFilter;
 import com.lucasbrown.NetworkTraining.DistributionSolverMethods.BernoulliDistribution;
 import com.lucasbrown.NetworkTraining.DistributionSolverMethods.BernoulliDistributionAdjuster;
@@ -84,7 +84,7 @@ public class FibonacciNetworkTest {
         NodeBuilder nodeBuilder = new NodeBuilder(net);
 
         nodeBuilder.setActivationFunction(ActivationFunction.LINEAR);
-        nodeBuilder.setNodeConstructor(ComplexNode::new);
+        nodeBuilder.setNodeConstructor(ComplexCombinator::new);
         nodeBuilder.setOutputDistSupplier(NormalDistribution::getStandardNormalDistribution);
         nodeBuilder.setProbabilityDistSupplier(BernoulliDistribution::getEvenDistribution);
         nodeBuilder.setProbabilityDistAdjusterSupplier(BernoulliDistributionAdjuster::new);

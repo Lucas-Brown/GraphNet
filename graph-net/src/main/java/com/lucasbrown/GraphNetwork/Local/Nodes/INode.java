@@ -4,14 +4,20 @@ import java.security.InvalidAlgorithmParameterException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Optional;
-
 import com.lucasbrown.GraphNetwork.Global.GraphNetwork;
 import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
 import com.lucasbrown.GraphNetwork.Local.Edge;
 import com.lucasbrown.GraphNetwork.Local.Outcome;
 import com.lucasbrown.GraphNetwork.Local.Signal;
+import com.lucasbrown.GraphNetwork.Local.Nodes.ValueCombinators.SignalCombinator;
 import com.lucasbrown.NetworkTraining.History.IStateRecord;
 
+/**
+ * A node within a graph neural network.
+ * Capable of sending and recieving signals from other nodes.
+ * Each node uses a @code NodeConnection to evaluate its own likelyhood of
+ * sending a signal out to other connected nodes
+ */
 public interface INode extends Comparable<INode>, IStateRecord<Outcome>{
 
     public int getID();
@@ -25,6 +31,8 @@ public interface INode extends Comparable<INode>, IStateRecord<Outcome>{
     public GraphNetwork getParentNetwork();
 
     public ActivationFunction getActivationFunction();
+
+    public SignalCombinator getCombinator();
 
     /**
      * 
@@ -53,23 +61,8 @@ public interface INode extends Comparable<INode>, IStateRecord<Outcome>{
 
     public Collection<Edge> getAllOutgoingConnections();
 
-    /**
-     * Get the arc associated with the transfer from this node to the given
-     * recieving node
-     * 
-     * @param recievingNode
-     * @return The arc if present, otherwise null
-     */
     public Optional<Edge> getOutgoingConnectionTo(INode recievingNode);
 
-    /**
-     * Get the arc associated with the transfer from the given sending node to this
-     * node
-     * 
-     * 
-     * @param recievingNode
-     * @return The arc if present, otherwise null
-     */
     public Optional<Edge> getIncomingConnectionFrom(INode sendingNode);
 
     /**
@@ -86,12 +79,26 @@ public interface INode extends Comparable<INode>, IStateRecord<Outcome>{
      */
     public boolean hasValidForwardSignal();
 
+    public void setValidForwardSignal(boolean state);
+
     /**
-     * Get whether the current forward signal is set and valid
+     * map every incoming node id to its corresponding value and combine.
+     * for example, an id of 6 may map to 0b0010 and an id of 2 may map to 0b1000
+     * binary_string will thus contain the value 0b1010
      * 
+     * @param incomingSignals
+     * @return a bit string indicating the weights, bias, and error index to use for
+     *         the given set of signals
+     */
+    public int nodeSetToBinStr(Collection<INode> incomingNodes);
+
+    /**
+     * Create an arraylist of arcs from a binary string representation
+     * 
+     * @param binStr
      * @return
      */
-    public void setValidForwardSignal(boolean state);
+    public ArrayList<Edge> binStrToArcList(int binStr);
 
     /**
      * Set all next signals to the current signal. Performs additional checks to
@@ -109,9 +116,8 @@ public interface INode extends Comparable<INode>, IStateRecord<Outcome>{
      */
     public void sendForwardSignals();
 
+    public ArrayList<Outcome> getState();
     public void clearSignals();
-
-    public double computeMergedSignalStrength(Collection<Signal> incomingSignals, int binary_string);
 
     public static int CompareNodes(INode n1, INode n2) {
         return n1.getID() - n2.getID();
