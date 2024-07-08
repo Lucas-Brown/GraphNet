@@ -1,24 +1,18 @@
 package com.lucasbrown.NetworkTraining;
 
-import com.lucasbrown.GraphNetwork.Global.ArcBuilder;
+import java.util.function.Supplier;
+
 import com.lucasbrown.GraphNetwork.Global.GraphNetwork;
 import com.lucasbrown.GraphNetwork.Global.NodeBuilder;
 import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
 import com.lucasbrown.GraphNetwork.Local.Filters.FlatRateFilter;
-import com.lucasbrown.GraphNetwork.Local.Filters.NormalPeakFilter;
-import com.lucasbrown.GraphNetwork.Local.Filters.OpenFilter;
-import com.lucasbrown.GraphNetwork.Local.Nodes.ITrainable;
+import com.lucasbrown.GraphNetwork.Local.Filters.IFilter;
+import com.lucasbrown.GraphNetwork.Local.Nodes.INode;
 import com.lucasbrown.GraphNetwork.Local.Nodes.InputNode;
 import com.lucasbrown.GraphNetwork.Local.Nodes.OutputNode;
-import com.lucasbrown.GraphNetwork.Local.Nodes.SimpleNode;
+import com.lucasbrown.GraphNetwork.Local.Nodes.ProbabilityCombinators.ComplexProbabilityCombinator;
+import com.lucasbrown.GraphNetwork.Local.Nodes.ProbabilityCombinators.SimpleProbabilityCombinator;
 import com.lucasbrown.GraphNetwork.Local.Nodes.ValueCombinators.ComplexCombinator;
-import com.lucasbrown.NetworkTraining.DataSetTraining.AmplifierFilter;
-import com.lucasbrown.NetworkTraining.DistributionSolverMethods.BernoulliDistribution;
-import com.lucasbrown.NetworkTraining.DistributionSolverMethods.BernoulliDistributionAdjuster;
-import com.lucasbrown.NetworkTraining.DistributionSolverMethods.NoAdjustments;
-import com.lucasbrown.NetworkTraining.DistributionSolverMethods.NormalBernoulliFilterAdjuster;
-import com.lucasbrown.NetworkTraining.DistributionSolverMethods.NormalDistribution;
-import com.lucasbrown.NetworkTraining.Solvers.ADAMSolver;
 import com.lucasbrown.NetworkTraining.Trainers.Trainer;
 
 public class FibonacciNetworkTest {
@@ -83,18 +77,17 @@ public class FibonacciNetworkTest {
 
         NodeBuilder nodeBuilder = new NodeBuilder(net);
 
+        Supplier<IFilter> filterSupplier = () -> new FlatRateFilter(0.9);
         nodeBuilder.setActivationFunction(ActivationFunction.LINEAR);
-        nodeBuilder.setNodeConstructor(ComplexCombinator::new);
-        nodeBuilder.setOutputDistSupplier(NormalDistribution::getStandardNormalDistribution);
-        nodeBuilder.setProbabilityDistSupplier(BernoulliDistribution::getEvenDistribution);
-        nodeBuilder.setProbabilityDistAdjusterSupplier(BernoulliDistributionAdjuster::new);
-
+        nodeBuilder.setValueCombinator(ComplexCombinator::new);
+        nodeBuilder.setProbabilityCombinator(() -> new ComplexProbabilityCombinator(filterSupplier));
+        
         nodeBuilder.setAsInputNode();
         InputNode in = (InputNode) nodeBuilder.build();
 
         nodeBuilder.setAsHiddenNode();
-        ITrainable hidden1 = (ITrainable) nodeBuilder.build();
-        ITrainable hidden2 = (ITrainable) nodeBuilder.build();
+        INode hidden1 = nodeBuilder.build();
+        INode hidden2 = nodeBuilder.build();
 
         nodeBuilder.setAsOutputNode();
         OutputNode out = (OutputNode) nodeBuilder.build();
@@ -104,19 +97,12 @@ public class FibonacciNetworkTest {
         hidden2.setName("Hidden 2");
         out.setName("Output");
 
-        ArcBuilder arcBuilder = new ArcBuilder(net);
-        // arcBuilder.setFilterSupplier(() -> new AmplifierFilter(0.999, 1.5));
-        arcBuilder.setFilterSupplier(() -> new FlatRateFilter(0.5));
-        // arcBuilder.setFilterSupplier(OpenFilter::new);
-        arcBuilder.setFilterAdjusterSupplier(NoAdjustments::new);
-        // arcBuilder.setFilterSupplier(NormalPeakFilter::getStandardNormalBetaFilter);
-        // arcBuilder.setFilterAdjusterSupplier(NormalBernoulliFilterAdjuster::new);
+        net.addNewConnection(in, hidden1);
+        net.addNewConnection(hidden1, hidden1);
+        net.addNewConnection(hidden1, hidden2);
+        net.addNewConnection(hidden2, hidden1);
+        net.addNewConnection(hidden1, out);
 
-        arcBuilder.build(in, hidden1);  
-        arcBuilder.build(hidden1, hidden2);
-        arcBuilder.build(hidden2, hidden1);
-        arcBuilder.build(hidden1, hidden1);
-        arcBuilder.build(hidden1, out);
 
         Trainer trainer = Trainer.getDefaultTrainer(net);
         trainer.setTrainingData(fibNet.inputData, fibNet.outputData);

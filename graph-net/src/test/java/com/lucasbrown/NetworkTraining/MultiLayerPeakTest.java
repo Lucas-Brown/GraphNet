@@ -2,7 +2,7 @@ package com.lucasbrown.NetworkTraining;
 
 import java.util.Random;
 
-import com.lucasbrown.GraphNetwork.Global.ArcBuilder;
+import com.lucasbrown.GraphNetwork.Global.EdgeBuilder;
 import com.lucasbrown.GraphNetwork.Global.GraphNetwork;
 import com.lucasbrown.GraphNetwork.Global.NodeBuilder;
 import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
@@ -99,7 +99,7 @@ public class MultiLayerPeakTest {
         in.setName("Input");
         out.setName("Output");
 
-        ArcBuilder arcBuilder = new ArcBuilder(net);
+        EdgeBuilder arcBuilder = new EdgeBuilder(net);
         arcBuilder.setFilterSupplier(NormalPeakFilter::getStandardNormalBetaFilter);
         arcBuilder.setFilterAdjusterSupplier(NormalBetaFilterAdjuster::new);
         // arcBuilder.setFilterAdjusterSupplier(NormalBernoulliFilterAdjuster::new);

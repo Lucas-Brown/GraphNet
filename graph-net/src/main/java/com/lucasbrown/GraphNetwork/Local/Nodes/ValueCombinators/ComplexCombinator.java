@@ -92,6 +92,9 @@ public class ComplexCombinator extends AdditiveValueCombinator {
 
     @Override
     public void applyDelta(double[] gradient) {
+        if (weights.length == 1) { 
+            return; // no connections and no gradient
+        }
 
         int i = 0;
         int key = 1;

@@ -1,8 +1,6 @@
 package com.lucasbrown.GraphNetwork.Local;
 
-import com.lucasbrown.GraphNetwork.Local.Filters.IFilter;
 import com.lucasbrown.GraphNetwork.Local.Nodes.INode;
-import com.lucasbrown.NetworkTraining.DistributionSolverMethods.IExpectationAdjuster;
 
 /**
  * A one-way connection between a sending node and a recieving node.
@@ -15,9 +13,7 @@ public class Edge {
      */
     public final INode sending, recieving;
 
-
-    public Edge(final INode sending, final INode recieving,
-            final IFilter filter, IExpectationAdjuster filterAdjuster) {
+    public Edge(final INode sending, final INode recieving) {
         this.sending = sending;
         this.recieving = recieving;
     }
@@ -33,7 +29,6 @@ public class Edge {
     public boolean doesMatchNodes(INode sendingMatch, INode recievingMatch) {
         return sending.equals(sendingMatch) && recieving.equals(recievingMatch);
     }
-
 
     /**
      * Send an forward signal from the sending node to the recieving node

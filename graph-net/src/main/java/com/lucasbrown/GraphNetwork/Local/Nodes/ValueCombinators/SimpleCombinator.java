@@ -17,11 +17,11 @@ public class SimpleCombinator extends AdditiveValueCombinator {
     protected double[] weights;
     protected double bias;
 
-    public SimpleCombinator(){
+    public SimpleCombinator() {
         this(new Random());
     }
 
-    public SimpleCombinator(Random random){
+    public SimpleCombinator(Random random) {
         rng = random;
         weights = new double[0];
         bias = rng.nextGaussian();
@@ -68,11 +68,11 @@ public class SimpleCombinator extends AdditiveValueCombinator {
     @Override
     public int getLinearIndexOfWeight(int key, int weight_index) {
         int lin_idx = 0;
-        while(key > 0){
-            if((key & 0b1) == 1){
+        while (key > 0) {
+            if ((key & 0b1) == 1) {
                 weight_index--;
             }
-            if(weight_index < 0){
+            if (weight_index < 0) {
                 return lin_idx;
             }
             lin_idx++;
@@ -88,6 +88,9 @@ public class SimpleCombinator extends AdditiveValueCombinator {
 
     @Override
     public void applyDelta(double[] gradient) {
+        if (weights.length == 0) { 
+            return; // no connections and no gradient
+        }
         for (int i = 0; i < weights.length; i++) {
             weights[i] -= gradient[i];
             gradient[i] = 0;

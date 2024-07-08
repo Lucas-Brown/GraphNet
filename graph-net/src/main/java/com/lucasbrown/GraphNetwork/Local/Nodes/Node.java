@@ -82,12 +82,12 @@ public class Node implements INode{
     private final IValueCombinator valueCombinator;
     private final IProbabilityCombinator probabilityCombinator;
 
-    public Node(GraphNetwork network, final ActivationFunction activationFunction, final AdditiveValueCombinator signalCombinator, final IProbabilityCombinator probabilityCombinator) {
+    public Node(GraphNetwork network, final ActivationFunction activationFunction, final IValueCombinator valueCombinator, final IProbabilityCombinator probabilityCombinator) {
         id = ID_COUNTER++;
         name = "INode " + id;
         this.network = Objects.requireNonNull(network);
         this.activationFunction = Objects.requireNonNull(activationFunction);
-        this.valueCombinator = Objects.requireNonNull(signalCombinator);
+        this.valueCombinator = Objects.requireNonNull(valueCombinator);
         this.probabilityCombinator = probabilityCombinator;
         incoming = new ArrayList<Edge>();
         outgoing = new ArrayList<Edge>();
@@ -168,6 +168,7 @@ public class Node implements INode{
     @Override
     public boolean addIncomingConnection(Edge connection) {
         valueCombinator.notifyNewIncomingConnection();
+        probabilityCombinator.notifyNewIncomingConnection();
         orderedIDMap.put(connection.getSendingID(), numInputCombinations);
         numInputCombinations *= 2;
         return incoming.add(connection);
@@ -301,11 +302,16 @@ public class Node implements INode{
      * Create ALL the possible combinations of outcomes for the incoming signals
      */
     private void combinePossibilities() {
+
         ArrayList<Pair<ArrayList<Signal>, ArrayList<Signal>>> signalPowerSet = IterableTools
                 .flatCartesianPowerProductPair(forward.values());
 
-        signalPowerSet.stream().parallel().forEach(pair -> pair.u = sortSignalByID(pair.u));
-        signalPowerSet.stream().parallel().forEach(pair -> assignTransferProbabilities(pair));
+        
+        signalPowerSet.stream().parallel().forEach(pair -> 
+            {
+                pair.u = sortSignalByID(pair.u);
+                pair.v = sortSignalByID(pair.v);
+            });
 
         outcomes = signalPowerSet.stream()
                 .parallel()
@@ -337,13 +343,6 @@ public class Node implements INode{
         //                 + outcomes.stream().mapToDouble(outcome -> outcome.probability).sum();
 
     }
-
-    private void assignTransferProbabilities(Pair<ArrayList<Signal>, ArrayList<Signal>> pair) {
-        ArrayList<Signal> signals = pair.u;
-        int key = nodeSetToBinStr(signals.stream().map(Signal::getSendingNode).toList());
-        probabilityCombinator.assignTransferProbabilities(signals, key);
-    }
-
     /**
      * Creates and fills the fields of a new outcome object for a given set of
      * incoming signals
@@ -360,10 +359,10 @@ public class Node implements INode{
         List<INode> nodeSet = signalSet.stream().map(signal -> signal.sendingNode).toList();
         outcome.node = this;
         outcome.binary_string = nodeSetToBinStr(nodeSet);
+        outcome.sourceTransferProbabilities = getTransferProbabilities(setPair.v);
         outcome.netValue = valueCombinator.computeMergedSignalStrength(signalSet, outcome.binary_string);
         outcome.activatedValue = activationFunction.activator(outcome.netValue);
-        outcome.probability = getProbabilityOfSignalSet(signalSet, setPair.v, outcome.binary_string);
-        outcome.sourceTransferProbabilities = signalSet.stream().mapToDouble(Signal::getTransferProbability).toArray();
+        outcome.probability = getProbabilityOfSignalSet(signalSet, setPair.v, outcome.binary_string, outcome.sourceTransferProbabilities);
         outcome.sourceKeys = signalSet.stream().mapToInt(Signal::getSourceKey).toArray();
         outcome.sourceOutcomes = outcomesFromSignal(signalSet);
 
@@ -372,14 +371,23 @@ public class Node implements INode{
         return outcome;
     }
 
-    public double getProbabilityOfSignalSet(Collection<Signal> signalSet, Collection<Signal> allSendingSignals, int binstr) {
+    private double[] getTransferProbabilities(Collection<Signal> signals) {
+        signals = sortSignalByID(signals);
+        int key = nodeSetToBinStr(signals.stream().map(Signal::getSendingNode).toList());
+        return probabilityCombinator.getTransferProbabilities(signals, key);
+    }
+
+
+    public double getProbabilityOfSignalSet(Collection<Signal> signalSet, Collection<Signal> allSendingSignals, int binstr, double[] transferProbs) {
         double probability = 1;
+        int i = 0;
         for (Signal s : allSendingSignals) {
             probability *= s.getSourceProbability();
+            double transProb = transferProbs[i++];
             if (signalSet.contains(s)) {
-                probability *= s.getTransferProbability();
+                probability *= transProb;
             } else {
-                probability *= 1 - s.getTransferProbability();
+                probability *= 1 - transProb;
             }
         }
         return probability;

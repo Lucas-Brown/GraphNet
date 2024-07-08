@@ -4,7 +4,7 @@ import java.util.Objects;
 import java.util.Random;
 import java.util.stream.Stream;
 
-import com.lucasbrown.GraphNetwork.Global.ArcBuilder;
+import com.lucasbrown.GraphNetwork.Global.EdgeBuilder;
 import com.lucasbrown.GraphNetwork.Global.BackpropTrainer;
 import com.lucasbrown.GraphNetwork.Global.GraphNetwork;
 import com.lucasbrown.GraphNetwork.Global.NodeBuilder;
@@ -102,7 +102,7 @@ public class AddSubMulTest {
         OutputNode out2 = (OutputNode) nodeBuilder.build();
         OutputNode out3 = (OutputNode) nodeBuilder.build();
 
-        ArcBuilder arcBuilder = new ArcBuilder(net);
+        EdgeBuilder arcBuilder = new EdgeBuilder(net);
         // arcBuilder.setFilterSupplier(OpenFilter::new);
         // arcBuilder.setFilterAdjusterSupplier(NoAdjustments::new);
         arcBuilder.setFilterSupplier(NormalPeakFilter::getStandardNormalBetaFilter);

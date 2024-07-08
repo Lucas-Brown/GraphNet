@@ -108,10 +108,8 @@ public class GraphNetwork implements IStateGenerator<INode>{
                 .collect(Collectors.toCollection(ArrayList::new));
     }
 
-    public Edge addNewConnection(INode transmittingNode, INode recievingNode,
-            IFilter transferFunction, IExpectationAdjuster filterAdjuster) {
-
-        Edge connection = new Edge(transmittingNode, recievingNode, transferFunction, filterAdjuster);
+    public Edge addNewConnection(INode transmittingNode, INode recievingNode) {
+        Edge connection = new Edge(transmittingNode, recievingNode);
         transmittingNode.addOutgoingConnection(connection);
         recievingNode.addIncomingConnection(connection);
         return connection;

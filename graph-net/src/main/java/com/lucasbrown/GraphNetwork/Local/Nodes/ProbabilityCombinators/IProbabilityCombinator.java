@@ -1,6 +1,7 @@
 package com.lucasbrown.GraphNetwork.Local.Nodes.ProbabilityCombinators;
 
 import java.util.ArrayList;
+import java.util.Collection;
 
 import com.lucasbrown.GraphNetwork.Local.Signal;
 import com.lucasbrown.GraphNetwork.Local.Filters.IFilter;
@@ -21,6 +22,6 @@ public interface IProbabilityCombinator {
      * @param signals 
      * @param key
      */
-    public void assignTransferProbabilities(ArrayList<Signal> signals, int key);
+    public double[] getTransferProbabilities(Collection<Signal> signals, int key);
 
 }

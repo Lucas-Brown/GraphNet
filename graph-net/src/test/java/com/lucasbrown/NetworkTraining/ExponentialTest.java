@@ -6,30 +6,35 @@ import static org.junit.Assert.assertEquals;
 import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.function.Supplier;
 import java.util.stream.IntStream;
 
 import org.junit.Assert;
 import org.junit.Test;
 
-import com.lucasbrown.GraphNetwork.Global.ArcBuilder;
 import com.lucasbrown.GraphNetwork.Global.GraphNetwork;
 import com.lucasbrown.GraphNetwork.Global.NodeBuilder;
 import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
 import com.lucasbrown.GraphNetwork.Local.Outcome;
 import com.lucasbrown.GraphNetwork.Local.Filters.FlatRateFilter;
+import com.lucasbrown.GraphNetwork.Local.Filters.IFilter;
 import com.lucasbrown.GraphNetwork.Local.Filters.NormalPeakFilter;
 import com.lucasbrown.GraphNetwork.Local.Filters.OpenFilter;
+import com.lucasbrown.GraphNetwork.Local.Nodes.IInputNode;
 import com.lucasbrown.GraphNetwork.Local.Nodes.INode;
-import com.lucasbrown.GraphNetwork.Local.Nodes.ITrainable;
 import com.lucasbrown.GraphNetwork.Local.Nodes.InputNode;
 import com.lucasbrown.GraphNetwork.Local.Nodes.OutputNode;
+import com.lucasbrown.GraphNetwork.Local.Nodes.ProbabilityCombinators.SimpleProbabilityCombinator;
 import com.lucasbrown.GraphNetwork.Local.Nodes.ValueCombinators.ComplexCombinator;
+import com.lucasbrown.GraphNetwork.Local.Nodes.ValueCombinators.IValueCombinator;
+import com.lucasbrown.GraphNetwork.Local.Nodes.ValueCombinators.SimpleCombinator;
 import com.lucasbrown.NetworkTraining.DistributionSolverMethods.BernoulliDistribution;
 import com.lucasbrown.NetworkTraining.DistributionSolverMethods.BernoulliDistributionAdjuster;
 import com.lucasbrown.NetworkTraining.DistributionSolverMethods.NoAdjustments;
 import com.lucasbrown.NetworkTraining.DistributionSolverMethods.NormalBernoulliFilterAdjuster;
 import com.lucasbrown.NetworkTraining.DistributionSolverMethods.NormalDistribution;
 import com.lucasbrown.NetworkTraining.History.History;
+import com.lucasbrown.NetworkTraining.History.NetworkHistory;
 import com.lucasbrown.NetworkTraining.NetworkDerivatives.ForwardNetworkGradient;
 import com.lucasbrown.NetworkTraining.Solvers.ADAMSolver;
 import com.lucasbrown.NetworkTraining.Trainers.Trainer;
@@ -81,18 +86,16 @@ public class ExponentialTest {
 
         NodeBuilder nodeBuilder = new NodeBuilder(net);
 
+        Supplier<IFilter> filterSupplier = () -> new FlatRateFilter(0.999);
         nodeBuilder.setActivationFunction(ActivationFunction.LINEAR);
-        nodeBuilder.setNodeConstructor(ComplexCombinator::new);
-        nodeBuilder.setOutputDistSupplier(NormalDistribution::getStandardNormalDistribution);
-        // nodeBuilder.setOutputDistAdjusterSupplier(NormalDistributionFromData::new);
-        nodeBuilder.setProbabilityDistSupplier(BernoulliDistribution::getEvenDistribution);
-        nodeBuilder.setProbabilityDistAdjusterSupplier(BernoulliDistributionAdjuster::new);
-
+        nodeBuilder.setValueCombinator(ComplexCombinator::new);
+        nodeBuilder.setProbabilityCombinator(() -> new SimpleProbabilityCombinator(filterSupplier));
+        
         nodeBuilder.setAsInputNode();
         InputNode in = (InputNode) nodeBuilder.build();
 
         nodeBuilder.setAsHiddenNode();
-        ITrainable hidden = (ITrainable) nodeBuilder.build();
+        INode hidden = nodeBuilder.build();
 
         nodeBuilder.setAsOutputNode();
         OutputNode out = (OutputNode) nodeBuilder.build();
@@ -101,16 +104,9 @@ public class ExponentialTest {
         hidden.setName("Hidden");
         out.setName("Output");
 
-        ArcBuilder arcBuilder = new ArcBuilder(net);
-        // arcBuilder.setFilterSupplier(NormalPeakFilter::getStandardNormalBetaFilter);
-        // arcBuilder.setFilterAdjusterSupplier(NormalBernoulliFilterAdjuster::new);
-        arcBuilder.setFilterSupplier(() -> new FlatRateFilter(0.999));
-        // arcBuilder.setFilterSupplier(OpenFilter::new);
-        arcBuilder.setFilterAdjusterSupplier(NoAdjustments::new);
-
-        arcBuilder.build(in, hidden);
-        arcBuilder.build(hidden, hidden);
-        arcBuilder.build(hidden, out);
+        net.addNewConnection(in, hidden);
+        net.addNewConnection(hidden, hidden);
+        net.addNewConnection(hidden, out);
         return net;
     }
 
@@ -129,7 +125,7 @@ public class ExponentialTest {
         trainer.setTrainingData(exponentialGrowth.inputData, exponentialGrowth.outputData);
 
         InputNode in = null;
-        ITrainable hidden = null;
+        INode hidden = null;
         OutputNode out = null;
         for(INode node : net.getNodes()){
             if(node instanceof OutputNode){
@@ -139,7 +135,7 @@ public class ExponentialTest {
                 in = (InputNode) node;
             }
             else{
-                hidden = (ITrainable) node;
+                hidden = node;
             }
         }
 
@@ -157,10 +153,11 @@ public class ExponentialTest {
         gradientMatchesExpected(net, history, gradient, trainer.weightLinearizer, hidden);
     }
 
-    private double getHiddenState(int timestep, ITrainable hidden, double initial){
+    private double getHiddenState(int timestep, INode hidden, double initial){
         int n = timestep - 1;
-        double w = hidden.getWeights(0b10)[0];
-        double b = hidden.getBias(0b10);
+        IValueCombinator comb = hidden.getValueCombinator();
+        double w = comb.getWeights(0b10)[0];
+        double b = comb.getBias(0b10);
 
         double value = initial*Math.pow(w, n);
         value += b*IntStream.range(0, n).mapToDouble(t -> Math.pow(w, t)).sum(); 
@@ -168,10 +165,11 @@ public class ExponentialTest {
     }
 
     
-    private double[] getHiddenDerivative(int timestep, ITrainable hidden, double initial){
+    private double[] getHiddenDerivative(int timestep, INode hidden, double initial){
         int n = timestep - 1;
-        double w = hidden.getWeights(0b10)[0];
-        double b = hidden.getBias(0b10);
+        IValueCombinator comb = hidden.getValueCombinator();
+        double w = comb.getWeights(0b10)[0];
+        double b = comb.getBias(0b10);
 
         double d_w;
         if(n == 0){
@@ -187,7 +185,7 @@ public class ExponentialTest {
     }
 
     
-    private double getInitialValue(NetworkHistory history, ITrainable hidden) {
+    private double getInitialValue(NetworkHistory history, INode hidden) {
         HashMap<INode, ArrayList<Outcome>> secondRecord = history.getStateAtTimestep(1);
         ArrayList<Outcome> secondOutcomes = secondRecord.get(hidden);
 
@@ -195,7 +193,7 @@ public class ExponentialTest {
         return initialExponentialValue;
     }
 
-    private void historyMatchesExpected(GraphNetwork net, NetworkHistory history, InputNode in, ITrainable hidden, OutputNode out) {
+    private void historyMatchesExpected(GraphNetwork net, NetworkHistory history, InputNode in, INode hidden, OutputNode out) {
         HashMap<INode, ArrayList<Outcome>> firstRecord = history.getStateAtTimestep(0);
         ArrayList<Outcome> firstOutcomes = firstRecord.get(in);
         Assert.assertNotNull(firstOutcomes);
@@ -213,7 +211,7 @@ public class ExponentialTest {
     }
 
 
-    private void gradientMatchesExpected(GraphNetwork net, NetworkHistory history, ArrayList<HashMap<Outcome, Vec>> gradient, WeightsLinearizer linearizer, ITrainable hidden) {
+    private void gradientMatchesExpected(GraphNetwork net, NetworkHistory history, ArrayList<HashMap<Outcome, Vec>> gradient, WeightsLinearizer linearizer, INode hidden) {
         double initialExponentialValue = getInitialValue(history, hidden);
 
         for (int timestep = 1; timestep < history.getNumberOfTimesteps(); timestep++) {

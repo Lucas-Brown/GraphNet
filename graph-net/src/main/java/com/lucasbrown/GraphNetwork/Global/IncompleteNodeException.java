@@ -1,6 +1,6 @@
 package com.lucasbrown.GraphNetwork.Global;
 
-public class IncompleteNodeException extends Exception {
+public class IncompleteNodeException extends RuntimeException {
 
     public IncompleteNodeException(String message) {
         super(message);

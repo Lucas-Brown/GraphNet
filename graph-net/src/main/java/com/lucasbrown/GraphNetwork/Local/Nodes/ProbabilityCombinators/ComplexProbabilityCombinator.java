@@ -8,9 +8,6 @@ import com.lucasbrown.HelperClasses.IterableTools;
 
 public class ComplexProbabilityCombinator extends DirectProbabilityCombinator {
 
-    
-    protected double[][] weights;
-
     private IFilter[][] filters;
 
     protected int numFilters = 0;
@@ -36,7 +33,7 @@ public class ComplexProbabilityCombinator extends DirectProbabilityCombinator {
         numFilters += numFilters + old_size;
 
         // the first half doesn't need to be changed
-        weights = Arrays.copyOf(weights, new_size);
+        filters = Arrays.copyOf(filters, new_size);
 
         // the second half needs entirely new data
         for (int i = old_size; i < new_size; i++) {

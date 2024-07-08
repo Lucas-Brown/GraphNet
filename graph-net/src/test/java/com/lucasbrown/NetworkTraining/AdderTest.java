@@ -2,20 +2,19 @@ package com.lucasbrown.NetworkTraining;
 
 import java.util.Objects;
 import java.util.Random;
+import java.util.function.Supplier;
 import java.util.stream.Stream;
 
-import com.lucasbrown.GraphNetwork.Global.ArcBuilder;
 import com.lucasbrown.GraphNetwork.Global.GraphNetwork;
 import com.lucasbrown.GraphNetwork.Global.NodeBuilder;
 import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
+import com.lucasbrown.GraphNetwork.Local.Filters.FlatRateFilter;
+import com.lucasbrown.GraphNetwork.Local.Filters.IFilter;
 import com.lucasbrown.GraphNetwork.Local.Filters.NormalPeakFilter;
 import com.lucasbrown.GraphNetwork.Local.Nodes.InputNode;
 import com.lucasbrown.GraphNetwork.Local.Nodes.OutputNode;
+import com.lucasbrown.GraphNetwork.Local.Nodes.ProbabilityCombinators.ComplexProbabilityCombinator;
 import com.lucasbrown.GraphNetwork.Local.Nodes.ValueCombinators.ComplexCombinator;
-import com.lucasbrown.NetworkTraining.DistributionSolverMethods.BetaDistribution;
-import com.lucasbrown.NetworkTraining.DistributionSolverMethods.BetaDistributionAdjuster2;
-import com.lucasbrown.NetworkTraining.DistributionSolverMethods.NormalBetaFilterAdjuster2;
-import com.lucasbrown.NetworkTraining.DistributionSolverMethods.NormalDistribution;
 import com.lucasbrown.NetworkTraining.Trainers.Trainer;
 
 public class AdderTest {
@@ -65,12 +64,10 @@ public class AdderTest {
 
         NodeBuilder nodeBuilder = new NodeBuilder(net);
 
+        Supplier<IFilter> filterSupplier = NormalPeakFilter::getStandardNormalBetaFilter;
         nodeBuilder.setActivationFunction(ActivationFunction.LINEAR);
-        nodeBuilder.setNodeConstructor(ComplexCombinator::new);
-        nodeBuilder.setOutputDistSupplier(NormalDistribution::getStandardNormalDistribution);
-        // nodeBuilder.setOutputDistAdjusterSupplier(NormalDistributionFromData::new);
-        nodeBuilder.setProbabilityDistSupplier(BetaDistribution::getUniformBetaDistribution);
-        nodeBuilder.setProbabilityDistAdjusterSupplier(BetaDistributionAdjuster2::new);
+        nodeBuilder.setValueCombinator(ComplexCombinator::new);
+        nodeBuilder.setProbabilityCombinator(() -> new ComplexProbabilityCombinator(filterSupplier));
 
         nodeBuilder.setAsInputNode();
 
@@ -87,16 +84,9 @@ public class AdderTest {
         in3.setName("Input 3");
         out.setName("Output");
 
-        ArcBuilder arcBuilder = new ArcBuilder(net);
-        // arcBuilder.setFilterSupplier(OpenFilter::new);
-        // arcBuilder.setFilterAdjusterSupplier(NoAdjustments::new);
-        arcBuilder.setFilterSupplier(NormalPeakFilter::getStandardNormalBetaFilter);
-        arcBuilder.setFilterAdjusterSupplier(NormalBetaFilterAdjuster2::new);
-
-        arcBuilder.build(in1, out);
-        arcBuilder.build(in2, out);
-        arcBuilder.build(in3, out);
-
+        net.addNewConnection(in1, out);
+        net.addNewConnection(in2, out);
+        net.addNewConnection(in3, out);
 
         Trainer trainer = Trainer.getDefaultTrainer(net);
         trainer.setTrainingData(adder.inputData, adder.outputData);
