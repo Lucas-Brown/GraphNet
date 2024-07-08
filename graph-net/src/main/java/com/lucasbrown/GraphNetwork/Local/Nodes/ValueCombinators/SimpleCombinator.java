@@ -11,7 +11,7 @@ import com.lucasbrown.HelperClasses.IterableTools;
  * Each node uses a @code NodeConnection to evaluate its own likelyhood of
  * sending a signal out to other connected nodes
  */
-public class SimpleCombinator extends TrainableCombinator {
+public class SimpleCombinator extends AdditiveValueCombinator {
 
     private Random rng;
     protected double[] weights;

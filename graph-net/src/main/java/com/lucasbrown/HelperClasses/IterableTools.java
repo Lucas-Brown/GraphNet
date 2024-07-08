@@ -1,11 +1,13 @@
 package com.lucasbrown.HelperClasses;
 
+import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
+import java.util.stream.Stream;
 
 import com.lucasbrown.HelperClasses.Structs.Pair;
 
@@ -57,6 +59,28 @@ public class IterableTools {
             }
         }
         return filtered_array;
+    }
+
+    public static <T> T[] applyMask(T[] array, int mask){
+        @SuppressWarnings("unchecked")
+        T[] filtered_array = (T[]) Array.newInstance(array.getClass().getComponentType(), Integer.bitCount(mask));
+        int filtered_count = 0;
+        for(int i = 0; i < array.length; i++){
+            if(((mask >> i) & 0b1) == 1){
+                filtered_array[filtered_count++] = array[i]; 
+            }
+        }
+        return filtered_array;
+    }
+
+    public static <T> void flatten(T[][] t_arr, T[] toFill){
+        int linear_idx = 0;
+        for (int i = 0; i < t_arr.length; i++) {
+            T[] toCopy = t_arr[i];
+            for (int j = 0; j < toCopy.length; j++) {
+                toFill[linear_idx++] = toCopy[j];
+            }
+        }
     }
 
     /**

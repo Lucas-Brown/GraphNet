@@ -9,7 +9,8 @@ import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
 import com.lucasbrown.GraphNetwork.Local.Edge;
 import com.lucasbrown.GraphNetwork.Local.Outcome;
 import com.lucasbrown.GraphNetwork.Local.Signal;
-import com.lucasbrown.GraphNetwork.Local.Nodes.ValueCombinators.SignalCombinator;
+import com.lucasbrown.GraphNetwork.Local.Nodes.ProbabilityCombinators.IProbabilityCombinator;
+import com.lucasbrown.GraphNetwork.Local.Nodes.ValueCombinators.IValueCombinator;
 import com.lucasbrown.NetworkTraining.History.IStateRecord;
 
 /**
@@ -32,7 +33,9 @@ public interface INode extends Comparable<INode>, IStateRecord<Outcome>{
 
     public ActivationFunction getActivationFunction();
 
-    public SignalCombinator getCombinator();
+    public IValueCombinator getValueCombinator();
+
+    public IProbabilityCombinator getProbabilityCombinator();
 
     /**
      * 

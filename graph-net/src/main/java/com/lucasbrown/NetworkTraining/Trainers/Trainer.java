@@ -8,7 +8,7 @@ import com.lucasbrown.GraphNetwork.Local.Outcome;
 import com.lucasbrown.GraphNetwork.Local.Filters.IFilter;
 import com.lucasbrown.GraphNetwork.Local.Nodes.INode;
 import com.lucasbrown.GraphNetwork.Local.Nodes.OutputNode;
-import com.lucasbrown.GraphNetwork.Local.Nodes.ValueCombinators.TrainableCombinator;
+import com.lucasbrown.GraphNetwork.Local.Nodes.ValueCombinators.ITrainableValueCombinator;
 import com.lucasbrown.NetworkTraining.History.NetworkHistory;
 import com.lucasbrown.NetworkTraining.NetworkDerivatives.ForwardFilterGradient;
 import com.lucasbrown.NetworkTraining.NetworkDerivatives.ForwardNetworkGradient;
@@ -187,7 +187,7 @@ public class Trainer implements ITrainer {
     private void applyErrorSignalsToNode(INode node) {
         double[] allDeltas = weightsDeltas.arrayCopy();
         double[] gradient = weightLinearizer.nodeSlice(node, allDeltas);
-        ((TrainableCombinator) node.getCombinator()).applyDelta(gradient);
+        ((ITrainableValueCombinator) node.getValueCombinator()).applyDelta(gradient);
     }
 
     private void applyProbabilityDeltas() {

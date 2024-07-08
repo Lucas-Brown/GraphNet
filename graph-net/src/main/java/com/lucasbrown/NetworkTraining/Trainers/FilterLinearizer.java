@@ -4,11 +4,13 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 
 import com.lucasbrown.GraphNetwork.Global.GraphNetwork;
 import com.lucasbrown.GraphNetwork.Local.Edge;
 import com.lucasbrown.GraphNetwork.Local.Filters.IFilter;
 import com.lucasbrown.GraphNetwork.Local.Nodes.INode;
+import com.lucasbrown.GraphNetwork.Local.Nodes.ProbabilityCombinators.IProbabilityCombinator;
 import com.lucasbrown.HelperClasses.IterableTools;
 
 import jsat.linear.DenseVector;
@@ -22,25 +24,28 @@ public class FilterLinearizer {
 
     public FilterLinearizer(GraphNetwork network){
         ArrayList<INode> nodes = network.getNodes();
-        allFilters = new HashSet<>(nodes.size());
-        vectorFilterOffset = new HashMap<>(nodes.size());
+        int n_size = nodes.size();
+        allFilters = new HashSet<>(n_size);
+        vectorFilterOffset = new HashMap<>(n_size);
         collectFilters(nodes);
         totalNumOfVariables = InitializeOffsetMap();
     }
 
     private void collectFilters(ArrayList<INode> nodes) {
         for (INode node : nodes) {
-            Collection<Edge> arcs = node.getAllIncomingConnections();
-            allFilters.addAll(arcs.stream().map(Edge::getFilter).toList());
+            IProbabilityCombinator comb = node.getProbabilityCombinator();
+            allFilters.addAll(List.of(comb.getAllFilters()));
         }
     }
-    
+
+
     private int InitializeOffsetMap() {
         int totalNumOfVariables = 0;
         for (IFilter filter : allFilters) {
             vectorFilterOffset.put(filter, totalNumOfVariables);
             totalNumOfVariables += filter.getNumberOfAdjustableParameters();
         }
+
         return totalNumOfVariables;
     } 
 

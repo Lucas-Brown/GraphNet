@@ -3,20 +3,8 @@ package com.lucasbrown.GraphNetwork.Local.Nodes.ValueCombinators;
 import java.util.Arrays;
 import java.util.Random;
 
-/**
- * A node within a graph neural network.
- * Capable of sending and recieving signals from other nodes.
- * Each node uses a @code NodeConnection to evaluate its own likelyhood of
- * sending a signal out to other connected nodes
- */
-public class ComplexCombinator extends TrainableCombinator {
+public class ComplexCombinator extends AdditiveValueCombinator {
 
-    /**
-     * Each possible combinations of inputs has a corresponding unique set of
-     * weights and biases
-     * both grow exponentially, which is bad, but every node should have relatively
-     * few connections
-     */
     protected double[][] weights;
     protected double[] biases;
 

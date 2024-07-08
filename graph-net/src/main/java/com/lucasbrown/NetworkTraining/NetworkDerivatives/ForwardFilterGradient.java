@@ -67,6 +67,9 @@ public class ForwardFilterGradient implements INetworkGradient{
         }
 
         int root_count = 0;
+        int key = outcome.binary_string;
+        IFilter[] filters = node.getProbabilityCombinator().getFilters(key);
+
         for (int i = 0; root_count < outcome.allRootOutcomes.length; i++) {
             if(((outcome.root_bin_str >> i) & 0b1) == 0){
                 continue;
@@ -80,7 +83,7 @@ public class ForwardFilterGradient implements INetworkGradient{
             root_gradient = root_gradient.divide(rootOutcome.probability);
 
             // distribution derivative
-            IFilter filter = node.getIncomingConnectionFrom(rootOutcome.node).get().filter;
+            IFilter filter = filters[i];
             double[] filter_derivative;
 
             // if the filter is not a part of the inclusion set, invert the probability
@@ -111,6 +114,5 @@ public class ForwardFilterGradient implements INetworkGradient{
         return gradient;
 
     }
-
     
 }

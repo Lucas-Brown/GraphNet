@@ -8,7 +8,7 @@ import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
 import com.lucasbrown.GraphNetwork.Local.Outcome;
 import com.lucasbrown.GraphNetwork.Local.Nodes.INode;
 import com.lucasbrown.GraphNetwork.Local.Nodes.InputNode;
-import com.lucasbrown.GraphNetwork.Local.Nodes.ValueCombinators.SignalCombinator;
+import com.lucasbrown.GraphNetwork.Local.Nodes.ValueCombinators.IValueCombinator;
 import com.lucasbrown.NetworkTraining.History.NetworkHistory;
 import com.lucasbrown.NetworkTraining.Trainers.WeightsLinearizer;
 
@@ -70,7 +70,7 @@ public class ForwardNetworkHessian extends ForwardNetworkGradient implements INe
         Vec z_jacobi = getZJacobi(node, outcome);
 
         int key = outcome.binary_string;
-        SignalCombinator combinator = node.getCombinator();
+        IValueCombinator combinator = node.getValueCombinator();
         double[] weights = combinator.getWeights(key);
 
         // use the net value jacobian to compute the activation jacobian

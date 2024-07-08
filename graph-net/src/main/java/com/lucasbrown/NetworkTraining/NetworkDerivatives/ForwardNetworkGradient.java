@@ -9,7 +9,7 @@ import com.lucasbrown.GraphNetwork.Local.Outcome;
 import com.lucasbrown.GraphNetwork.Local.Nodes.IInputNode;
 import com.lucasbrown.GraphNetwork.Local.Nodes.INode;
 import com.lucasbrown.GraphNetwork.Local.Nodes.InputNode;
-import com.lucasbrown.GraphNetwork.Local.Nodes.ValueCombinators.SignalCombinator;
+import com.lucasbrown.GraphNetwork.Local.Nodes.ValueCombinators.IValueCombinator;
 import com.lucasbrown.NetworkTraining.History.NetworkHistory;
 import com.lucasbrown.NetworkTraining.Trainers.WeightsLinearizer;
 
@@ -18,6 +18,8 @@ import jsat.linear.Vec;
 
 /**
  * Computes the gradient using a forward pass
+ * 
+ * Note, this current implementation implicitly assumes that the value combinator is a linear value combinator
  */
 public class ForwardNetworkGradient implements INetworkGradient  {
 
@@ -62,7 +64,7 @@ public class ForwardNetworkGradient implements INetworkGradient  {
 
         Vec z_jacobi = new DenseVector(linearizer.totalNumOfVariables);
         int key = outcome.binary_string;
-        SignalCombinator combinator = node.getCombinator();
+        IValueCombinator combinator = node.getValueCombinator();
         double[] weights = combinator.getWeights(key);
 
         // construct the jacobian for the net value (z)

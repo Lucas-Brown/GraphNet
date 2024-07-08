@@ -10,7 +10,8 @@ import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
 import com.lucasbrown.GraphNetwork.Local.Edge;
 import com.lucasbrown.GraphNetwork.Local.Outcome;
 import com.lucasbrown.GraphNetwork.Local.Signal;
-import com.lucasbrown.GraphNetwork.Local.Nodes.ValueCombinators.SignalCombinator;
+import com.lucasbrown.GraphNetwork.Local.Nodes.ProbabilityCombinators.IProbabilityCombinator;
+import com.lucasbrown.GraphNetwork.Local.Nodes.ValueCombinators.IValueCombinator;
 
 public class NodeWrapper implements INode {
 
@@ -177,8 +178,13 @@ public class NodeWrapper implements INode {
     }
 
     @Override
-    public SignalCombinator getCombinator(){
-        return wrappingNode.getCombinator();
+    public IValueCombinator getValueCombinator(){
+        return wrappingNode.getValueCombinator();
+    }
+
+    @Override
+    public IProbabilityCombinator getProbabilityCombinator(){
+        return wrappingNode.getProbabilityCombinator();
     }
 
 }

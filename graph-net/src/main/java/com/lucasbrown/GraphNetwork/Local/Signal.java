@@ -6,15 +6,13 @@ public class Signal {
     public final INode sendingNode;
     public final INode recievingNode;
     public final Outcome sourceOutcome;
-    public final double firingProbability;
+    public double transferProbability;
 
-    public Signal(final INode sendingNode, final INode recievingNode, final Outcome sourceOutcome,
-            final double firingProbability) {
+    public Signal(final INode sendingNode, final INode recievingNode, final Outcome sourceOutcome) {
         assert Double.isFinite(sourceOutcome.activatedValue);
         this.sendingNode = sendingNode;
         this.recievingNode = recievingNode;
         this.sourceOutcome = sourceOutcome;
-        this.firingProbability = firingProbability;
     }
 
     public INode getSendingNode() {
@@ -42,15 +40,15 @@ public class Signal {
     }
 
     public double getTotalProbability() {
-        return sourceOutcome.probability * firingProbability;
+        return sourceOutcome.probability * transferProbability;
     }
 
-    public double getFiringProbability() {
-        return firingProbability;
+    public double getTransferProbability() {
+        return transferProbability;
     }
 
     public double getSourceProbability() {
-        return firingProbability;
+        return transferProbability;
     }
 
     public static int compareSendingNodeIDs(Signal s1, Signal s2) {

@@ -1,16 +1,21 @@
 package com.lucasbrown.GraphNetwork.Local.Nodes.ValueCombinators;
 
-public abstract class TrainableCombinator extends SignalCombinator{
+public interface ITrainableValueCombinator extends IValueCombinator{
     
     /**
-     * Compute a unique index between 0 and {@link SignalCombinator#getNumberOfVariables} 
+     * @return The total number of variables (weights + biases) 
+     */
+    public abstract int getNumberOfVariables();
+
+    /**
+     * Compute a unique index between 0 and {@link #getNumberOfVariables} 
      * @param key the binary string corresponding to the input combination
      * @return A unique index for the specific weight
      */
     public abstract int getLinearIndexOfWeight(int key, int weight_index);
 
     /**
-     * Compute a unique index between 0 and {@link SignalCombinator#getNumberOfVariables} 
+     * Compute a unique index between 0 and {@link #getNumberOfVariables} 
      * @param key the binary string corresponding to the input combination
      * @return A unique index for the specific bias
      */
