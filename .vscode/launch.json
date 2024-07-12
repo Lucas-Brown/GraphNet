@@ -6,6 +6,13 @@
     "configurations": [
         {
             "type": "java",
+            "name": "MultiplierTest",
+            "request": "launch",
+            "mainClass": "com.lucasbrown.NetworkTraining.MultiplierTest",
+            "projectName": "graph-net"
+        },
+        {
+            "type": "java",
             "name": "Current File",
             "request": "launch",
             "mainClass": "${file}",

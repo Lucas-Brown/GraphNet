@@ -1,5 +1,9 @@
 package com.lucasbrown.NetworkTraining.OutputDerivatives;
 
+import java.util.ArrayList;
+import java.util.stream.Stream;
+
+import com.lucasbrown.GraphNetwork.Local.Outcome;
 import com.lucasbrown.NetworkTraining.History.NetworkHistory;
 
 import jsat.linear.Vec;
@@ -12,4 +16,12 @@ public interface IGradient {
 
     public void setTargets(Double[][] targets); 
     public Double[][] getTargets();
+
+    static double getProbabilityVolume(Outcome[] outcomes) {
+        return Stream.of(outcomes).mapToDouble(outcome -> outcome.probability).sum();
+    }
+
+    static double getProbabilityVolume(ArrayList<Outcome> outcomes) {
+        return outcomes.stream().mapToDouble(outcome -> outcome.probability).sum();
+    }
 }

@@ -39,7 +39,7 @@ public class OutcomeChanceFilterGradient extends GradientBase {
             return 0;
         }
         
-        double error = getProbabilityVolume(outcomesAtTime);
+        double error = IGradient.getProbabilityVolume(outcomesAtTime);
         
         return target == null ? error : 1 - error;
     }

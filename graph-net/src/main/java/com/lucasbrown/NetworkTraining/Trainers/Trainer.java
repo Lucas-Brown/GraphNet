@@ -7,11 +7,14 @@ import com.lucasbrown.GraphNetwork.Global.GraphNetwork;
 import com.lucasbrown.GraphNetwork.Local.Outcome;
 import com.lucasbrown.GraphNetwork.Local.Filters.IFilter;
 import com.lucasbrown.GraphNetwork.Local.Nodes.INode;
+import com.lucasbrown.GraphNetwork.Local.Nodes.IOutputNode;
 import com.lucasbrown.GraphNetwork.Local.Nodes.OutputNode;
 import com.lucasbrown.GraphNetwork.Local.Nodes.ValueCombinators.ITrainableValueCombinator;
 import com.lucasbrown.NetworkTraining.History.NetworkHistory;
 import com.lucasbrown.NetworkTraining.NetworkDerivatives.ForwardFilterGradient;
+import com.lucasbrown.NetworkTraining.NetworkDerivatives.ForwardNetworkFilterGradient;
 import com.lucasbrown.NetworkTraining.NetworkDerivatives.ForwardNetworkGradient;
+import com.lucasbrown.NetworkTraining.OutputDerivatives.CompleteNetworkGradient;
 import com.lucasbrown.NetworkTraining.OutputDerivatives.DirectNetworkGradient;
 import com.lucasbrown.NetworkTraining.OutputDerivatives.ErrorFunction;
 import com.lucasbrown.NetworkTraining.OutputDerivatives.IGradient;
@@ -132,15 +135,16 @@ public class Trainer implements ITrainer {
         int time_count = history.getNumberOfTimesteps();
 
         StringBuilder sb = new StringBuilder();
-        ArrayList<OutputNode> nodes = network.getOutputNodes();
+        ArrayList<INode> nodes = network.getNodes();
 
         for (int t = 0; t < time_count; t++) {
             sb.append("Time Step ");
             sb.append(t);
             sb.append("\n\t");
 
+            int outIdx = 0;
             for (int i = 0; i < nodes.size(); i++) {
-                OutputNode node = nodes.get(i);
+                INode node = nodes.get(i);
                 ArrayList<Outcome> outcomes = history.getStateOfRecord(t, node);
 
                 if (outcomes == null || outcomes.isEmpty()) {
@@ -154,9 +158,14 @@ public class Trainer implements ITrainer {
                         .limit(2)
                         .map(Object::toString)
                         .collect(Collectors.joining(",")));
-                sb.append("] | target = ");
-                sb.append(targets[0][t][i]);
-                sb.append("\n\t");
+
+                if (node instanceof IOutputNode) {
+                    sb.append("] | target = ");
+                    sb.append(targets[0][t][outIdx++]);
+                    sb.append("\n\t");
+                } else {
+                    sb.append("]\n\t");
+                }
             }
             sb.append("\n");
         }
@@ -204,10 +213,16 @@ public class Trainer implements ITrainer {
         FilterLinearizer filterLinearizer = new FilterLinearizer(network);
         NetworkInputEvaluater networkEvaluater = new NetworkInputEvaluater(network);
 
-        ErrorFunction erf = new ErrorFunction.AugmentedRelativeError();
+        ErrorFunction erf = new ErrorFunction.MeanSquaredError();
+
+        // CompleteNetworkGradient netGradient = new CompleteNetworkGradient(network,
+        // new ForwardNetworkGradient(weightLinearizer),
+        // new ForwardNetworkFilterGradient(filterLinearizer), erf,
+        // null,weightLinearizer.totalNumOfVariables);
 
         DirectNetworkGradient netGradient = new DirectNetworkGradient(network,
                 new ForwardNetworkGradient(weightLinearizer), null, erf, weightLinearizer.totalNumOfVariables);
+
         ADAMSolver weightsSolver = new ADAMSolver(netGradient, weightLinearizer.totalNumOfVariables);
 
         OutcomeChanceFilterGradient filterGradient = new OutcomeChanceFilterGradient(network,

@@ -27,7 +27,7 @@ public class WeightedOutcomeChanceFilterGradient extends GradientBase {
             return gradient;
         }
         
-        double probabilityVolume = GradientBase.getProbabilityVolume(outcomesAtTime);
+        double probabilityVolume = IGradient.getProbabilityVolume(outcomesAtTime);
 
         if(probabilityVolume == 0){
             return gradient;
@@ -65,7 +65,7 @@ public class WeightedOutcomeChanceFilterGradient extends GradientBase {
             return 0;
         }
         
-        double probabilityVolume = GradientBase.getProbabilityVolume(outcomesAtTime);
+        double probabilityVolume = IGradient.getProbabilityVolume(outcomesAtTime);
 
         if(probabilityVolume == 0){
             return 0;

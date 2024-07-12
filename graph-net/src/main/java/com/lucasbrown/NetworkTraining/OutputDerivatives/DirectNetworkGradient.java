@@ -30,7 +30,7 @@ public class DirectNetworkGradient extends GradientBase {
             return gradient;
         }
 
-        double probabilityVolume = GradientBase.getProbabilityVolume(outcomesAtTime);
+        double probabilityVolume = IGradient.getProbabilityVolume(outcomesAtTime);
 
         if (probabilityVolume == 0) {
             return gradient;
@@ -57,7 +57,7 @@ public class DirectNetworkGradient extends GradientBase {
             return error;
         }
 
-        double probabilityVolume = GradientBase.getProbabilityVolume(outcomesAtTime);
+        double probabilityVolume = IGradient.getProbabilityVolume(outcomesAtTime);
 
         if (probabilityVolume == 0) {
             return error;

@@ -43,13 +43,24 @@ public class OpenFilter implements IFilter {
     }
 
     @Override
-    public double[] getLogarithmicDerivative(double x) {
+    public double[] getLogarithmicParameterDerivative(double x) {
         return new double[0];
     }
 
     @Override
-    public double[] getNegatedLogarithmicDerivative(double x) {
+    public double[] getNegatedLogarithmicParameterDerivative(double x) {
         return new double[0];
+    }
+
+    
+    @Override
+    public double getLogarithmicDerivative(double x) {
+        return 0;
+    }
+
+    @Override
+    public double getNegatedLogarithmicDerivative(double x) {
+        return 0;
     }
     
 }

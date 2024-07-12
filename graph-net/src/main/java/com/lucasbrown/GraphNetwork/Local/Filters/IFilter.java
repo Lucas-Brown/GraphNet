@@ -13,6 +13,10 @@ public interface IFilter {
     public void setAdjustableParameters(double[] params);
     public void applyAdjustableParameterUpdate(double[] delta);
 
-    public double[] getLogarithmicDerivative(double x);
-    public double[] getNegatedLogarithmicDerivative(double x);
+    public double[] getLogarithmicParameterDerivative(double x);
+    public double[] getNegatedLogarithmicParameterDerivative(double x);
+
+    public double getLogarithmicDerivative(double x);
+    public double getNegatedLogarithmicDerivative(double x);
+    
 }

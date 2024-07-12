@@ -14,14 +14,17 @@ import com.lucasbrown.NetworkTraining.Trainers.FilterLinearizer;
 import jsat.linear.DenseVector;
 import jsat.linear.Vec;
 
-public class ForwardFilterGradient implements INetworkGradient{
+/**
+ * A naming abomination
+ */
+public class ForwardNetworkFilterGradient implements INetworkGradient{
 
     protected FilterLinearizer linearizer;
     protected NetworkHistory networkHistory;
 
     private ArrayList<HashMap<Outcome, Vec>> gradientsThroughTime;
 
-    public ForwardFilterGradient(FilterLinearizer linearizer) {
+    public ForwardNetworkFilterGradient(FilterLinearizer linearizer) {
         this.linearizer = linearizer;
     }
 
@@ -52,7 +55,7 @@ public class ForwardFilterGradient implements INetworkGradient{
     }
 
     protected Vec computeGradientOfOutcome(INode node, Outcome outcome) {
-        Vec gradient = new DenseVector(linearizer.totalNumOfVariables);
+        Vec gradient = new DenseVector(1);
         outcome.trainingData = gradient;
 
         // the Jacobian and Hessian of the input matrix will always be zero
@@ -84,18 +87,18 @@ public class ForwardFilterGradient implements INetworkGradient{
 
             // distribution derivative
             IFilter filter = filters[root_count];
-            double[] filter_derivative;
+            double filter_derivative;
 
             // if the filter is not a part of the inclusion set, invert the probability
             if(((outcome.binary_string >> i) & 0b1) == 0){
-                filter_derivative = filter.getNegatedLogarithmicParameterDerivative(rootOutcome.activatedValue); 
+                filter_derivative = filter.getNegatedLogarithmicDerivative(rootOutcome.activatedValue); 
             }
             else{
-                filter_derivative = filter.getLogarithmicParameterDerivative(rootOutcome.activatedValue); 
+                filter_derivative = filter.getLogarithmicDerivative(rootOutcome.activatedValue); 
             }
             
             // add the derivative to the gradient
-            root_gradient = linearizer.addToVector(filter, filter_derivative, root_gradient);
+            root_gradient.mutableAdd(filter_derivative);
 
             
             for (double d : root_gradient.arrayCopy()) {

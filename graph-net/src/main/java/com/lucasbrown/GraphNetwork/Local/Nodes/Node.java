@@ -307,14 +307,13 @@ public class Node implements INode{
                 .flatCartesianPowerProductPair(forward.values());
 
         
-        signalPowerSet.stream().parallel().forEach(pair -> 
+        signalPowerSet.stream().forEach(pair -> 
             {
                 pair.u = sortSignalByID(pair.u);
                 pair.v = sortSignalByID(pair.v);
             });
 
         outcomes = signalPowerSet.stream()
-                .parallel()
                 .filter(set -> !set.u.isEmpty()) // remove the null set
                 .map(this::signalSetToOutcome)
                 // .filter(outcome -> outcome.probability > ZERO_THRESHOLD)

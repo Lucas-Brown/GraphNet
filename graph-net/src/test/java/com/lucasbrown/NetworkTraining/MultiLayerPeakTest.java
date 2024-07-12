@@ -1,21 +1,15 @@
 package com.lucasbrown.NetworkTraining;
 
 import java.util.Random;
-
-import com.lucasbrown.GraphNetwork.Global.EdgeBuilder;
 import com.lucasbrown.GraphNetwork.Global.GraphNetwork;
 import com.lucasbrown.GraphNetwork.Global.NodeBuilder;
 import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
 import com.lucasbrown.GraphNetwork.Local.Filters.NormalPeakFilter;
-import com.lucasbrown.GraphNetwork.Local.Nodes.ITrainable;
+import com.lucasbrown.GraphNetwork.Local.Nodes.INode;
 import com.lucasbrown.GraphNetwork.Local.Nodes.InputNode;
 import com.lucasbrown.GraphNetwork.Local.Nodes.OutputNode;
+import com.lucasbrown.GraphNetwork.Local.Nodes.ProbabilityCombinators.SimpleProbabilityCombinator;
 import com.lucasbrown.GraphNetwork.Local.Nodes.ValueCombinators.ComplexCombinator;
-import com.lucasbrown.NetworkTraining.DistributionSolverMethods.BetaDistribution;
-import com.lucasbrown.NetworkTraining.DistributionSolverMethods.BetaDistributionAdjuster;
-import com.lucasbrown.NetworkTraining.DistributionSolverMethods.NormalBetaFilterAdjuster;
-import com.lucasbrown.NetworkTraining.DistributionSolverMethods.NormalDistribution;
-import com.lucasbrown.NetworkTraining.Solvers.ADAMSolver;
 import com.lucasbrown.NetworkTraining.Trainers.Trainer;
 
 public class MultiLayerPeakTest {
@@ -71,26 +65,21 @@ public class MultiLayerPeakTest {
         MultiLayerPeakTest ptest = new MultiLayerPeakTest();
 
         GraphNetwork net = new GraphNetwork();
-
+        
         NodeBuilder nodeBuilder = new NodeBuilder(net);
 
         nodeBuilder.setActivationFunction(ActivationFunction.LINEAR);
-        nodeBuilder.setNodeConstructor(ComplexCombinator::new);
-        nodeBuilder.setOutputDistSupplier(NormalDistribution::getStandardNormalDistribution);
-        // nodeBuilder.setOutputDistAdjusterSupplier(NormalDistributionFromData::new);
-        nodeBuilder.setProbabilityDistSupplier(BetaDistribution::getUniformBetaDistribution);
-        nodeBuilder.setProbabilityDistAdjusterSupplier(BetaDistributionAdjuster::new);
-        // nodeBuilder.setProbabilityDistSupplier(BernoulliDistribution::getEvenDistribution);
-        // nodeBuilder.setProbabilityDistAdjusterSupplier(BernoulliDistributionAdjuster::new);
-
+        nodeBuilder.setValueCombinator(ComplexCombinator::new);
+        nodeBuilder.setProbabilityCombinator(() -> new SimpleProbabilityCombinator(NormalPeakFilter::getStandardNormalBetaFilter));
+        
         nodeBuilder.setAsInputNode();
 
         InputNode in = (InputNode) nodeBuilder.build();
 
         nodeBuilder.setAsHiddenNode();
 
-        ITrainable hidden1 = (ITrainable) nodeBuilder.build();
-        ITrainable hidden2 = (ITrainable) nodeBuilder.build();
+        INode hidden1 = nodeBuilder.build();
+        INode hidden2 = nodeBuilder.build();
 
         nodeBuilder.setAsOutputNode();
 
@@ -99,29 +88,23 @@ public class MultiLayerPeakTest {
         in.setName("Input");
         out.setName("Output");
 
-        EdgeBuilder arcBuilder = new EdgeBuilder(net);
-        arcBuilder.setFilterSupplier(NormalPeakFilter::getStandardNormalBetaFilter);
-        arcBuilder.setFilterAdjusterSupplier(NormalBetaFilterAdjuster::new);
-        // arcBuilder.setFilterAdjusterSupplier(NormalBernoulliFilterAdjuster::new);
-        // arcBuilder.setFilterSupplier(OpenFilter::new);
-        // arcBuilder.setFilterAdjusterSupplier(NoAdjustments::new);
+        net.addNewConnection(in, hidden1);
+        net.addNewConnection(hidden1, hidden2);
+        net.addNewConnection(hidden2, out);
 
-        arcBuilder.build(in, hidden1);
-        arcBuilder.build(hidden1, hidden2);
-        arcBuilder.build(hidden2, out);
+        Trainer trainer = Trainer.getDefaultTrainer(net);
+        trainer.setTrainingData(ptest.inputData, ptest.outputData);
+        // ADAMSolver weightSolver = (ADAMSolver) trainer.weightsSolver;
+        // weightSolver.alpha = 0.1;
+        // weightSolver.epsilon = 0.01;
+        // weightSolver.beta_1 = 0.9;
+        // weightSolver.beta_2 = 0.99;
 
-        Trainer trainer = Trainer.getDefaultTrainer(net, ptest.inputData, ptest.outputData);
-        ADAMSolver weightSolver = (ADAMSolver) trainer.weightsSolver;
-        weightSolver.alpha = 0.1;
-        weightSolver.epsilon = 0.01;
-        weightSolver.beta_1 = 0.9;
-        weightSolver.beta_2 = 0.99;
-
-        ADAMSolver probabilitySolver = (ADAMSolver) trainer.probabilitySolver;
-        probabilitySolver.alpha = 0.1;
-        probabilitySolver.epsilon = 0.01;
-        probabilitySolver.beta_1 = 0.9;
-        probabilitySolver.beta_2 = 0.99;
+        // ADAMSolver probabilitySolver = (ADAMSolver) trainer.probabilitySolver;
+        // probabilitySolver.alpha = 0.1;
+        // probabilitySolver.epsilon = 0.01;
+        // probabilitySolver.beta_1 = 0.9;
+        // probabilitySolver.beta_2 = 0.99;
 
         trainer.trainNetwork(10000, 1000);
         System.out.println();
