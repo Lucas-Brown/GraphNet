@@ -80,7 +80,7 @@ public class ForwardFilterGradient implements INetworkGradient{
 
             // root derivative component
             Vec root_gradient = (Vec) rootOutcome.trainingData;
-            root_gradient = root_gradient.divide(rootOutcome.probability);
+            gradient.mutableAdd(root_gradient);
 
             // distribution derivative
             IFilter filter = filters[root_count];
@@ -92,18 +92,19 @@ public class ForwardFilterGradient implements INetworkGradient{
             }
             else{
                 filter_derivative = filter.getLogarithmicParameterDerivative(rootOutcome.activatedValue); 
+                // filter_derivative = new double[filter.getNumberOfAdjustableParameters()];
+            }
+
+            for (double d : filter_derivative) {
+                assert Double.isFinite(d);
             }
             
             // add the derivative to the gradient
-            root_gradient = linearizer.addToVector(filter, filter_derivative, root_gradient);
+            Vec filter_gradient = linearizer.paramsToVector(filter, filter_derivative);
 
-            
-            for (double d : root_gradient.arrayCopy()) {
-                assert Double.isFinite(d);
-            }
 
             // scale the root gradient and add to the total
-            gradient.mutableAdd(root_gradient);
+            gradient.mutableAdd(filter_gradient.multiply(outcome.probability));
             root_count++;
         }
 

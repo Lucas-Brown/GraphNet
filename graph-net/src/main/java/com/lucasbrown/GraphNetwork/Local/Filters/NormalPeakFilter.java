@@ -66,7 +66,7 @@ public class NormalPeakFilter implements IFilter {
     }
 
     @Override
-    public void setAdjustableParameters(double[] params) {
+    public void setAdjustableParameters(double... params) {
         mean = params[0];
         variance = params[1];
     }
@@ -100,14 +100,6 @@ public class NormalPeakFilter implements IFilter {
         return exp_deriv;
     }
 
-    public static double likelihood(double x, double mean, double variance) {
-        double temp = (x - mean) / variance;
-        return Math.exp(-temp * temp / 2);
-    }
-
-    public static NormalPeakFilter getStandardNormalBetaFilter() {
-        return new NormalPeakFilter(0, 1);
-    }
 
     @Override
     public double getLogarithmicDerivative(double x) {
@@ -119,6 +111,15 @@ public class NormalPeakFilter implements IFilter {
         double normal_derivative = getLogarithmicDerivative(x);
         double likelihood = getChanceToSend(x);
         return -likelihood/(1-likelihood) * normal_derivative;
+    }
+    
+    public static double likelihood(double x, double mean, double variance) {
+        double temp = (x - mean) / variance;
+        return Math.exp(-temp * temp / 2);
+    }
+
+    public static NormalPeakFilter getStandardNormalBetaFilter() {
+        return new NormalPeakFilter(0, 1);
     }
 
 }

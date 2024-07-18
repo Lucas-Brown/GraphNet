@@ -66,6 +66,7 @@ public class ComplexCombinator extends AdditiveValueCombinator {
 
     @Override
     public void setWeights(int bitStr, double[] newWeights) {
+        assert newWeights.length == weights[bitStr].length;
         weights[bitStr] = newWeights;
     }
 

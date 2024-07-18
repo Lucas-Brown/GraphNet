@@ -6,6 +6,7 @@ import com.lucasbrown.GraphNetwork.Global.GraphNetwork;
 import com.lucasbrown.GraphNetwork.Global.NodeBuilder;
 import com.lucasbrown.GraphNetwork.Local.ActivationFunction;
 import com.lucasbrown.GraphNetwork.Local.Filters.CappedNormalPeakFilter;
+import com.lucasbrown.GraphNetwork.Local.Filters.GeneralizedExponentialDecayFilter;
 import com.lucasbrown.GraphNetwork.Local.Filters.IFilter;
 import com.lucasbrown.GraphNetwork.Local.Filters.NormalPeakFilter;
 import com.lucasbrown.GraphNetwork.Local.Filters.OpenFilter;
@@ -13,6 +14,7 @@ import com.lucasbrown.GraphNetwork.Local.Nodes.INode;
 import com.lucasbrown.GraphNetwork.Local.Nodes.InputNode;
 import com.lucasbrown.GraphNetwork.Local.Nodes.OutputNode;
 import com.lucasbrown.GraphNetwork.Local.Nodes.ProbabilityCombinators.ComplexProbabilityCombinator;
+import com.lucasbrown.GraphNetwork.Local.Nodes.ProbabilityCombinators.IProbabilityCombinator;
 import com.lucasbrown.GraphNetwork.Local.Nodes.ProbabilityCombinators.SimpleProbabilityCombinator;
 import com.lucasbrown.GraphNetwork.Local.Nodes.ValueCombinators.ComplexCombinator;
 import com.lucasbrown.GraphNetwork.Local.Nodes.ValueCombinators.IValueCombinator;
@@ -22,10 +24,11 @@ import com.lucasbrown.NetworkTraining.Trainers.Trainer;
 public class MultiplierTest {
 
     private Random rng = new Random();
-    private int[] M1 = {10,1,2,3,4,5,6,7,8,9,0};
-    private int[] M2 = {70,10,20,30,40,50,60,0,80,90,100};
+    private int[] M1 = {10,1,2,3,4,5,6,7,8,9};
+    private int[] M2 = {70,10,20,30,40,50,60,80,90,100};
     private int N = M1.length * M2.length;
-    private final int mul_steps = 4;
+    private final int mul_steps = 3;
+    private final int overshoots = 5;
     private Double[][][] inputData;
     private Double[][][] outputData;
 
@@ -41,7 +44,7 @@ public class MultiplierTest {
     }
 
     private Double[][] createInput(int m1, int m2){
-        Double[][] input = new Double[m1+mul_steps][2];
+        Double[][] input = new Double[m1+mul_steps+overshoots][2];
         input[0] = new Double[] { (double) m1, (double) m2 };
         for (int i = 1; i < input.length; i++) {
             input[i] = new Double[] { null, null };
@@ -61,11 +64,11 @@ public class MultiplierTest {
         int m1 = (int) input[0][0].longValue();
         int m2 = (int) input[0][1].longValue();
 
-        Double[][] out = new Double[m1+mul_steps][1];
+        Double[][] out = new Double[m1+mul_steps+overshoots][1];
         for (int i = 0; i < input.length; i++) {
             out[i] = new Double[]{null};
         }
-        out[out.length-2] = new Double[]{(double) m1*m2};
+        out[out.length-overshoots-1] = new Double[]{(double) m1*m2};
         return out;
     }
 
@@ -88,7 +91,7 @@ public class MultiplierTest {
         INode valueAccumulator = nodeBuilder.build();
 
         nodeBuilder.setAsOutputNode();
-        nodeBuilder.setProbabilityCombinator(() -> new ComplexProbabilityCombinator(() -> new CappedNormalPeakFilter(0, 100, 1E-6)));
+        nodeBuilder.setProbabilityCombinator(() -> new ComplexProbabilityCombinator(NormalPeakFilter::getStandardNormalBetaFilter));
         OutputNode out = (OutputNode) nodeBuilder.build();
 
         in1.setName("Input 1");
@@ -124,15 +127,22 @@ public class MultiplierTest {
 
 
         IValueCombinator valueVComb = valueAccumulator.getValueCombinator();
-        valueVComb.setBias(0b10, 0);
-        valueVComb.setWeights(0b10, new double[]{1});
+        valueVComb.setBias(0b01, 0);
+        valueVComb.setWeights(0b01, new double[]{1});
+        valueVComb.setBias(0b11, 0);
+        valueVComb.setWeights(0b11, new double[]{1,1});
 
         
         IValueCombinator outVComb = out.getValueCombinator();
-        outVComb.setBias(0b10, 0);
-        outVComb.setWeights(0b10, new double[]{0});
-        outVComb.setBias(0b01, 0);
-        outVComb.setWeights(0b01, new double[]{1});
+        outVComb.setBias(0b11, 0);
+        outVComb.setWeights(0b11, new double[]{0, 1});
+
+        IProbabilityCombinator outPComb = out.getProbabilityCombinator();
+        IFilter[] outFilters = outPComb.getFilters(0b11);
+        // outFilters[0].setAdjustableParameters(new double[]{-10, 10, 0, 1, 2});
+        // outFilters[1].setAdjustableParameters(new double[]{-10, 10, 0, 1000, 2});
+        outFilters[1].setAdjustableParameters(100,1000);
+        outFilters[0].setAdjustableParameters(0,1);
 
         return net;
     }
@@ -147,13 +157,15 @@ public class MultiplierTest {
         Trainer trainer = Trainer.getDefaultTrainer(net);
         trainer.setTrainingData(mul.inputData, mul.outputData);
 
-        // ADAMSolver weightsSolver = (ADAMSolver) trainer.weightsSolver;
-        // weightsSolver.alpha= 1E-1;
-        // weightsSolver.epsilon = 1E-4;
+        ADAMSolver weightsSolver = (ADAMSolver) trainer.weightsSolver;
+        weightsSolver.alpha= 1E-12;
+        weightsSolver.epsilon = 1E-24;
 
-        // ADAMSolver probsSolver = (ADAMSolver) trainer.probabilitySolver;
-        // probsSolver.alpha = 1E-3;
-        // probsSolver.epsilon = 1E-6;
+        ADAMSolver probsSolver = (ADAMSolver) trainer.probabilitySolver;
+        probsSolver.alpha = 1E-2;
+        probsSolver.epsilon = 1E-12;
+        // probsSolver.beta_1=0.999;
+        // probsSolver.beta_2=0.9999;
 
         trainer.trainNetwork(10000000, 100);
 

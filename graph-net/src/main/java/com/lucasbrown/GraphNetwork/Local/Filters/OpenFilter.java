@@ -33,7 +33,7 @@ public class OpenFilter implements IFilter {
     }
 
     @Override
-    public void setAdjustableParameters(double[] params) {
+    public void setAdjustableParameters(double... params) {
         // do nothing
     }
 

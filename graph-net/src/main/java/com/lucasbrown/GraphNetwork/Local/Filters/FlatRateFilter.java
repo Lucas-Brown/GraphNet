@@ -47,7 +47,7 @@ public class FlatRateFilter implements IFilter {
     }
 
     @Override
-    public void setAdjustableParameters(double[] params) {
+    public void setAdjustableParameters(double... params) {
         rate = params[0];
     }
 

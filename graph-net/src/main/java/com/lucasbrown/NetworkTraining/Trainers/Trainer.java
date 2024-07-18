@@ -19,6 +19,7 @@ import com.lucasbrown.NetworkTraining.OutputDerivatives.DirectNetworkGradient;
 import com.lucasbrown.NetworkTraining.OutputDerivatives.ErrorFunction;
 import com.lucasbrown.NetworkTraining.OutputDerivatives.IGradient;
 import com.lucasbrown.NetworkTraining.OutputDerivatives.OutcomeChanceFilterGradient;
+import com.lucasbrown.NetworkTraining.OutputDerivatives.WeightedOutcomeChanceFilterGradient;
 import com.lucasbrown.NetworkTraining.Solvers.ADAMSolver;
 import com.lucasbrown.NetworkTraining.Solvers.ISolver;
 
@@ -213,7 +214,7 @@ public class Trainer implements ITrainer {
         FilterLinearizer filterLinearizer = new FilterLinearizer(network);
         NetworkInputEvaluater networkEvaluater = new NetworkInputEvaluater(network);
 
-        ErrorFunction erf = new ErrorFunction.MeanSquaredError();
+        ErrorFunction erf = new ErrorFunction.AugmentedRelativeError();
 
         // CompleteNetworkGradient netGradient = new CompleteNetworkGradient(network,
         // new ForwardNetworkGradient(weightLinearizer),
@@ -225,7 +226,7 @@ public class Trainer implements ITrainer {
 
         ADAMSolver weightsSolver = new ADAMSolver(netGradient, weightLinearizer.totalNumOfVariables);
 
-        OutcomeChanceFilterGradient filterGradient = new OutcomeChanceFilterGradient(network,
+        WeightedOutcomeChanceFilterGradient filterGradient = new WeightedOutcomeChanceFilterGradient(network,
                 new ForwardFilterGradient(filterLinearizer), null, erf, filterLinearizer.totalNumOfVariables);
         ADAMSolver filterSolver = new ADAMSolver(filterGradient, filterLinearizer.totalNumOfVariables);
 

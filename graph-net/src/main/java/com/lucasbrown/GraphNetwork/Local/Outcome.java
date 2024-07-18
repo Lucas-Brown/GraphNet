@@ -33,7 +33,7 @@ public class Outcome {
 
     @Override
     public String toString() {
-        return String.format("(%.2e, %2.0f%s)", netValue, probability * 100, "%");
+        return String.format("(%.2e, %2.0f%s, %s)", netValue, probability * 100, "%", Integer.toBinaryString(binary_string));
     }
 
     /*

@@ -22,15 +22,27 @@ public class WeightedOutcomeChanceFilterGradient extends GradientBase {
 
     protected Vec computeGradientOfOutput(ArrayList<Outcome> outcomesAtTime, HashMap<Outcome, Vec> gradientAtTime, Double target) {
         Vec gradient = new DenseVector(totalNumOfVariables);
-        
+
         if(outcomesAtTime == null || outcomesAtTime.isEmpty()){
             return gradient;
         }
-        
+
+        if(target == null){
+            gradientOfNullTarget(outcomesAtTime, gradientAtTime, gradient);
+        }
+        else
+        {
+            gradientOfTarget(outcomesAtTime, gradientAtTime, (double) target, gradient);
+        }
+        return gradient;
+    }
+
+    private void gradientOfTarget(ArrayList<Outcome> outcomesAtTime, HashMap<Outcome, Vec> gradientAtTime, double target, Vec gradient) {
+    
         double probabilityVolume = IGradient.getProbabilityVolume(outcomesAtTime);
 
         if(probabilityVolume == 0){
-            return gradient;
+            return;
         }
 
         double totalOutputError = 0;
@@ -45,7 +57,6 @@ public class WeightedOutcomeChanceFilterGradient extends GradientBase {
                 continue;
             }
 
-            networkDerivative.multiply(target == null ? -1 : 1);
             assert networkDerivative.countNaNs() == 0;
 
             // accumulate jacobians
@@ -53,15 +64,26 @@ public class WeightedOutcomeChanceFilterGradient extends GradientBase {
         }
         if(totalOutputError == 0){
             gradient.mutableMultiply(0);
-            return gradient;
+            return;
         }
 
         assert gradient.countNaNs() == 0;
-        return gradient.divide(-totalOutputError);
+        gradient.mutableDivide(-totalOutputError);
+    }
+
+    private void gradientOfNullTarget(ArrayList<Outcome> outcomesAtTime, HashMap<Outcome, Vec> gradientAtTime, Vec gradient) {
+
+        for (Outcome outcome : outcomesAtTime) {
+            Vec networkDerivative = gradientAtTime.get(outcome);
+            
+            // accumulate jacobians
+            gradient.mutableAdd(networkDerivative);
+        }
+        gradient.mutableDivide(outcomesAtTime.size()*10);
     }
 
     protected double computeErrorOfOutput(ArrayList<Outcome> outcomesAtTime, Double target) {
-        if(outcomesAtTime == null || outcomesAtTime.isEmpty()){
+        if(outcomesAtTime == null || outcomesAtTime.isEmpty() || target == null){
             return 0;
         }
         

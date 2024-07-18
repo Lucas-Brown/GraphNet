@@ -60,7 +60,7 @@ public interface ErrorFunction {
      */
     public static class AugmentedRelativeError implements ErrorFunction {
 
-        public double eps = 1;
+        public double eps = 1E-12;
 
         @Override
         public double error(double value, double target) {

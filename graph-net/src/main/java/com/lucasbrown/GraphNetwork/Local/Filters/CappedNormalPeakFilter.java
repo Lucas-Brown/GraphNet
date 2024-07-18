@@ -71,7 +71,7 @@ public class CappedNormalPeakFilter implements IFilter {
     }
 
     @Override
-    public void setAdjustableParameters(double[] params) {
+    public void setAdjustableParameters(double... params) {
         mean = params[0];
         variance = params[1];
     }
