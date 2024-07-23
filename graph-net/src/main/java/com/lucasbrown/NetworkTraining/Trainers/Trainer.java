@@ -214,7 +214,7 @@ public class Trainer implements ITrainer {
         FilterLinearizer filterLinearizer = new FilterLinearizer(network);
         NetworkInputEvaluater networkEvaluater = new NetworkInputEvaluater(network);
 
-        ErrorFunction erf = new ErrorFunction.AugmentedRelativeError();
+        ErrorFunction erf = new ErrorFunction.MeanSquaredError();
 
         // CompleteNetworkGradient netGradient = new CompleteNetworkGradient(network,
         // new ForwardNetworkGradient(weightLinearizer),

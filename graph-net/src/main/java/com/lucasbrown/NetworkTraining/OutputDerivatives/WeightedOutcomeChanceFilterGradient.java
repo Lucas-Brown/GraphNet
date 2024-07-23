@@ -5,44 +5,155 @@ import java.util.HashMap;
 
 import com.lucasbrown.GraphNetwork.Global.GraphNetwork;
 import com.lucasbrown.GraphNetwork.Local.Outcome;
+import com.lucasbrown.GraphNetwork.Local.Nodes.INode;
+import com.lucasbrown.GraphNetwork.Local.Nodes.OutputNode;
+import com.lucasbrown.NetworkTraining.History.NetworkHistory;
 import com.lucasbrown.NetworkTraining.NetworkDerivatives.INetworkGradient;
+import com.lucasbrown.NetworkTraining.OutputDerivatives.ErrorFunction.CrossEntropy;
 
 import jsat.linear.DenseVector;
 import jsat.linear.Vec;
 
-public class WeightedOutcomeChanceFilterGradient extends GradientBase {
+public class WeightedOutcomeChanceFilterGradient implements IGradient {
+
+    protected Double[][] targets;
+    protected INetworkGradient networkGradientEvaluater;
+    protected Vec gradient;
+    protected ArrayList<OutputNode> outputNodes;
+    protected int totalNumOfVariables;
+
+    
+    private Vec probGrad, valueGrad;
+    private double probError, valueError;
 
     private static double temperature = 1;
     private ErrorFunction errorFunction;
+    private static final CrossEntropy crossEntropy = new CrossEntropy();
 
     public WeightedOutcomeChanceFilterGradient(GraphNetwork network, INetworkGradient networkGradientEvaluater, Double[][] targets, ErrorFunction errorFunction, int totalNumOfVariables){
-        super(network, networkGradientEvaluater, targets, totalNumOfVariables);
+        this.targets = targets;
+        this.networkGradientEvaluater = networkGradientEvaluater;
+        this.totalNumOfVariables = totalNumOfVariables;
         this.errorFunction = errorFunction;
+
+        outputNodes = network.getOutputNodes();
     }
 
-    protected Vec computeGradientOfOutput(ArrayList<Outcome> outcomesAtTime, HashMap<Outcome, Vec> gradientAtTime, Double target) {
+    
+    @Override
+    public Vec computeGradient(NetworkHistory networkHistory) {
+        ArrayList<HashMap<Outcome, Vec>> networkGradient = networkGradientEvaluater.getGradient(networkHistory);
+        gradient = new DenseVector(totalNumOfVariables);
+
+        gradientOfTargets(networkHistory, networkGradient);
+        gradientOfValues(networkHistory, networkGradient);
+
+        return gradient;
+
+    }
+
+    private void gradientOfTargets(NetworkHistory networkHistory, ArrayList<HashMap<Outcome, Vec>> networkGradient){
+        
+        final int out_size = outputNodes.size();
+        Vec[] gradient_prob = new Vec[out_size];
+        int[] T_prob = new int[out_size];
+
+        probGrad = new DenseVector(totalNumOfVariables);
+
+        if(out_size == 0){
+            return;
+        }
+
+        for (int i = 0; i < out_size; i++) {
+            gradient_prob[i] = new DenseVector(totalNumOfVariables);
+        }
+
+        // loop over all output nodes at every timestep
+        for (int timestep = 0; timestep < targets.length; timestep++) {
+
+            for (int i = 0; i < out_size; i++) {
+                INode outputNode = outputNodes.get(i);
+                ArrayList<Outcome> outcomesAtTime = networkHistory.getStateOfRecord(timestep, outputNode);
+                HashMap<Outcome, Vec> gradientAtTime = networkGradient.get(timestep);
+                Double target = targets[timestep][i];
+                boolean is_value = target != null;
+
+                // skip when there's no outcome
+                if(outcomesAtTime == null || outcomesAtTime.isEmpty()){
+                    continue;
+                }
+
+                // probabilty component
+                gradient_prob[i].mutableAdd(gradientOfTarget(outcomesAtTime, gradientAtTime, is_value ? 1 : 0));
+                T_prob[i]++;
+            }
+
+        }
+
+        for (int i = 0; i < out_size; i++) {
+            if(T_prob[i] == 0) continue;
+
+            probGrad.mutableAdd(gradient_prob[i].divide(T_prob[i]));
+        }
+    }
+
+    private void gradientOfValues(NetworkHistory networkHistory, ArrayList<HashMap<Outcome, Vec>> networkGradient){
+
+        final int out_size = outputNodes.size();
+        Vec[] gradient_value = new Vec[out_size];
+        int[] T_value = new int[out_size];
+
+        valueGrad = new DenseVector(totalNumOfVariables);
+
+        if(out_size == 0){
+            return;
+        }
+
+        for (int i = 0; i < out_size; i++) {
+            gradient_value[i] = new DenseVector(totalNumOfVariables);
+        }
+
+        // loop over all output nodes at every timestep
+        for (int timestep = 0; timestep < targets.length; timestep++) {
+
+            for (int i = 0; i < out_size; i++) {
+                INode outputNode = outputNodes.get(i);
+                ArrayList<Outcome> outcomesAtTime = networkHistory.getStateOfRecord(timestep, outputNode);
+                HashMap<Outcome, Vec> gradientAtTime = networkGradient.get(timestep);
+                Double target = targets[timestep][i];
+                boolean is_value = target != null;
+
+                // skip when there's no outcome
+                if(outcomesAtTime == null || outcomesAtTime.isEmpty()){
+                    continue;
+                }
+
+                // value component 
+                if(!is_value){
+                    continue;
+                }
+                
+                Vec gradient_value_at_time = weightedValueGradient(outcomesAtTime, gradientAtTime, (double) target);
+                gradient_value[i].mutableAdd(gradient_value_at_time);
+                T_value[i]++;
+            }
+
+        }
+
+        for (int i = 0; i < out_size; i++) {
+            if(T_value[i] == 0) continue;
+
+            valueGrad.mutableAdd(gradient_value[i].divide(T_value[i]));
+        }
+    }
+
+    private Vec weightedValueGradient(ArrayList<Outcome> outcomesAtTime, HashMap<Outcome, Vec> gradientAtTime, double target) {
         Vec gradient = new DenseVector(totalNumOfVariables);
 
-        if(outcomesAtTime == null || outcomesAtTime.isEmpty()){
-            return gradient;
-        }
-
-        if(target == null){
-            gradientOfNullTarget(outcomesAtTime, gradientAtTime, gradient);
-        }
-        else
-        {
-            gradientOfTarget(outcomesAtTime, gradientAtTime, (double) target, gradient);
-        }
-        return gradient;
-    }
-
-    private void gradientOfTarget(ArrayList<Outcome> outcomesAtTime, HashMap<Outcome, Vec> gradientAtTime, double target, Vec gradient) {
-    
         double probabilityVolume = IGradient.getProbabilityVolume(outcomesAtTime);
 
         if(probabilityVolume == 0){
-            return;
+            return gradient;
         }
 
         double totalOutputError = 0;
@@ -64,22 +175,45 @@ public class WeightedOutcomeChanceFilterGradient extends GradientBase {
         }
         if(totalOutputError == 0){
             gradient.mutableMultiply(0);
-            return;
+            return gradient;
         }
 
         assert gradient.countNaNs() == 0;
-        gradient.mutableDivide(-totalOutputError);
+        gradient.mutableDivide(-totalOutputError*probabilityVolume);
+        return gradient.multiply(1);
     }
 
-    private void gradientOfNullTarget(ArrayList<Outcome> outcomesAtTime, HashMap<Outcome, Vec> gradientAtTime, Vec gradient) {
+    private Vec gradientOfTarget(ArrayList<Outcome> outcomesAtTime, HashMap<Outcome, Vec> gradientAtTime, double targetProbability) {
+        Vec gradient = new DenseVector(totalNumOfVariables);
 
+        double probabilityVolume = IGradient.getProbabilityVolume(outcomesAtTime);
+        
         for (Outcome outcome : outcomesAtTime) {
             Vec networkDerivative = gradientAtTime.get(outcome);
             
             // accumulate jacobians
             gradient.mutableAdd(networkDerivative);
         }
-        gradient.mutableDivide(outcomesAtTime.size()*10);
+        gradient.mutableMultiply(crossEntropy.error_derivative(probabilityVolume, targetProbability));
+        assert gradient.countNaNs() == 0;
+        return gradient;
+    }
+
+
+    @Override
+    public double getTotalError(NetworkHistory networkHistory) {
+        double error = 0;
+
+        for (int i = 0; i < outputNodes.size(); i++) {
+            for (int timestep = 0; timestep < targets.length; timestep++) {
+                INode outputNode = outputNodes.get(i);
+                ArrayList<Outcome> outcomesAtTime = networkHistory.getStateOfRecord(timestep, outputNode);
+                Double target = targets[timestep][i];
+                error += computeErrorOfOutput(outcomesAtTime, target);
+            }
+        }
+        return error / targets.length;
+
     }
 
     protected double computeErrorOfOutput(ArrayList<Outcome> outcomesAtTime, Double target) {
@@ -114,16 +248,17 @@ public class WeightedOutcomeChanceFilterGradient extends GradientBase {
         return -error/totalOutputError;
     }
 
-    
-    // public static double[][] targetsToProbabilies(Double[][] targets){
-    //     double[][] probs = new double[targets.length][];
-    //     for (int i = 0; i < probs.length; i++) {
-    //         probs[i] = new double[targets[i].length];
-    //         for (int j = 0; j < probs[i].length; j++) {
-    //             probs[i][j] = targets[i][j] == null ? 0 : 1;
-    //         }
-    //     }
-    //     return probs;
-    // }
+    private void localIterateOverHistory(NetworkHistory networkHistory, HistoryIteratorFunction histFunc){
+        IGradient.iterateOverHistory(targets, outputNodes, networkHistory, histFunc);
+    }
 
+    @Override
+    public void setTargets(Double[][] targets) {
+        this.targets = targets;
+    }
+
+    @Override
+    public Double[][] getTargets() {
+        return targets;
+    }
 }
