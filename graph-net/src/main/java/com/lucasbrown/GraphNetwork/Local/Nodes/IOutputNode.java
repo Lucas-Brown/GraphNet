@@ -1,6 +1,6 @@
 package com.lucasbrown.GraphNetwork.Local.Nodes;
 
-public interface IOutputNode {
+public interface IOutputNode extends INode{
 
     /**
      * Get the value of this node

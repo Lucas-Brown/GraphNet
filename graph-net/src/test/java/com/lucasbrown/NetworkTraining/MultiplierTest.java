@@ -162,8 +162,8 @@ public class MultiplierTest {
         weightsSolver.epsilon = 1E-24;
 
         ADAMSolver probsSolver = (ADAMSolver) trainer.probabilitySolver;
-        probsSolver.alpha = 1E-1;
-        probsSolver.epsilon = 1E-12;
+        probsSolver.alpha = 1E1;
+        probsSolver.epsilon = 1E-6;
         // probsSolver.beta_1=0.999;
         // probsSolver.beta_2=0.9999;
 
