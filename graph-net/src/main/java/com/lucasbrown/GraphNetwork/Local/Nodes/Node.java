@@ -373,7 +373,8 @@ public class Node implements INode{
     private double[] getTransferProbabilities(Collection<Signal> signals) {
         signals = sortSignalByID(signals);
         int key = nodeSetToBinStr(signals.stream().map(Signal::getSendingNode).toList());
-        return probabilityCombinator.getTransferProbabilities(signals, key);
+        double[] transferProbs = probabilityCombinator.getTransferProbabilities(signals, key);
+        return transferProbs;
     }
 
 
