@@ -1,6 +1,7 @@
 package com.lucasbrown.NetworkTraining.OutputDerivatives;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.stream.Stream;
 
 import com.lucasbrown.GraphNetwork.Local.Outcome;
@@ -21,7 +22,7 @@ public interface IGradient {
         return Stream.of(outcomes).mapToDouble(outcome -> outcome.probability).sum();
     }
 
-    static double getProbabilityVolume(ArrayList<Outcome> outcomes) {
+    static double getProbabilityVolume(Collection<Outcome> outcomes) {
         return outcomes.stream().mapToDouble(outcome -> outcome.probability).sum();
     }
 }
