@@ -48,6 +48,9 @@ public class WeightedOutcomeChanceFilterGradient implements IGradient {
         gradientOfTargets(networkHistory, networkGradient);
         gradientOfValues(networkHistory, networkGradient);
 
+        gradient.mutableAdd(probGrad);
+        gradient.mutableAdd(valueGrad);
+
         return gradient;
 
     }

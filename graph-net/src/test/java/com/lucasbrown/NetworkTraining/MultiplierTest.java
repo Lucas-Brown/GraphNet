@@ -25,7 +25,7 @@ public class MultiplierTest {
 
     private Random rng = new Random();
     private int[] M1 = {10,1,2,3,4,5,6,7,8,9};
-    private int[] M2 = {70,10,20,30,40,50,60,80,90,100};
+    private int[] M2 = {70,-10,20,-30,-40,50,-60,80,90,-100};
     private int N = M1.length * M2.length;
     private final int mul_steps = 3;
     private final int overshoots = 5;
@@ -162,8 +162,8 @@ public class MultiplierTest {
         weightsSolver.epsilon = 1E-24;
 
         ADAMSolver probsSolver = (ADAMSolver) trainer.probabilitySolver;
-        probsSolver.alpha = 1E-1;
-        probsSolver.epsilon = 1E-12;
+        probsSolver.alpha = 1E-0;
+        probsSolver.epsilon = 1E-2;
         // probsSolver.beta_1=0.999;
         // probsSolver.beta_2=0.9999;
 
