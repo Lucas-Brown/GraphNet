@@ -108,6 +108,7 @@ public class Trainer implements ITrainer {
         for (int i = 0; i < inputs.length; i++) {
             networkEvaluater.setInputData(inputs[i]);
             histories[i] = networkEvaluater.computeNetworkInference();
+            assert histories[i].getNumberOfTimesteps() == inputs[i].length;
         }
         return histories;
     }
@@ -172,6 +173,7 @@ public class Trainer implements ITrainer {
         }
 
         sb.append("Accuracy error : ");
+        weightsGradient.setTargets(targets[0]);
         sb.append(getTotalError(histories, weightsGradient));
         sb.append("\nConsistency error : ");
         probabilityGradient.setTargets(targets[0]);
@@ -185,6 +187,7 @@ public class Trainer implements ITrainer {
         for (int i = 0; i < histories.length; i++) {
             NetworkHistory history = histories[i];
             errorEvaluator.setTargets(targets[i]);
+            assert history.getNumberOfTimesteps() == targets[i].length;
             error += errorEvaluator.getTotalError(history);
         }
         return error / histories.length;
