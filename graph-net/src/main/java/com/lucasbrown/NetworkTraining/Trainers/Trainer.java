@@ -113,7 +113,7 @@ public class Trainer implements ITrainer {
         return histories;
     }
 
-    private Vec aggregateWeightGradients(NetworkHistory[] histories) {
+    public Vec aggregateWeightGradients(NetworkHistory[] histories) {
         Vec gradient = new DenseVector(weightLinearizer.totalNumOfVariables);
         for (int i = 0; i < inputs.length; i++) {
             weightsGradient.setTargets(targets[i]);
@@ -123,7 +123,7 @@ public class Trainer implements ITrainer {
         return gradient.divide(inputs.length);
     }
 
-    private Vec aggregateProbabilityGradients(NetworkHistory[] histories) {
+    public Vec aggregateProbabilityGradients(NetworkHistory[] histories) {
         Vec gradient = new DenseVector(filterLinearizer.totalNumOfVariables);
         for (int i = 0; i < inputs.length; i++) {
             probabilityGradient.setTargets(targets[i]);
@@ -132,7 +132,7 @@ public class Trainer implements ITrainer {
         return gradient.divide(inputs.length);
     }
 
-    private void printNetwork(NetworkHistory[] histories) {
+    public void printNetwork(NetworkHistory[] histories) {
         NetworkHistory history = histories[0]; // print an example
         int time_count = history.getNumberOfTimesteps();
 

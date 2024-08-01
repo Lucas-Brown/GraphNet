@@ -75,10 +75,8 @@ public class MultiLayerSelectorTest {
 
         nodeBuilder.setAsHiddenNode();
 
-        INode hidden11 = nodeBuilder.build();
-        INode hidden12 = nodeBuilder.build();
-        // INode hidden21 = nodeBuilder.build();
-        // INode hidden22 = nodeBuilder.build();
+        // INode hidden11 = nodeBuilder.build();
+        // INode hidden12 = nodeBuilder.build();
 
         nodeBuilder.setAsOutputNode();
 
@@ -91,20 +89,20 @@ public class MultiLayerSelectorTest {
         out2.setName("Output");
         out3.setName("Output");
 
-        net.addNewConnection(in, hidden11);
-        net.addNewConnection(in, hidden12);
+        // net.addNewConnection(in, hidden11);
+        // net.addNewConnection(in, hidden12);
 
-        // net.addNewConnection(hidden11, hidden21);
-        // net.addNewConnection(hidden11, hidden22);
-        // net.addNewConnection(hidden12, hidden21);
-        // net.addNewConnection(hidden12, hidden22);
+        // net.addNewConnection(hidden11, out1);
+        // net.addNewConnection(hidden11, out2);
+        // net.addNewConnection(hidden11, out3);
+        // net.addNewConnection(hidden12, out1);
+        // net.addNewConnection(hidden12, out2);
+        // net.addNewConnection(hidden12, out3);
 
-        net.addNewConnection(hidden11, out1);
-        net.addNewConnection(hidden11, out2);
-        net.addNewConnection(hidden11, out3);
-        net.addNewConnection(hidden12, out1);
-        net.addNewConnection(hidden12, out2);
-        net.addNewConnection(hidden12, out3);
+        
+        net.addNewConnection(in, out1);
+        net.addNewConnection(in, out2);
+        net.addNewConnection(in, out3);
 
         Trainer trainer = Trainer.getDefaultTrainer(net);
         trainer.setTrainingData(ptest.inputData, ptest.outputData);
@@ -114,13 +112,13 @@ public class MultiLayerSelectorTest {
         // weightSolver.beta_1 = 0.9;
         // weightSolver.beta_2 = 0.99;
 
-        // ADAMSolver probabilitySolver = (ADAMSolver) trainer.probabilitySolver;
-        // probabilitySolver.alpha = 0.1;
-        // probabilitySolver.epsilon = 1E-6;
-        // probabilitySolver.beta_1 = 0.9;
-        // probabilitySolver.beta_2 = 0.99;
+        ADAMSolver probabilitySolver = (ADAMSolver) trainer.probabilitySolver;
+        probabilitySolver.alpha = 1E-6;
+        probabilitySolver.epsilon = 1E-8;
+        probabilitySolver.beta_1 = 0.99;
+        probabilitySolver.beta_2 = 0.999;
 
-        trainer.trainNetwork(100000, 1000);
+        trainer.trainNetwork(1000000, 1000);
         System.out.println();
     }
 }

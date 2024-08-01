@@ -62,6 +62,33 @@ public class WeightsLinearizer {
         return indexCombinPair.u + indexCombinPair.v.getLinearIndexOfBias(key);
     }
 
+    public double[] getAllParameters(){
+        double[] params = new double[totalNumOfVariables];
+
+        for(Pair<Integer, ITrainableValueCombinator> positionPair : vectorNodeOffset.values()){
+            int idx = positionPair.u;
+            ITrainableValueCombinator valueCombinator = positionPair.v;
+            System.arraycopy(valueCombinator.getLinearizedVariables(), 0, params, idx, valueCombinator.getNumberOfVariables());
+        }
+
+        return params;
+    }
+
+    
+    public void setParameter(int i, double value){
+        double[] params = new double[totalNumOfVariables];
+
+        for(Pair<Integer, ITrainableValueCombinator> positionPair : vectorNodeOffset.values()){
+            int idx = positionPair.u;
+            ITrainableValueCombinator valueCombinator = positionPair.v;
+            int varNum = valueCombinator.getNumberOfVariables();
+            if(i >= idx && i < idx + varNum){
+                valueCombinator.setLinearizedVariable(i-idx, value);
+                return;
+            }
+        }
+    }
+
     /**
      * returns the portion of the linearized array corresponding to this node
      * 

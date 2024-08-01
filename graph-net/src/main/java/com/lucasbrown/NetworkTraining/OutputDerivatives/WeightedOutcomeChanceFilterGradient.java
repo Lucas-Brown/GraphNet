@@ -134,7 +134,7 @@ public class WeightedOutcomeChanceFilterGradient implements IGradient {
 
             valueGrad.mutableAdd(gradient_value[i].divide(T_value[i]));
         }
-        return valueGrad.multiply(10);
+        return valueGrad;
     }
 
     private Vec weightedValueGradient(ArrayList<Outcome> outcomesAtTime, HashMap<Outcome, Vec> gradientAtTime,
