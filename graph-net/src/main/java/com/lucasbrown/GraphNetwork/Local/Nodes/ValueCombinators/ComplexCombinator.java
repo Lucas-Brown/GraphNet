@@ -120,4 +120,50 @@ public class ComplexCombinator extends AdditiveValueCombinator {
         return numWeights + biases.length - 1;
     }
 
+    @Override
+    public double[] getLinearizedVariables() {
+        double[] vars = new double[getNumberOfVariables()];
+        int weightCount = 0;
+        for(int key = 1; key < biases.length; key++){
+            double[] weight = weights[key];
+            System.arraycopy(weight, 0, vars, weightCount, weight.length);
+            weightCount += weight.length;
+        }
+
+        System.arraycopy(biases, 0, vars, numWeights, biases.length-1);
+        return vars;
+    }
+
+    @Override
+    public void setLinearizedVariables(double[] variables) {
+        int weightCount = 0;
+        for(int key = 1; key < biases.length; key++){
+            double[] weight = weights[key];
+            System.arraycopy(variables, weightCount, weight, 0, weight.length);
+            weightCount += weight.length;
+        }
+
+        System.arraycopy(variables, numWeights, biases, 0, biases.length-1);
+    }
+
+    @Override
+    public void setLinearizedVariable(int index, double value) {
+        if(index >= numWeights){
+            biases[index - numWeights] = value;
+        }
+        else
+        {
+        // TODO: closed-form solution??? 
+        int weightCount = 0;
+            for(int key = 1; key < biases.length; key++){
+                double[] weight = weights[key];
+                if(index < weightCount + weight.length){
+                    weight[index - weightCount] = value;
+                    return;
+                }
+                weightCount += weight.length;
+            }
+        }
+    }
+
 }

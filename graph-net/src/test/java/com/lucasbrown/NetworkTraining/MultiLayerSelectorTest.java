@@ -75,10 +75,8 @@ public class MultiLayerSelectorTest {
 
         nodeBuilder.setAsHiddenNode();
 
-        INode hidden11 = nodeBuilder.build();
-        INode hidden12 = nodeBuilder.build();
-        // INode hidden21 = nodeBuilder.build();
-        // INode hidden22 = nodeBuilder.build();
+        // INode hidden11 = nodeBuilder.build();
+        // INode hidden12 = nodeBuilder.build();
 
         nodeBuilder.setAsOutputNode();
 
@@ -94,10 +92,12 @@ public class MultiLayerSelectorTest {
         // net.addNewConnection(in, hidden11);
         // net.addNewConnection(in, hidden12);
 
-        // net.addNewConnection(hidden11, hidden21);
-        // net.addNewConnection(hidden11, hidden22);
-        // net.addNewConnection(hidden12, hidden21);
-        // net.addNewConnection(hidden12, hidden22);
+        // net.addNewConnection(hidden11, out1);
+        // net.addNewConnection(hidden11, out2);
+        // net.addNewConnection(hidden11, out3);
+        // net.addNewConnection(hidden12, out1);
+        // net.addNewConnection(hidden12, out2);
+        // net.addNewConnection(hidden12, out3);
 
         // net.addNewConnection(hidden11, out1);
         // net.addNewConnection(hidden11, out2);
@@ -124,7 +124,7 @@ public class MultiLayerSelectorTest {
         // probabilitySolver.beta_1 = 0.99;
         // probabilitySolver.beta_2 = 0.999;
 
-        trainer.trainNetwork(100000, 1000);
+        trainer.trainNetwork(1000000, 1000);
         System.out.println();
     }
 }

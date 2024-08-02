@@ -99,4 +99,29 @@ public class SimpleCombinator extends AdditiveValueCombinator {
         bias -= gradient[gradient.length - 1];
     }
 
+    @Override
+    public double[] getLinearizedVariables() {
+        double[] vars = new double[weights.length + 1];
+        System.arraycopy(weights, weights.length, vars, 0, weights.length);
+        vars[weights.length] = bias;
+        return vars;
+    }
+
+    @Override
+    public void setLinearizedVariables(double[] variables) {
+        System.arraycopy(variables, weights.length, weights, 0, weights.length);
+        bias = variables[weights.length];
+    }
+
+    @Override
+    public void setLinearizedVariable(int index, double value) {
+        if(index == weights.length){
+            bias = value;
+        }
+        else
+        {
+            weights[index] = value;
+        }
+    }
+
 }
