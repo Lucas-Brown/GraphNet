@@ -81,6 +81,24 @@ public class CappedNormalPeakFilter implements IFilter {
         mean -= delta[0];
         variance -= delta[1];
     }
+    
+    @Override
+    public void setAdjustableParameter(int index, double value)
+    {
+        switch(index)
+        {
+            case 0:
+                mean = value;
+                break;
+            case 1:
+                variance = value;
+                break;
+            default:
+                throw new RuntimeException("Invalid index");
+        }
+
+    }
+
 
     @Override
     public double[] getLogarithmicParameterDerivative(double x) {

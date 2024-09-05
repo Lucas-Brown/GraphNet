@@ -11,14 +11,15 @@ import static com.lucasbrown.HelperClasses.MathHelpers.sigmoid_derivative;
 /**
  * f\left(x,a,b,u,s,n\right)=\left(b-a\right)e^{-\frac{1}{2}\left|\frac{x-u}{s}\right|^{n}}+a
  */
-public class GeneralizedExponentialDecayFilter implements IFilter{
+public class GeneralizedExponentialDecayFilter implements IFilter {
 
     private final Random rng;
 
     // parameters
-    private double lower_param, upper_param, mean, variance, power; 
+    private double lower_param, upper_param, mean, variance, power;
 
-    public GeneralizedExponentialDecayFilter(double lower_param, double upper_param, double mean, double variance, double power, Random random){
+    public GeneralizedExponentialDecayFilter(double lower_param, double upper_param, double mean, double variance,
+            double power, Random random) {
         this.lower_param = lower_param;
         this.upper_param = upper_param;
         this.mean = mean;
@@ -27,8 +28,8 @@ public class GeneralizedExponentialDecayFilter implements IFilter{
         rng = random;
     }
 
-    public GeneralizedExponentialDecayFilter(double lower_param, double upper_param, double mean, double variance, double power)
-    {
+    public GeneralizedExponentialDecayFilter(double lower_param, double upper_param, double mean, double variance,
+            double power) {
         this(lower_param, upper_param, mean, variance, power, new Random());
     }
 
@@ -39,10 +40,10 @@ public class GeneralizedExponentialDecayFilter implements IFilter{
 
     @Override
     public double getChanceToSend(double x) {
-        double w = Math.abs((x - mean)/variance);
+        double w = Math.abs((x - mean) / variance);
         double lower = sigmoid(lower_param);
         double upper = sigmoid(upper_param);
-        return (upper-lower)*Math.exp(-Math.pow(w, power)/2) + lower;
+        return (upper - lower) * Math.exp(-Math.pow(w, power) / 2) + lower;
     }
 
     @Override
@@ -58,7 +59,7 @@ public class GeneralizedExponentialDecayFilter implements IFilter{
 
     @Override
     public double[] getAdjustableParameters() {
-        return new double[]{lower_param, upper_param, mean, variance, power};
+        return new double[] { lower_param, upper_param, mean, variance, power };
     }
 
     @Override
@@ -72,6 +73,30 @@ public class GeneralizedExponentialDecayFilter implements IFilter{
     }
 
     @Override
+    public void setAdjustableParameter(int index, double value) {
+        switch (index) {
+            case 0:
+                lower_param = value;
+                break;
+            case 1:
+                upper_param = value;
+                break;
+            case 2:
+                mean = value;
+                break;
+            case 3:
+                variance = value;
+                break;
+            case 4:
+                power = value;
+                break;
+            default:
+                throw new RuntimeException("Invalid index");
+        }
+
+    }
+
+    @Override
     public void applyAdjustableParameterUpdate(double[] delta) {
         lower_param -= delta[0];
         upper_param -= delta[1];
@@ -80,21 +105,21 @@ public class GeneralizedExponentialDecayFilter implements IFilter{
         power -= delta[4];
     }
 
-    private double[] getDerivativeOfParameters(double x){
-        double w = Math.abs((x - mean)/variance);
+    private double[] getDerivativeOfParameters(double x) {
+        double w = Math.abs((x - mean) / variance);
         double lower = sigmoid(lower_param);
         double upper = sigmoid(upper_param);
         double w_pow = Math.pow(w, power);
-        double exp = Math.exp(-w_pow/2);
+        double exp = Math.exp(-w_pow / 2);
         double range = upper - lower;
-        double d_exp = range*exp*w_pow/2;
+        double d_exp = range * exp * w_pow / 2;
 
-        double d_lower = (1-exp)*sigmoid_derivative(lower_param);
-        double d_upper = exp*sigmoid_derivative(upper_param);
-        double d_mean = (x - mean) == 0 ? 0 : d_exp*power/(x-mean);
-        double d_variance = d_exp*power / variance;
-        double d_power = w == 0 ? 0 : -d_exp*Math.log(w);
-        return new double[]{d_lower, d_upper, d_mean, d_variance, d_power};
+        double d_lower = (1 - exp) * sigmoid_derivative(lower_param);
+        double d_upper = exp * sigmoid_derivative(upper_param);
+        double d_mean = (x - mean) == 0 ? 0 : d_exp * power / (x - mean);
+        double d_variance = d_exp * power / variance;
+        double d_power = w == 0 ? 0 : -d_exp * Math.log(w);
+        return new double[] { d_lower, d_upper, d_mean, d_variance, d_power };
     }
 
     @Override
@@ -112,7 +137,7 @@ public class GeneralizedExponentialDecayFilter implements IFilter{
         double eval = getChanceToSend(x);
         double[] derivatives = getDerivativeOfParameters(x);
         for (int i = 0; i < derivatives.length; i++) {
-            derivatives[i] /= eval-1;
+            derivatives[i] /= eval - 1;
         }
         return derivatives;
     }
@@ -129,8 +154,8 @@ public class GeneralizedExponentialDecayFilter implements IFilter{
         throw new UnsupportedOperationException("Unimplemented method 'getNegatedLogarithmicDerivative'");
     }
 
-    public static GeneralizedExponentialDecayFilter getEvenChanceDistribution(){
+    public static GeneralizedExponentialDecayFilter getEvenChanceDistribution() {
         return new GeneralizedExponentialDecayFilter(0, 0, 0, 1, 2);
     }
-    
+
 }

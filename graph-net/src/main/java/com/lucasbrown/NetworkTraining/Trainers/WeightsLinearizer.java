@@ -76,8 +76,6 @@ public class WeightsLinearizer {
 
     
     public void setParameter(int i, double value){
-        double[] params = new double[totalNumOfVariables];
-
         for(Pair<Integer, ITrainableValueCombinator> positionPair : vectorNodeOffset.values()){
             int idx = positionPair.u;
             ITrainableValueCombinator valueCombinator = positionPair.v;

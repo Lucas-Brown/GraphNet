@@ -51,6 +51,18 @@ public class FlatRateFilter implements IFilter {
         rate = params[0];
     }
 
+    
+    @Override
+    public void setAdjustableParameter(int index, double value) {
+        if(index == 0){
+            rate = value;
+        }
+        else
+        {
+            throw new RuntimeException("Invalid index");
+        }
+    }
+
     @Override
     public void applyAdjustableParameterUpdate(double[] delta) {
         rate -= delta[0];

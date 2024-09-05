@@ -11,6 +11,7 @@ public interface IFilter {
     public int getNumberOfAdjustableParameters();
     public double[] getAdjustableParameters();
     public void setAdjustableParameters(double... params);
+    public void setAdjustableParameter(int index, double value);
     public void applyAdjustableParameterUpdate(double[] delta);
 
     public double[] getLogarithmicParameterDerivative(double x);

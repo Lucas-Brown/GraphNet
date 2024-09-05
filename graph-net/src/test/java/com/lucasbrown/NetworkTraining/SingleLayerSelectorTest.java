@@ -15,17 +15,17 @@ import com.lucasbrown.NetworkTraining.Solvers.ADAMSolver;
 import com.lucasbrown.NetworkTraining.Trainers.NumericalDerivativeTrainer;
 import com.lucasbrown.NetworkTraining.Trainers.Trainer;
 
-public class MultiLayerSelectorTest {
+public class SingleLayerSelectorTest {
 
     private static Random rng = new Random();
     private static int counter = 0;
-    private static int n_depth = 2;
+    private static int n_depth = 1;
     private static int N = 100;
 
     private Double[][] inputData;
     private Double[][] outputData;
 
-    private MultiLayerSelectorTest(){
+    private SingleLayerSelectorTest(){
         initializeInputData();
         initializeOutputData();
     }
@@ -60,7 +60,7 @@ public class MultiLayerSelectorTest {
 
 
     public static void main(String[] args) {
-        MultiLayerSelectorTest ptest = new MultiLayerSelectorTest();
+        SingleLayerSelectorTest ptest = new SingleLayerSelectorTest();
 
         GraphNetwork net = new GraphNetwork();
         
@@ -76,8 +76,8 @@ public class MultiLayerSelectorTest {
 
         nodeBuilder.setAsHiddenNode();
 
-        INode hidden11 = nodeBuilder.build();
-        INode hidden12 = nodeBuilder.build();
+        // INode hidden11 = nodeBuilder.build();
+        // INode hidden12 = nodeBuilder.build();
 
         nodeBuilder.setAsOutputNode();
 
@@ -90,15 +90,8 @@ public class MultiLayerSelectorTest {
         out2.setName("Output 2");
         out3.setName("Output 3");
 
-        net.addNewConnection(in, hidden11);
-        net.addNewConnection(in, hidden12);
-
-        net.addNewConnection(hidden11, out1);
-        net.addNewConnection(hidden11, out2);
-        net.addNewConnection(hidden11, out3);
-        net.addNewConnection(hidden12, out1);
-        net.addNewConnection(hidden12, out2);
-        net.addNewConnection(hidden12, out3);
+        // net.addNewConnection(in, hidden11);
+        // net.addNewConnection(in, hidden12);
 
         // net.addNewConnection(hidden11, out1);
         // net.addNewConnection(hidden11, out2);
@@ -107,9 +100,16 @@ public class MultiLayerSelectorTest {
         // net.addNewConnection(hidden12, out2);
         // net.addNewConnection(hidden12, out3);
 
-        // net.addNewConnection(in, out1);
-        // net.addNewConnection(in, out2);
-        // net.addNewConnection(in, out3);
+        // net.addNewConnection(hidden11, out1);
+        // net.addNewConnection(hidden11, out2);
+        // net.addNewConnection(hidden11, out3);
+        // net.addNewConnection(hidden12, out1);
+        // net.addNewConnection(hidden12, out2);
+        // net.addNewConnection(hidden12, out3);
+
+        net.addNewConnection(in, out1);
+        net.addNewConnection(in, out2);
+        net.addNewConnection(in, out3);
 
         Trainer trainer = Trainer.getDefaultTrainer(net);
         trainer.setTrainingData(ptest.inputData, ptest.outputData);

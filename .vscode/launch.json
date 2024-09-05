@@ -6,6 +6,13 @@
     "configurations": [
         {
             "type": "java",
+            "name": "SingleLayerSelectorTest",
+            "request": "launch",
+            "mainClass": "com.lucasbrown.NetworkTraining.SingleLayerSelectorTest",
+            "projectName": "graph-net"
+        },
+        {
+            "type": "java",
             "name": "MultiLayerSelectorTest",
             "request": "launch",
             "mainClass": "com.lucasbrown.NetworkTraining.MultiLayerSelectorTest",

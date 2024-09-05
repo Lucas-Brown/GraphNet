@@ -72,6 +72,23 @@ public class NormalPeakFilter implements IFilter {
     }
 
     @Override
+    public void setAdjustableParameter(int index, double value)
+    {
+        switch(index)
+        {
+            case 0:
+                mean = value;
+                break;
+            case 1:
+                variance = value;
+                break;
+            default:
+                throw new RuntimeException("Invalid index");
+        }
+
+    }
+
+    @Override
     public void applyAdjustableParameterUpdate(double[] delta) {
         mean -= delta[0];
         variance -= delta[1];
@@ -90,9 +107,10 @@ public class NormalPeakFilter implements IFilter {
     @Override
     public double[] getNegatedLogarithmicParameterDerivative(double x) {
         double[] exp_deriv = getLogarithmicParameterDerivative(x);
+        final double stabilityFactor = 1-1E-12;
 
         double temp = (x - mean) / variance;
-        double factor = 0.99999 / (Math.exp(temp * temp / 2) - 0.99999); // set slightly off of 1 for numerical stability
+        double factor = stabilityFactor / (Math.exp(temp * temp / 2) - stabilityFactor); // set slightly off of 1 for numerical stability
 
         exp_deriv[0] *= factor;
         exp_deriv[1] *= factor;

@@ -5,13 +5,16 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map.Entry;
 
 import com.lucasbrown.GraphNetwork.Global.GraphNetwork;
 import com.lucasbrown.GraphNetwork.Local.Edge;
 import com.lucasbrown.GraphNetwork.Local.Filters.IFilter;
 import com.lucasbrown.GraphNetwork.Local.Nodes.INode;
 import com.lucasbrown.GraphNetwork.Local.Nodes.ProbabilityCombinators.IProbabilityCombinator;
+import com.lucasbrown.GraphNetwork.Local.Nodes.ValueCombinators.ITrainableValueCombinator;
 import com.lucasbrown.HelperClasses.IterableTools;
+import com.lucasbrown.HelperClasses.Structs.Pair;
 
 import jsat.linear.DenseVector;
 import jsat.linear.Vec;
@@ -82,5 +85,30 @@ public class FilterLinearizer {
             new_vec.set(vec_idx, new_vec.get(vec_idx) + filter_derivative[i]);
         }
         return new_vec;
+    }
+
+    
+    public double[] getAllParameters(){
+        double[] params = new double[totalNumOfVariables];
+
+        for(Entry<IFilter, Integer> entry : vectorFilterOffset.entrySet()){
+            IFilter filter = entry.getKey();
+            int idx = entry.getValue();
+            System.arraycopy(filter.getAdjustableParameters(), 0, params, idx, filter.getNumberOfAdjustableParameters());
+        }
+
+        return params;
+    }
+
+    public void setParameter(int i, double value){
+        for(Entry<IFilter, Integer> entry : vectorFilterOffset.entrySet()){
+            IFilter filter = entry.getKey();
+            int idx = entry.getValue();
+            int varNum = filter.getNumberOfAdjustableParameters();
+            if(i >= idx && i < idx + varNum){
+                filter.setAdjustableParameter(i-idx, value);
+                return;
+            }
+        }
     }
 }

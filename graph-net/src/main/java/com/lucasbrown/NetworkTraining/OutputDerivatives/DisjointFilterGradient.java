@@ -13,7 +13,7 @@ import com.lucasbrown.NetworkTraining.OutputDerivatives.ErrorFunction.CrossEntro
 import jsat.linear.DenseVector;
 import jsat.linear.Vec;
 
-public class WeightedOutcomeChanceFilterGradient implements IGradient {
+public class DisjointFilterGradient implements IGradient {
 
     protected Double[][] targets;
     protected INetworkGradient networkGradientEvaluater;
@@ -27,7 +27,7 @@ public class WeightedOutcomeChanceFilterGradient implements IGradient {
     private NetworkHistory networkHistory;
     private ArrayList<HashMap<Outcome, Vec>> networkGradient;
 
-    public WeightedOutcomeChanceFilterGradient(GraphNetwork network, INetworkGradient networkGradientEvaluater,
+    public DisjointFilterGradient(GraphNetwork network, INetworkGradient networkGradientEvaluater,
             Double[][] targets, ErrorFunction errorFunction, int totalNumOfVariables) {
         this.targets = targets;
         this.networkGradientEvaluater = networkGradientEvaluater;
@@ -42,13 +42,14 @@ public class WeightedOutcomeChanceFilterGradient implements IGradient {
         this.networkHistory = networkHistory;
         networkGradient = networkGradientEvaluater.getGradient(networkHistory);
 
-        Vec probGrad = gradientOfTargets();
-        Vec valueGrad = gradientOfValues();
+        // Vec probGrad = gradientOfTargets();
+        // Vec valueGrad = gradientOfValues();
         // double probError = errorOfTargets();
         // double valueError = errorOfValues();
 
-        return probGrad.subtract(valueGrad);
+        // return probGrad.add(valueGrad);
 
+        return gradientOfTargets();
     }
 
     private Vec gradientOfTargets() {
@@ -181,11 +182,11 @@ public class WeightedOutcomeChanceFilterGradient implements IGradient {
 
         for (Outcome outcome : outcomesAtTime) {
             Vec networkDerivative = gradientAtTime.get(outcome);
+            double error_deriv = crossEntropy.error_derivative(outcome.probability, targetProbability);
 
             // accumulate jacobians
-            gradient.mutableAdd(networkDerivative);
+            gradient.mutableAdd(networkDerivative.multiply(error_deriv));
         }
-        gradient.mutableMultiply(crossEntropy.error_derivative(probabilityVolume, targetProbability));
         assert gradient.countNaNs() == 0;
         return gradient;
     }

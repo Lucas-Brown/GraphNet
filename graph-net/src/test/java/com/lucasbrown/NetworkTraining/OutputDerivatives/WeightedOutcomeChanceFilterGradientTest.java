@@ -11,7 +11,9 @@ import com.lucasbrown.GraphNetwork.Local.Nodes.InputNode;
 import com.lucasbrown.GraphNetwork.Local.Nodes.OutputNode;
 import com.lucasbrown.GraphNetwork.Local.Nodes.ProbabilityCombinators.ComplexProbabilityCombinator;
 import com.lucasbrown.GraphNetwork.Local.Nodes.ValueCombinators.ComplexCombinator;
+import com.lucasbrown.GraphNetwork.Local.Nodes.ValueCombinators.IValueCombinator;
 import com.lucasbrown.NetworkTraining.History.NetworkHistory;
+import com.lucasbrown.NetworkTraining.Trainers.NumericalDerivativeTrainer;
 import com.lucasbrown.NetworkTraining.Trainers.Trainer;
 
 import jsat.linear.DenseVector;
@@ -20,9 +22,6 @@ import jsat.linear.Vec;
 public class WeightedOutcomeChanceFilterGradientTest {
 
     private double delta = 1E-6;
-
-    private static final Double[][] inputData = {{1d}, {null}};
-    private static final Double[][] outputData = {{null, null, null}, {null, 1d, null}};
 
     private GraphNetwork getSingleLayerModel(){
         GraphNetwork net = new GraphNetwork();
@@ -48,10 +47,22 @@ public class WeightedOutcomeChanceFilterGradientTest {
         out2.setName("Output 2");
         out3.setName("Output 1");
 
-        
         net.addNewConnection(in, out1);
         net.addNewConnection(in, out2);
         net.addNewConnection(in, out3);
+
+        IValueCombinator vComb1 = out1.getValueCombinator();
+        vComb1.setBias(0b1, 0);
+        vComb1.setWeights(0b1, new double[]{1});
+        
+        IValueCombinator vComb2 = out2.getValueCombinator();
+        vComb2.setBias(0b1, 0);
+        vComb2.setWeights(0b1, new double[]{1});
+        
+        IValueCombinator vComb3 = out3.getValueCombinator();
+        vComb3.setBias(0b1, 0);
+        vComb3.setWeights(0b1, new double[]{1});
+
         return net;
     }
 
@@ -59,31 +70,27 @@ public class WeightedOutcomeChanceFilterGradientTest {
     public void testComputeGradient() {
         GraphNetwork net = getSingleLayerModel();
 
+        final Double[][] inputData = {{0.5d}, {null}};
+        final Double[][] outputData = {{null, null, null}, {1d, null, null}};
+        final double[] targetErrors = {-0.9411918, -0.4705959, 3.31076541, 1.6553827, 3.31076541, 1.6553827};
         
+        // numerical check
+        NumericalDerivativeTrainer numericalTrainer = NumericalDerivativeTrainer.getDefaultTrainer(net);
+        numericalTrainer.setTrainingData(inputData, outputData);
 
-        Trainer trainer = Trainer.getDefaultTrainer(net);
-        trainer.setTrainingData(inputData, outputData);
+        Vec filterDerivative = numericalTrainer.computeNumericalDerivativeOfFilters();
 
-        NetworkHistory[] histories = trainer.computeAllHistories();
+        // analytic check
+        Trainer analyticTrainer = Trainer.getDefaultTrainer(net);
+        analyticTrainer.setTrainingData(inputData, outputData);
+
+        NetworkHistory[] histories = analyticTrainer.computeAllHistories();
         
-        Vec weightsGradient = trainer.aggregateWeightGradients(histories);
-        Vec probabilityGradient = trainer.aggregateProbabilityGradients(histories);
+        Vec weightsGradient = analyticTrainer.aggregateWeightGradients(histories);
+        Vec probabilityGradient = analyticTrainer.aggregateProbabilityGradients(histories);
 
-        double[] linearWeightsAndBias = trainer.weightLinearizer.getAllParameters();
-        double[] weightsGradientNumerical = new double[linearWeightsAndBias.length];
-        for(int i = 0; i < linearWeightsAndBias.length; i++){
-            trainer.weightLinearizer.setParameter(i, linearWeightsAndBias[i] + delta);
-            NetworkHistory history1 = trainer.computeAllHistories()[0];
-            double error1 = trainer.weightsGradient.getTotalError(history1);
+        Assert.assertArrayEquals(targetErrors, filterDerivative.arrayCopy(), 1E-6);
+        Assert.assertArrayEquals(targetErrors, probabilityGradient.arrayCopy(), 1E-6);
 
-            trainer.weightLinearizer.setParameter(i, linearWeightsAndBias[i] - delta);
-            NetworkHistory history2 = trainer.computeAllHistories()[0];
-            double error2 = trainer.weightsGradient.getTotalError(history2);
-
-            weightsGradientNumerical[i] = (error1 - error2)/(2*delta);
-        }
-
-        Assert.assertArrayEquals(weightsGradient.arrayCopy(), weightsGradientNumerical, 1E-6);
-        
     }
 }
