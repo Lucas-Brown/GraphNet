@@ -17,7 +17,6 @@ import com.lucasbrown.GraphNetwork.Local.Nodes.INode;
 import com.lucasbrown.GraphNetwork.Local.Nodes.IOutputNode;
 import com.lucasbrown.GraphNetwork.Local.Nodes.InputNode;
 import com.lucasbrown.GraphNetwork.Local.Nodes.OutputNode;
-import com.lucasbrown.NetworkTraining.DistributionSolverMethods.IExpectationAdjuster;
 import com.lucasbrown.NetworkTraining.History.IStateGenerator;
 
 /**

@@ -28,11 +28,6 @@ import com.lucasbrown.GraphNetwork.Local.Nodes.ProbabilityCombinators.SimpleProb
 import com.lucasbrown.GraphNetwork.Local.Nodes.ValueCombinators.ComplexCombinator;
 import com.lucasbrown.GraphNetwork.Local.Nodes.ValueCombinators.IValueCombinator;
 import com.lucasbrown.GraphNetwork.Local.Nodes.ValueCombinators.SimpleCombinator;
-import com.lucasbrown.NetworkTraining.DistributionSolverMethods.BernoulliDistribution;
-import com.lucasbrown.NetworkTraining.DistributionSolverMethods.BernoulliDistributionAdjuster;
-import com.lucasbrown.NetworkTraining.DistributionSolverMethods.NoAdjustments;
-import com.lucasbrown.NetworkTraining.DistributionSolverMethods.NormalBernoulliFilterAdjuster;
-import com.lucasbrown.NetworkTraining.DistributionSolverMethods.NormalDistribution;
 import com.lucasbrown.NetworkTraining.History.History;
 import com.lucasbrown.NetworkTraining.History.NetworkHistory;
 import com.lucasbrown.NetworkTraining.NetworkDerivatives.ForwardNetworkGradient;

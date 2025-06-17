@@ -1,7 +1,5 @@
 package com.lucasbrown.GraphNetwork.Local.Filters;
 
-import com.lucasbrown.NetworkTraining.DistributionSolverMethods.IExpectationAdjuster;
-
 /**
  * Always allows signals to pass
  */
@@ -15,11 +13,6 @@ public class OpenFilter implements IFilter {
     @Override
     public double getChanceToSend(double x) {
         return 1;
-    }
-
-    @Override
-    public void applyAdjustments(IExpectationAdjuster adjuster) {
-        // Do nothing
     }
     
     @Override

@@ -2,8 +2,6 @@ package com.lucasbrown.GraphNetwork.Local.Filters;
 
 import java.util.Random;
 
-import com.lucasbrown.NetworkTraining.DistributionSolverMethods.IExpectationAdjuster;
-
 /**
  * Allows all signals to pass with the same fixed rate.
  * Adjustments are made in transformed coordinates to prevent full 0% and 100% 
@@ -28,11 +26,6 @@ public class FlatRateFilter implements IFilter {
     @Override
     public double getChanceToSend(double x) {
         return rate;
-    }
-
-    @Override
-    public void applyAdjustments(IExpectationAdjuster adjuster) {
-        rate = adjuster.getUpdatedParameters()[0];
     }
 
     @Override

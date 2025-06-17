@@ -3,7 +3,6 @@ package com.lucasbrown.GraphNetwork.Local.Filters;
 import java.util.Random;
 
 import com.lucasbrown.HelperClasses.MathHelpers;
-import com.lucasbrown.NetworkTraining.DistributionSolverMethods.IExpectationAdjuster;
 
 import static com.lucasbrown.HelperClasses.MathHelpers.sigmoid;
 import static com.lucasbrown.HelperClasses.MathHelpers.sigmoid_derivative;
@@ -44,12 +43,6 @@ public class GeneralizedExponentialDecayFilter implements IFilter {
         double lower = sigmoid(lower_param);
         double upper = sigmoid(upper_param);
         return (upper - lower) * Math.exp(-Math.pow(w, power) / 2) + lower;
-    }
-
-    @Override
-    public void applyAdjustments(IExpectationAdjuster adjuster) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'applyAdjustments'");
     }
 
     @Override

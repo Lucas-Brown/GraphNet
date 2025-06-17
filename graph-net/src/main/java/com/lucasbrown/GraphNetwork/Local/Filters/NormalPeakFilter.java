@@ -2,8 +2,6 @@ package com.lucasbrown.GraphNetwork.Local.Filters;
 
 import java.util.Random;
 
-import com.lucasbrown.NetworkTraining.DistributionSolverMethods.IExpectationAdjuster;
-
 public class NormalPeakFilter implements IFilter {
 
     private final Random rng;
@@ -45,14 +43,6 @@ public class NormalPeakFilter implements IFilter {
     @Override
     public double getChanceToSend(double x) {
         return likelihood(x, mean, variance);
-    }
-
-    @Override
-    public void applyAdjustments(IExpectationAdjuster adjuster) {
-        double[] updated_params = adjuster.getUpdatedParameters();
-        mean = updated_params[0];
-        variance = updated_params[1];
-        N = updated_params[2];
     }
 
     @Override
